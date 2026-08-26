@@ -22,7 +22,7 @@ Le portail locataire emploie la même hiérarchie de contexte mais remplace le M
 | Population | Six rôles internes | Locataire externe |
 | Autorisation | Membership + rôle fixe + capacité | Tenant Portal Access + ressources reliées |
 | Finalité | Gérer ou consulter selon rôle | Consulter sa situation locative |
-| Navigation | Accueil, Biens, Locataires, Paiements, Activité | Accueil, Loyers, Reçus, Compte ; notifications par entrée légère dédiée |
+| Navigation | Accueil, Biens, Locataires, Locations, Paiements, Activité | Accueil, Loyers, Reçus, Compte ; notifications par entrée légère dédiée |
 | Paramètres | Compte + Organization selon capacités | Compte portail, sessions, canal, langue |
 | Données financières | Selon matrice interne | Lecture de ses échéances/paiements confirmés/reçus |
 | Traçabilité | Activity et Audit séparé | Journal d’accès non exposé ; état synthétique interne |
@@ -38,6 +38,7 @@ Aucun passage visuel ne transforme un locataire en membre interne. Si une même 
 | Accueil | KPIs autorisés, période, retards, tâches, activité récente | Détail indicateur, échéance, paiement, reçu | Ajouter un bien si vide ; sinon action pertinente au rôle |
 | Biens | Liste et recherche de biens | Détail bien, unités, occupation, contrat depuis unité | Ajouter un bien ou une unité selon contexte/capacité |
 | Locataires | Liste et recherche de locataires | Détail, contrats, accès portail | Ajouter un locataire ; créer contrat ; inviter portail |
+| Locations | Liste des brouillons, locations actives et terminées | Détail, Tenant, Property, Unit ; placeholders Dues/Paiements/Documents | Créer, activer ou terminer selon capacité |
 | Paiements | Échéances et paiements selon capacités | Détail échéance, saisie, détail paiement, reçu, correction demandée | Enregistrer un paiement si autorisé |
 | Activité | Notifications et fil d’activité | Ressource cible ; audit Owner dans espace distinct | Marquer lu, ouvrir la ressource |
 
@@ -73,8 +74,8 @@ Il n’existe aucune bibliothèque globale de documents au MVP. Les fichiers res
 
 | Rôle | Barre mobile proposée | Accueil | Secondaire |
 |---|---|---|---|
-| Organization Owner | Accueil, Biens, Locataires, Paiements, Activité | Dashboard complet | Équipe, profil/settings Organization, appareils, langue, audit |
-| Gestionnaire | Accueil, Biens, Locataires, Paiements, Activité | Opérations et KPIs autorisés | Profil public Organization en contexte, appareils, langue |
+| Organization Owner | Accueil, Biens, Locataires, Locations, Paiements, Activité | Dashboard complet | Équipe, profil/settings Organization, appareils, langue, audit |
+| Gestionnaire | Accueil, Biens, Locataires, Locations, Paiements, Activité | Opérations et KPIs autorisés | Profil public Organization en contexte, appareils, langue |
 | Encaisseur | Accueil, Paiements, Activité | Tâches de paiement, sans dashboard financier global | Appareils, langue ; contexte bien/locataire seulement dans le flow paiement |
 | Gardien | Accueil, Biens, Activité si pertinente | Contexte local sans finance | Appareils, langue ; identité locataire minimale seulement dans le contexte autorisé |
 | Comptable | Accueil, Paiements, Activité | Dashboard financier en lecture | Appareils, langue ; biens/locataires/contrats accessibles comme contexte depuis la finance |
@@ -114,7 +115,14 @@ Règles :
 - création/activation/clôture du bail ;
 - administration de l’accès portail par Owner/gestionnaire.
 
-### 5.4 Paiements
+### 5.4 Locations
+
+- liste/recherche des brouillons, locations actives et terminées ;
+- détail relié à Tenant, Property et Unit ;
+- résumé des conditions, activation et fin explicites ;
+- sections Échéances, Paiements et Documents visibles comme placeholders jusqu’à 6C1/6C2/6C3.
+
+### 5.5 Paiements
 
 - vue par défaut centrée sur les échéances : en retard, dues, à venir et réglées ;
 - recherche et filtres simples ;
@@ -123,7 +131,7 @@ Règles :
 - détail paiement et demande de correction ;
 - reçu, téléchargement et email contrôlé.
 
-### 5.5 Activité
+### 5.6 Activité
 
 - onglet interne Notifications ;
 - onglet interne Activité si la capacité existe ;

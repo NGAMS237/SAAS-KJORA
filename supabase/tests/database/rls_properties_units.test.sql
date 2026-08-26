@@ -163,7 +163,7 @@ reset role;
 select hasnt_column('public', 'units', 'occupied', 'aucun booléen occupation ne crée une seconde vérité');
 select has_column('public', 'units', 'area_sqm', 'superficie facultative est disponible');
 select col_not_null('public', 'units', 'property_id', 'parent Property est obligatoire');
-select is((select count(*) from private.domain_events where event_type = 'PROPERTY_CREATED'), 3::bigint, 'un event unique existe pour chaque Property créée');
+select is((select count(*) from private.domain_events where event_type = 'PROPERTY_CREATED' and organization_id in ('22000000-0000-4000-8000-00000000000a', '22000000-0000-4000-8000-00000000000b')), 3::bigint, 'un event unique existe pour chaque Property créée par le test');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '12000000-0000-4000-8000-000000000005', true);

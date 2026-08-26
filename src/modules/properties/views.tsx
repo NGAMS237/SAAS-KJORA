@@ -116,7 +116,7 @@ export function PropertiesView({
                 <p>{property.locality}</p>
                 <div className="demo-meta">
                   <span>{property.unitCount} {t("unité(s)", "unit(s)")}</span>
-                  <span>0 {t("occupée(s)", "occupied")}</span>
+                  <span>{property.unitCount - property.vacantCount} {t("occupée(s)", "occupied")}</span>
                   <span>{property.vacantCount} {t("vacante(s)", "vacant")}</span>
                 </div>
               </div>
@@ -240,7 +240,7 @@ export function PropertyDetailView({
     router.refresh();
   }
 
-  const vacant = property.units.length;
+  const vacant = property.units.filter((unit) => unit.occupancy === "vacant").length;
   return (
     <div className="page-stack">
       <Link className="demo-back" href="/app/biens"><ArrowLeft size={17} />{t("Tous les biens", "All properties")}</Link>
@@ -267,7 +267,7 @@ export function PropertyDetailView({
       <section className="demo-summary-grid">
         <Card><strong className="demo-summary-value">{property.units.length}</strong><span>{t("Unités", "Units")}</span></Card>
         <Card><strong className="demo-summary-value">{vacant}</strong><span>{t("Vacantes", "Vacant")}</span></Card>
-        <Card><strong className="demo-summary-value">0</strong><span>{t("Occupées", "Occupied")}</span></Card>
+        <Card><strong className="demo-summary-value">{property.units.length - vacant}</strong><span>{t("Occupées", "Occupied")}</span></Card>
       </section>
       {adding ? (
         <Card>
@@ -301,7 +301,7 @@ function UnitRow({ propertyId, unit }: { propertyId: string; unit: UnitRecord })
     <Link href={`/app/biens/${propertyId}/unites/${unit.id}`} className="demo-list-row">
       <span className="demo-list-row__icon"><Home size={19} /></span>
       <div><strong>{unit.label}</strong><span>{unitLabel(unit.type, t)}{unit.areaSqm ? ` · ${unit.areaSqm} m²` : ""}</span></div>
-      <Badge tone="neutral">{t("Vacante", "Vacant")}</Badge>
+      <Badge tone={unit.occupancy === "occupied" ? "success" : "neutral"}>{unit.occupancy === "occupied" ? t("Occupée", "Occupied") : t("Vacante", "Vacant")}</Badge>
       <ChevronRight size={18} />
     </Link>
   );
@@ -311,10 +311,12 @@ export function UnitDetailView({
   property,
   unit,
   canManage,
+  canManageLease,
 }: {
   property: { id: string; name: string; type: PropertyType };
   unit: UnitRecord;
   canManage: boolean;
+  canManageLease: boolean;
 }) {
   const t = useCopy();
   const router = useRouter();
@@ -366,7 +368,8 @@ export function UnitDetailView({
         </Card>
       ) : null}
       <Card className="demo-detail-card">
-        <div><Badge tone="neutral">{t("Vacante", "Vacant")}</Badge><h2>{t("Unité vacante", "Vacant unit")}</h2><p>{t("Aucun bail réel n’existe encore. L’occupation sera dérivée des baux actifs au Lot 6B.", "No real lease exists yet. Occupancy will be derived from active leases in Lot 6B.")}</p>{unit.areaSqm ? <p><strong>{unit.areaSqm} m²</strong></p> : null}</div>
+        <div><Badge tone={unit.occupancy === "occupied" ? "success" : "neutral"}>{unit.occupancy === "occupied" ? t("Occupée", "Occupied") : t("Vacante", "Vacant")}</Badge><h2>{unit.occupancy === "occupied" ? t("Unité occupée", "Occupied unit") : t("Unité vacante", "Vacant unit")}</h2><p>{unit.occupancy === "occupied" ? t(`${unit.activeTenantName ?? "Locataire"} · occupation dérivée de la location active.`, `${unit.activeTenantName ?? "Tenant"} · occupancy derived from the active lease.`) : t("Aucune location active n’est associée.", "No active lease is linked.")}</p>{unit.areaSqm ? <p><strong>{unit.areaSqm} m²</strong></p> : null}</div>
+        {unit.activeLeaseId ? <Link className="button button--secondary" href={`/app/locations/${unit.activeLeaseId}`}>{t("Ouvrir la location", "Open lease")}</Link> : canManageLease ? <Link className="button button--primary" href={`/app/locations/nouveau?unit=${unit.id}`}>{t("Créer une location", "Create lease")}</Link> : null}
       </Card>
       {canManage ? <div className="resource-danger-zone"><button className="button button--danger" disabled={busy} onClick={archiveUnit} type="button"><Archive size={17} />{t("Archiver l’unité", "Archive unit")}</button><p>{t("L’unité disparaîtra des listes actives sans être supprimée physiquement.", "The unit will leave active lists without being physically deleted.")}</p></div> : null}
     </div>

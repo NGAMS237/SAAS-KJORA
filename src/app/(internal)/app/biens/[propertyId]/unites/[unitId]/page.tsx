@@ -16,6 +16,7 @@ export default async function UnitPage({ params }: { params: Promise<{ propertyI
       property={{ id: detail.property.id, name: detail.property.name, type: detail.property.type }}
       unit={detail.unit}
       canManage={authorization.capabilities.includes("unit.manage")}
+      canManageLease={authorization.capabilities.includes("lease.manage")}
     />
   );
 }

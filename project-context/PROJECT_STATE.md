@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — Lot 6A Biens + Unités terminé, testé et déployé ; validation fonctionnelle de Blaise en attente
+> Mise à jour : 2026-08-26 — Lot 6B Locataires + Locations explicitement autorisé et en cours ; validation fonctionnelle 6A toujours en attente
 
 ## Lots
 
@@ -13,8 +13,9 @@
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
-- **Biens + Unités : BACKEND RÉEL — persistance Supabase ; Locataires + Baux : PRÉVISUALISATION FICTIVE explicite seulement**
+- **Lot 6B — Tenant + Lease backend : AUTORISÉ / EN COURS**
+- **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
+- **Biens + Unités : BACKEND RÉEL — persistance Supabase ; remplacement de la prévisualisation Locataires/Baux par le backend réel en cours**
 
 ## Terminé
 
@@ -91,7 +92,8 @@
 - Le type Property, le tenant, le créateur, le rattachement Unit et l’état archivé sont protégés ; archiver un bien archive ses Units actives sans les supprimer.
 - Le Domain Event technique `PROPERTY_CREATED` est idempotent, porte `organization_id` et ne contient aucune phrase localisée ni communication par défaut.
 - Les écrans Biens, création, détail et Unit utilisent désormais les données Supabase réelles de l’Organization active. La photo reste un placeholder assumé et Storage est différé.
-- Aucun modèle Tenant ou Lease réel n’a été créé : le Lot 6B reste non commencé et les écrans Locataires/Baux demeurent explicitement fictifs.
+- Blaise a explicitement autorisé le Lot 6B sans valider rétroactivement le Lot 6A ; le gate de démarrage antérieur est remplacé par D-081.
+- La destination centrale `Locations` et la chaîne métier complète sont confirmées par D-082 ; le découpage 6C1/6C2/6C3 est confirmé par D-083.
 
 ## Testé
 
@@ -175,8 +177,8 @@
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
 - La validation fonctionnelle réelle par Blaise du parcours Équipe/invitation et de l’email transactionnel est confirmée ; le gate du Lot 5C est satisfait.
-- La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6A ; elle doit couvrir refresh/reconnexion, maison + « Maison entière », immeuble multi-unités, modification, archivage, rôles et isolation A/B. Ce gate n’autorise pas encore le Lot 6B.
+- La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6A ; elle doit couvrir refresh/reconnexion, maison + « Maison entière », immeuble multi-unités, modification, archivage, rôles et isolation A/B. D-081 autorise néanmoins explicitement l’exécution du Lot 6B.
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le Lot 6A par Blaise. Ne pas démarrer le Lot 6B avant cette validation explicite.**
+**Exécuter uniquement le Lot 6B autorisé, le tester, le déployer sur `main`, puis le faire valider fonctionnellement par Blaise. Ne pas démarrer 6C1. La validation fonctionnelle 6A reste à obtenir séparément.**

@@ -210,7 +210,7 @@ Chaque critère suit `Étant donné / Lorsque / Alors`. Un critère interne tena
 
 ### AC-TEN-002 — Champs facultatifs
 
-**Étant donné** aucune langue préférée ni pièce justificative, **lorsque** le minimum validé est présent, **alors** la création n’exige aucune donnée personnelle supplémentaire non décidée.
+**Étant donné** aucune langue préférée, profession, pièce d’identité, expiration, notes ni photo, **lorsque** le minimum validé est présent, **alors** la création n’exige aucune donnée personnelle supplémentaire. Si une pièce est renseignée, type et numéro vont ensemble. La photo reste un placeholder et aucun scan Storage n’est créé au Lot 6B.
 
 ### AC-TEN-003 — Utilisation dans contrat
 
@@ -234,9 +234,9 @@ Chaque critère suit `Étant donné / Lorsque / Alors`. Un critère interne tena
 
 **Étant donné** Unit explicite, locataire titulaire unique, montant XAF, périodicité mensuelle/trimestrielle/semestrielle/annuelle, début et exigibilité valides, **lorsque** Owner ou gestionnaire confirme l’activation, **alors** le contrat devient actif et `LEASE_ACTIVATED` est produit.
 
-### AC-LEASE-003 — Échéance après activation
+### AC-LEASE-003 — Préparation financière sans échéance
 
-**Étant donné** un contrat actif, **lorsque** l’échéancier applicable est créé, **alors** chaque loyer attendu produit `RENT_DUE_CREATED` et reste lié au contrat.
+**Étant donné** un contrat actif, **lorsque** le Lot 6B l’affiche, **alors** loyer hors charges, charges, total dérivé, dépôt, avance, périodicité, exigibilité J-X et proratas restent lisibles sans créer d’échéance, Payment, Ledger ou Receipt. La génération réelle appartient à 6C1.
 
 ### AC-LEASE-004 — Données incohérentes
 
@@ -244,7 +244,7 @@ Chaque critère suit `Étant donné / Lorsque / Alors`. Un critère interne tena
 
 ### AC-LEASE-005 — Unité occupée
 
-**Décision future requise.** **Étant donné** une unité avec contrat actif concurrent, **lorsque** un second contrat est présenté, **alors** aucune règle de superposition n’est inventée dans le Lot 2 et le cas doit rester explicitement non résolu avant implémentation.
+**Étant donné** une unité avec contrat actif concurrent, **lorsque** un second brouillon couvre les mêmes dates, un chevauchement partiel ou un recouvrement total, **alors** le brouillon peut rester préparé mais son activation est refusée par une contrainte PostgreSQL conformément à D-077/D-084. Une location future est activable seulement après la fin de la précédente.
 
 ### AC-LEASE-006 — Fin de contrat
 

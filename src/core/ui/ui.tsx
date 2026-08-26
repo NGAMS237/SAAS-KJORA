@@ -7,7 +7,7 @@ export function DemoNotice({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? "demo-notice demo-notice--compact" : "demo-notice"}>
       <span className="demo-notice__dot" aria-hidden="true" />
-      <span>Données fictives · Lot 5A</span>
+      <span>Certaines vues restent en démonstration</span>
     </div>
   );
 }
@@ -39,12 +39,14 @@ export function Card({
   children,
   className = "",
   muted = false,
+  id,
 }: {
   children: ReactNode;
   className?: string;
   muted?: boolean;
+  id?: string;
 }) {
-  return <section className={`card${muted ? " card--muted" : ""} ${className}`}>{children}</section>;
+  return <section className={`card${muted ? " card--muted" : ""} ${className}`} id={id}>{children}</section>;
 }
 
 export function KpiCard({

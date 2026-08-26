@@ -435,17 +435,18 @@ Prévoir clés serveur séparées, domaines et journaux séparés, et aucun doma
 
 ### Espace interne
 
-La navigation mobile principale des six rôles internes utilise cinq destinations, affichées selon les permissions :
+La navigation interne centrale des six rôles utilise les destinations suivantes, affichées selon les permissions :
 
 - Accueil ;
 - Biens ;
 - Locataires ;
+- Locations ;
 - Paiements ;
 - Activité.
 
 Équipe, profil, paramètres Organization, changement d’Organization et autres fonctions secondaires restent dans un espace secondaire adapté. L’Organization active est clairement identifiable sur toute vue tenant-scoped. Le changement de contexte remplace entièrement les données affichées et recalcule les permissions.
 
-Units, Leases, Rent/Dues, Payments, Receipts et `Tenant Portal Access` sont atteints contextuellement depuis les destinations utiles plutôt que par un onglet global pour chaque module.
+Units, Rent/Dues, Receipts et `Tenant Portal Access` restent atteints contextuellement depuis les destinations utiles. Les Leases disposent aussi d’une entrée centrale `Locations`, sans supprimer les liens contextuels depuis Tenant, Property et Unit.
 
 ### Portail locataire
 
@@ -506,6 +507,14 @@ Les 50 écrans fonctionnels du Lot 2 sont regroupés en flows courts orientés t
 
 Une Unit ne peut avoir deux Leases dont les périodes se chevauchent. Un bail futur peut commencer après la fin du précédent ; deux baux simultanés sur la même Unit sont refusés au MVP mono-titulaire.
 
+### Chaîne métier et préparation financière 6B
+
+La chaîne officielle est `Organization → Property → Unit → Tenant → Lease → Due/Charge → Payment → PaymentAllocation → Receipt → Ledger → Owner visibility`.
+
+Le Lot 6B persiste Tenant et Lease réels. Un Lease relie explicitement Organization, Tenant, Property et Unit ; ses états sont `draft`, `active` et `ended`. L’occupation est dérivée exclusivement des Leases actives et n’est jamais stockée comme booléen. Les montants de loyer hors charges, charges récurrentes, dépôt et avance initiale restent distincts. Le total périodique et les proratas calendaires sont dérivés ; une correction manuelle exige une justification.
+
+La suite est découpée en `6C1 — Dues + Charges + Ledger`, `6C2 — Payments + Allocation + Tenant credit`, puis `6C3 — Documents + Notifications + Receipts + Statements`. Les changements futurs de loyer et charges y seront effectifs-datés, sans réécriture historique. 6B n’implémente aucun de ces sous-lots.
+
 ## 19. Inspiration et différenciation
 
 Patterns retenus : organisation par domaines métier, suivi payé/partiel/en retard, reçus et rappels, historique de communications, préférences de notifications, dashboard orienté actions et suivi financier lisible.
@@ -546,4 +555,4 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 
 **Lot 6A — Property + Unit backend réel : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Biens/Unités sont reliés à Supabase et bornés à l’Organization active ; maison → Unit « Maison entière », immeuble multi-unités, archivage non destructif, RBAC/RLS et `PROPERTY_CREATED` sont implémentés. Le commit `3746ef2` est sur `origin/main` et l’alias Vercel Production sert la nouvelle API. La photo reste un placeholder et Storage est différé.
 
-**Lot 6B — Tenant + Lease backend réel : NON COMMENCÉ.** Locataires et Baux restent une prévisualisation fictive explicitement signalée. Le prochain gate est la validation fonctionnelle du Lot 6A par Blaise ; 6B ne peut pas démarrer avant cette validation explicite.
+**Lot 6B — Tenant + Lease backend réel : AUTORISÉ / EN COURS.** Blaise a explicitement autorisé son démarrage le 2026-08-26 malgré la validation fonctionnelle 6A encore en attente. Cette autorisation ne modifie pas le statut du Lot 6A. Les écrans Locataires et Locations doivent désormais quitter la prévisualisation fictive et utiliser Supabase réel.

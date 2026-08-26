@@ -22,7 +22,9 @@ export type UnitRecord = {
   type: UnitType;
   areaSqm: number | null;
   status: ResourceStatus;
-  occupancy: "vacant";
+  occupancy: "vacant" | "occupied";
+  activeLeaseId: string | null;
+  activeTenantName: string | null;
 };
 
 export type PropertyDetail = Omit<PropertySummary, "unitCount" | "vacantCount"> & {

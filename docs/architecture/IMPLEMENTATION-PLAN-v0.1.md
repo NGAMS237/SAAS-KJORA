@@ -1,8 +1,8 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-26 : le backend réel du Lot 6A Biens + Unités est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Le commit `3746ef2` est sur `origin/main` et l’alias Vercel Production sert la nouvelle API. Les données Biens/Unités sont persistées dans Supabase ; seules les prévisualisations Locataires/Baux restent fictives. Le Lot 6B reste **NON COMMENCÉ**.
+> Mise à jour 2026-08-26 : le backend réel du Lot 6A Biens + Unités est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Blaise autorise explicitement le Lot 6B, désormais **AUTORISÉ / EN COURS**, sans valider rétroactivement 6A.
 
-> Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. Le Lot 6A attend la validation fonctionnelle de Blaise ; le Lot 6B ne doit pas démarrer avant cette validation explicite.
+> Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. D-081 remplace le gate de démarrage 6B antérieur. Le Lot 6A conserve sa validation fonctionnelle en attente et 6C1 ne doit pas démarrer pendant 6B.
 
 > Statut : **PLAN VALIDÉ PAR BLAISE — D-072 à D-077**  
 > Portée : ordre de développement futur en petits lots testables  
@@ -46,7 +46,9 @@ Aucun projet Supabase, déploiement ou secret ne doit être créé avant autoris
 | 5C | Membership/RBAC + isolation RLS | Deux Organizations, rôles et refus démontrables |
 | 6A | Property + Unit | Créer maison/immeuble et unités |
 | 6B | Tenant + Lease | Créer locataire et activer bail |
-| 6C | Due + Payment + Receipt | Boucle financière complète et reçus privés |
+| 6C1 | Dues + Charges + Ledger | Échéancier et vérité comptable dérivée |
+| 6C2 | Payments + Allocation + Tenant credit | Encaissements, allocations et crédit locataire |
+| 6C3 | Documents + Notifications + Receipts + Statements | Artefacts privés et communications |
 | 6D | Dashboard + notifications + Activity/Audit | Visibilité opérationnelle et effets asynchrones |
 | 6E | Tenant Portal minimal | Locataire invité consulte ses mêmes vérités métier |
 
@@ -265,6 +267,8 @@ Implémenter le premier module métier et éprouver le pattern module + RLS + ev
 
 ## 9. Lot 6B — Tenant + Lease
 
+> Statut d’entrée : **AUTORISÉ / EN COURS** par D-081. Le Lot 6A reste en attente de validation fonctionnelle séparée.
+
 ### Objectif
 
 Créer le dossier locataire minimal et activer un Lease sur une Unit explicite.
@@ -277,9 +281,13 @@ Créer le dossier locataire minimal et activer un Lease sur une Unit explicite.
 ### Contenu
 
 - Tenant avec nom + téléphone ou email ;
+- fiche Tenant réelle : nom complet, téléphone/email avec au moins un contact, langue, profession, pièce d’identité facultative et notes internes ;
+- photo en placeholder ; aucun Storage ou scan d’identité au Lot 6B ;
 - minimisation des contacts par rôle ;
 - Lease brouillon, résumé, activation et clôture explicite ;
-- Rent Schedule avec périodicités validées ;
+- destination centrale `Locations` et liens Tenant/Property/Unit ;
+- loyer hors charges, charges récurrentes, total dérivé, dépôt séparé et avance initiale descriptive ;
+- périodicité, jour d’exigibilité, génération J-X et proratas calendaires entrée/sortie ;
 - `TENANT_CREATED` et `LEASE_ACTIVATED` ;
 - aucun accès portail implicite ;
 - aucun cotitulaire, e-signature ou bibliothèque juridique.
@@ -309,60 +317,88 @@ Créer le dossier locataire minimal et activer un Lease sur une Unit explicite.
 - events non dupliqués ;
 - aucune donnée Tenant recopiée dans Lease.
 
-## 10. Lot 6C — Dues, Payments et Receipts
+## 10. Lot 6C1 — Dues + Charges + Ledger
 
 ### Objectif
 
-Achever la boucle financière manuelle avec états dérivés, paiements partiels et reçus privés.
+Générer les échéances et charges effectives-datées depuis le Lease, puis établir le Ledger comme source de vérité financière sans réécrire l’historique.
 
 ### Dépendances
 
 - 6B validé.
-- Payment Allocation et Storage privé validés.
-- Frontière serveur/idempotence disponible.
+- 6B validé.
+- Règles d’échéancier, prorata et modifications effectives-datées validées.
 
 ### Contenu
 
-- génération Rent Due depuis Schedule ;
-- règles Cameroun J-5 et lendemain ;
-- statuts dérivés ;
-- Payment + Allocation unique au MVP ;
-- total/partiel, quatre moyens manuels ;
-- preuve facultative privée ;
-- résumé/confirmation et anti-double soumission ;
-- `PAYMENT_RECORDED` puis `PAYMENT_COMPLETED` ;
-- Receipt après Completed seulement ;
-- téléchargement et email contrôlé avec échec non bloquant ;
-- demande de correction, sans correction effective.
+- génération Due depuis le calendrier du Lease ;
+- charges et évolutions de loyer effectives-datées ;
+- prorata calendaire d’entrée/sortie avec correction motivée ;
+- Ledger tenant-scoped et statuts d’échéance dérivés ;
+- règles Cameroun de génération J-X et retard ;
+- aucun Payment, Receipt, document ou notification dans 6C1.
 
 ### Critères de sortie
 
 - AC-DUE-001 à AC-DUE-008 réussis.
-- AC-PAY-001 à AC-PAY-014 réussis.
-- AC-REC-001 à AC-REC-009 réussis.
-- Surpaiement bloqué avant écriture.
-- Un seul paiement/reçu pour une intention rejouée.
-- Aucun objet privé B délivré à A.
+- Les AC-DUE pertinentes sont réussies et le Ledger reste cohérent sous concurrence.
+- Aucune réécriture d’une période financière passée.
+- Aucun Payment ou Receipt créé prématurément.
 
 ### Ce que Blaise pourra tester
 
 - voir échéance à venir/due/en retard ;
-- enregistrer un paiement partiel puis compléter ;
-- tenter surpaiement/double clic/rôle interdit ;
-- consulter/télécharger/email le reçu ;
-- constater qu’un email échoué ne change pas le paiement.
+- vérifier le prorata et le total loyer + charges ;
+- appliquer un futur changement de loyer sans modifier les périodes passées ;
+- consulter le Ledger dérivé.
 
 ### Tests obligatoires
 
 - calculs de montant/état/date ;
-- transactions concurrentes sur restant ;
-- idempotence Payment/Receipt ;
-- séquence des events ;
-- RLS et Storage A/B ;
-- permissions Owner/gestionnaire/encaisseur/comptable/consultation ;
+- concurrence et idempotence de génération ;
+- RLS A/B et permissions ;
+- historique effectif-daté immuable.
+
+## 11. Lot 6C2 — Payments + Allocation + Tenant credit
+
+### Objectif
+
+Enregistrer les paiements manuels, les allouer explicitement et gérer le crédit locataire sans surpaiement implicite.
+
+### Dépendances
+
+- 6C1 validé.
+- Frontière serveur/idempotence disponible.
+
+### Contenu
+
+- Payment et PaymentAllocation ;
+- paiements totaux/partiels et quatre moyens manuels ;
+- crédit locataire explicite ;
+- résumé/confirmation et anti-double soumission ;
+- `PAYMENT_RECORDED` puis `PAYMENT_COMPLETED` ;
+- aucun Receipt ou document réel dans 6C2.
+
+## 12. Lot 6C3 — Documents + Notifications + Receipts + Statements
+
+### Objectif
+
+Produire les artefacts privés et communications à partir des vérités financières validées.
+
+### Dépendances
+
+- 6C2 validé.
+- Storage privé, outbox et worker validés.
+
+### Contenu
+
+- Receipt après paiement complété seulement ;
+- documents et relevés privés ;
+- notifications et partage contrôlé ;
+- email non bloquant, retry et idempotence ;
 - aucune URL publique permanente.
 
-## 11. Lot 6D — Dashboard, notifications, Activity et Audit
+## 13. Lot 6D — Dashboard, Activity et Audit
 
 ### Objectif
 
@@ -411,7 +447,7 @@ Donner la visibilité propriétaire et fiabiliser le traitement asynchrone du mo
 - révocation après notification ;
 - charge/pagination sur chronologies synthétiques.
 
-## 12. Lot 6E — Tenant Portal minimal
+## 14. Lot 6E — Tenant Portal minimal
 
 ### Objectif
 
@@ -466,7 +502,7 @@ Ouvrir une lecture locataire sûre des mêmes Lease, Dues, Payments et Receipts.
 - rétention journal 12 mois ;
 - aucune route interne, mutation financière ou partage public.
 
-## 13. Gate de release MVP après 6E
+## 15. Gate de release MVP après 6E
 
 Avant toute mise en production future :
 
@@ -482,7 +518,7 @@ Avant toute mise en production future :
 
 Cette gate n’est pas un lot de développement lancé par le présent document.
 
-## 14. Définition de « terminé » pour chaque lot futur
+## 16. Définition de « terminé » pour chaque lot futur
 
 - objectif démontrable atteint ;
 - critères fonctionnels référencés passants ;
@@ -493,7 +529,7 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 - limites et blocages explicités ;
 - aucun travail du lot suivant commencé implicitement.
 
-## 15. Risques de séquencement
+## 17. Risques de séquencement
 
 | Risque | Prévention |
 |---|---|
@@ -505,7 +541,7 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 | Bloquer Lease sur occupation | Invariant sans chevauchement déjà confirmé par D-077 |
 | Surarchitecture | Un serveur web, un projet Supabase par environnement, un worker logique ; séparation seulement mesurée |
 
-## 16. Prochaine action proposée
+## 18. Prochaine action proposée
 
 Le Lot 4 et ses six décisions sont validés. La prochaine étape possible est **Lot 5A — Bootstrap application, navigation et design tokens**, uniquement après autorisation explicite distincte de Blaise.
 

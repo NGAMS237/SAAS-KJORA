@@ -7,6 +7,7 @@ import {
   CreditCard,
   FileCheck2,
   House,
+  KeyRound,
   LayoutDashboard,
   ReceiptText,
   Settings,
@@ -26,6 +27,7 @@ export const internalPrimaryNavigation: NavigationItem[] = [
   { href: "/app", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/app/biens", label: "Biens", icon: Building2, requiredCapability: "property.view" },
   { href: "/app/locataires", label: "Locataires", icon: Users, requiredCapability: "tenant.view" },
+  { href: "/app/locations", label: "Locations", icon: KeyRound, requiredCapability: "lease.view" },
   { href: "/app/paiements", label: "Paiements", icon: CreditCard, requiredCapability: "payment.view" },
   { href: "/app/activite", label: "Activité", icon: Activity, requiredCapability: "activity.view" },
 ];
