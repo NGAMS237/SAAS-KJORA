@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — PIN validé par Blaise ; socle technique Lot 5C implémenté et testé
+> Mise à jour : 2026-08-26 — PIN validé par Blaise ; Lot 5C testé et déployé, configuration email requise
 
 ## Lots
 
@@ -11,7 +11,7 @@
 - **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
-- **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ — DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 5C — Membership/RBAC + isolation : PARTIEL / TESTÉ / DÉPLOYÉ — EMAIL TRANSACTIONNEL À CONFIGURER, VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6A — Property + Unit backend : NON COMMENCÉ**
 - **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
 - **Prévisualisation UX 6A/6B : DISPONIBLE — données fictives, store client éphémère, aucune persistance Supabase**
@@ -148,9 +148,10 @@
 - Prévisualisation UX — tests purs couvrant création maison + Unit « Maison entière », immeuble multi-unités, vacance, locataire téléphone seul, email seul, refus sans contact, brouillon/activation, occupation après activation, refus de chevauchement et absence d’accès portail.
 - Suite complète après prévisualisation : TypeScript et ESLint réussis, 25 tests Node réussis, build Next.js réussi avec 28 routes recensées.
 - Lot 5C — 47 assertions pgTAP distantes réussies dans une transaction annulée : six rôles, capabilities positives/négatives, invitations, usage unique, expiration, relance, révocation, transfert Owner, révocation en cours de session et refus Org A/Org B/direct UUID.
-- Lot 5C — la suite Node couvre RBAC, refus d’open redirect d’invitation, PIN et régressions du prototype ; TypeScript, ESLint et build Next.js réussis avant déploiement.
+- Lot 5C — 36 tests Node réussis couvrant RBAC, refus d’open redirect d’invitation, PIN et régressions du prototype ; TypeScript, ESLint et build Next.js de 32 routes réussis.
 - Les tests 5C n’ont laissé aucune donnée fictive distante : le projet KJORA conserve 2 Organizations, 2 Memberships réelles, 0 invitation et 0 entrée d’audit après rollback.
 - Advisors Supabase exécutés : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant ; les avertissements `SECURITY DEFINER` correspondent aux RPC authentifiées intentionnelles qui revérifient `auth.uid()`, Organization et capability avec retraits `PUBLIC`/`anon`.
+- Commit applicatif Lot 5C `b79cd0d` poussé sur `main` ; déploiement Vercel Production `Ready` et alias stable `https://saas-kjora.vercel.app` vérifié. `/connexion/` répond 200, `/app/` redirige l’anonyme et l’API Équipe refuse l’anonyme en 401.
 
 ## Bloqué
 
