@@ -172,12 +172,12 @@
 - Advisors Supabase relancés : aucune alerte sécurité liée au Lot 6A ; `private.domain_events` cumule schéma non exposé, aucun grant client et policy de refus explicite. Les index 6A encore signalés comme inutilisés le sont parce que les trois tables sont vides.
 - Le contrôle local anonyme confirme la redirection `/app/biens` vers `/connexion`; le parcours authentifié réel reste à valider par Blaise sur l’alias Production.
 - Commit Lot 6A `3746ef2` poussé sur `main` et présent sur `origin/main` ; alias Vercel Production `https://saas-kjora.vercel.app` vérifié. La nouvelle route `/api/rentals` est servie, refuse le POST anonyme en 401, `/connexion/` répond 200 et `/app/biens` redirige l’anonyme vers la connexion.
-- Lot 6B — 39 assertions pgTAP distantes réussies dans une transaction annulée : téléphone seul, email seul, refus sans contact, données d’identité privées, RLS A/B, brouillon, activation, occupation, mêmes dates, chevauchements partiel/total, fin, libération et bail futur.
-- Régressions distantes 5B (9), 5C (47) et 6A (52) réussies ; total final : 147 assertions pgTAP sans identité, Tenant, Lease ou event de test persisté.
+- Lot 6B — 40 assertions pgTAP distantes réussies dans une transaction annulée : téléphone seul, email seul, refus sans contact, données d’identité privées, RLS A/B, brouillon, activation, occupation, mêmes dates, chevauchements partiel/total, protection de l’historique terminé, libération et bail futur.
+- Régressions distantes 5B (9), 5C (47) et 6A (52) réussies ; total final : 148 assertions pgTAP sans identité, Tenant, Lease ou event de test persisté.
 - Lot 6B — 64 tests Node réussis ; TypeScript, ESLint et build Next.js 16.3.2 réussis avec 36 routes, dont `/api/tenancy` et les trois routes Locations.
-- Migration Supabase `lot_6b_tenants_leases` appliquée au seul projet KJORA (`20260826190157`). `tenants` et `leases` ont RLS active et restent à 0 ligne après les tests.
+- Migrations Supabase `lot_6b_tenants_leases` (`20260826190157`) et `lot_6b_lease_period_history_hardening` (`20260826192408`) appliquées au seul projet KJORA. `tenants` et `leases` ont RLS active et restent à 0 ligne après les tests.
 - Advisors Supabase : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant. Les RPC `SECURITY DEFINER` 6B sont intentionnelles, révoquées à `PUBLIC`/`anon`, exposées à `authenticated` seulement et revérifient Organization + `tenant.view/manage` avec `search_path` vide. Les index 6B signalés inutilisés le sont parce que les tables sont vides.
-- Commit applicatif Lot 6B `42f9691` poussé sur `origin/main`. L’alias Vercel Production sert `/api/tenancy/` (GET 405, POST anonyme 401) et `/app/locations/` redirige l’anonyme vers `/connexion/`.
+- Commit applicatif Lot 6B `42f9691` et durcissement d’historique `f4dcc72`. L’alias Vercel Production sert `/api/tenancy/` (GET 405, POST anonyme 401) et `/app/locations/` redirige l’anonyme vers `/connexion/`.
 
 ## Bloqué
 
