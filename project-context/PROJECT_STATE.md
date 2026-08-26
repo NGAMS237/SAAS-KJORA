@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — PIN validé par Blaise ; Lot 5C testé et déployé, validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-08-26 — Lot 6A Biens + Unités terminé et testé ; commit local prêt, push/déploiement en attente d’autorisation explicite
 
 ## Lots
 
@@ -11,10 +11,10 @@
 - **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
-- **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 6A — Property + Unit backend : NON COMMENCÉ**
+- **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ**
+- **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
-- **Prévisualisation UX 6A/6B : DISPONIBLE — données fictives, store client éphémère, aucune persistance Supabase**
+- **Biens + Unités : BACKEND RÉEL — persistance Supabase ; Locataires + Baux : PRÉVISUALISATION FICTIVE explicite seulement**
 
 ## Terminé
 
@@ -86,6 +86,12 @@
 - Invitations internes sécurisées : expiration 7 jours, token aléatoire stocké uniquement sous forme hashée, usage unique, email vérifié correspondant, relance invalidant l’ancien token et aucune permission avant acceptation.
 - Protections Owner implémentées : aucune création Owner par invitation/changement générique, aucune auto-révocation, aucune révocation directe d’un Owner et transfert atomique vers un User vérifié avant rétrogradation de l’Owner courant.
 - Migration RLS 5C et migration de durcissement Owner appliquées uniquement au projet Supabase KJORA ; aucune table Property/Unit/Tenant/Lease n’a été créée.
+- Lot 6A implémenté dans le projet Supabase KJORA : tables `properties` et `units` tenant-scoped, table interne `private.domain_events`, RLS immédiate, privilèges par colonnes et absence de suppression physique côté client.
+- Une maison crée atomiquement et une seule fois l’Unit explicite « Maison entière » ; un immeuble accepte plusieurs Units, dont le type Chambre et une superficie facultative.
+- Le type Property, le tenant, le créateur, le rattachement Unit et l’état archivé sont protégés ; archiver un bien archive ses Units actives sans les supprimer.
+- Le Domain Event technique `PROPERTY_CREATED` est idempotent, porte `organization_id` et ne contient aucune phrase localisée ni communication par défaut.
+- Les écrans Biens, création, détail et Unit utilisent désormais les données Supabase réelles de l’Organization active. La photo reste un placeholder assumé et Storage est différé.
+- Aucun modèle Tenant ou Lease réel n’a été créé : le Lot 6B reste non commencé et les écrans Locataires/Baux demeurent explicitement fictifs.
 
 ## Testé
 
@@ -149,10 +155,15 @@
 - Suite complète après prévisualisation : TypeScript et ESLint réussis, 25 tests Node réussis, build Next.js réussi avec 28 routes recensées.
 - Lot 5C — 47 assertions pgTAP distantes réussies dans une transaction annulée : six rôles, capabilities positives/négatives, invitations, usage unique, expiration, relance, révocation, transfert Owner, révocation en cours de session et refus Org A/Org B/direct UUID.
 - Lot 5C — 36 tests Node réussis couvrant RBAC, refus d’open redirect d’invitation, PIN et régressions du prototype ; TypeScript, ESLint et build Next.js de 32 routes réussis.
-- Les tests 5C n’ont laissé aucune donnée fictive distante : le projet KJORA conserve 2 Organizations, 2 Memberships réelles, 0 invitation et 0 entrée d’audit après rollback.
+- Les tests 5C n’ont laissé aucune donnée fictive distante et n’ont modifié aucune donnée utilisateur réelle après rollback.
 - Advisors Supabase exécutés : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant ; les avertissements `SECURITY DEFINER` correspondent aux RPC authentifiées intentionnelles qui revérifient `auth.uid()`, Organization et capability avec retraits `PUBLIC`/`anon`.
 - Commit applicatif Lot 5C `b79cd0d` poussé sur `main` ; déploiement Vercel Production `Ready` et alias stable `https://saas-kjora.vercel.app` vérifié. `/connexion/` répond 200, `/app/` redirige l’anonyme et l’API Équipe refuse l’anonyme en 401.
 - Email transactionnel 5C configuré côté serveur Vercel en Production et Preview : clé Resend d’envoi limitée au domaine vérifié et sender Kjora autorisé ; aucune variable n’est publique, committée ou exposée au navigateur.
+- Lot 6A — 52 assertions pgTAP distantes réussies dans une transaction annulée : création maison/immeuble, Unit automatique, Chambre/superficie, RBAC, RLS Org A/B, contraintes cross-tenant, archivage en cascade, immutabilité et event idempotent.
+- Régressions SQL 5B (9 assertions) et 5C (47 assertions) conservées ; total distant validé pour la passe finale : 108 assertions, sans donnée de test persistée. Les tables `properties`, `units` et `private.domain_events` restent à 0 ligne après rollback.
+- Lot 6A — suite Node complète : 43 tests réussis ; TypeScript, ESLint et build Next.js 16.3.2 réussis, avec 33 routes dont `/api/rentals` et les routes Biens/Unités dynamiques.
+- Advisors Supabase relancés : aucune alerte sécurité liée au Lot 6A ; `private.domain_events` cumule schéma non exposé, aucun grant client et policy de refus explicite. Les index 6A encore signalés comme inutilisés le sont parce que les trois tables sont vides.
+- Le contrôle local anonyme confirme la redirection `/app/biens` vers `/connexion`; le parcours authentifié réel reste à valider par Blaise sur l’alias Production.
 
 ## Bloqué
 
@@ -162,9 +173,9 @@
 - Les paramètres techniques de retry et la politique légale de rétention restent à préciser dans leurs lots concernés sans remettre en cause l’architecture validée.
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
-- La prévisualisation UX doit être testée par Blaise sur staging ; ses données Biens/Unités/Locataires/Baux ne sont jamais enregistrées dans Supabase et disparaissent au refresh.
-- La validation fonctionnelle réelle par Blaise reste requise pour confirmer sur staging l’envoi, la relance, l’acceptation unique et la révocation d’une invitation interne avant de marquer le Lot 5C **VALIDÉ**.
+- La validation fonctionnelle réelle par Blaise du parcours Équipe/invitation et de l’email transactionnel est confirmée ; le gate du Lot 5C est satisfait.
+- La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6A ; elle doit couvrir refresh/reconnexion, maison + « Maison entière », immeuble multi-unités, modification, archivage, rôles et isolation A/B. Ce gate n’autorise pas encore le Lot 6B.
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le parcours Équipe/invitation du Lot 5C par Blaise. Le Lot 6A — Biens + Unités backend réel — reste la prochaine étape et ne doit pas démarrer avant cette validation.**
+**Autoriser le push du commit Lot 6A local vers `https://github.com/NGAMS237/SAAS-KJORA.git`/`main`, vérifier Vercel Production, puis faire valider fonctionnellement le Lot 6A par Blaise. Ne pas démarrer le Lot 6B avant cette validation explicite.**

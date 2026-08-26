@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-25 — Lots 1, 2 et 3 validés
+> Dernière mise à jour : 2026-08-26 — Lot 5C Membership/RBAC validé fonctionnellement
 
 ## 1. Vision
 
@@ -536,4 +536,14 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 
 **Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ.**
 
-**Lot 5A — Bootstrap application, navigation et design tokens : NON COMMENCÉ.** Son démarrage exige une autorisation explicite ; la validation du Lot 4 n’autorise automatiquement aucun code, projet Supabase, secret ni déploiement.
+**Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE.**
+
+**Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ.**
+
+**Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ.**
+
+**Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ.** Blaise a confirmé le parcours fonctionnel réel Équipe/invitation et l’email transactionnel sur le déploiement Vercel ; le gate du Lot 6A est satisfait.
+
+**Lot 6A — Property + Unit backend réel : TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Biens/Unités sont reliés à Supabase et bornés à l’Organization active ; maison → Unit « Maison entière », immeuble multi-unités, archivage non destructif, RBAC/RLS et `PROPERTY_CREATED` sont implémentés. La photo reste un placeholder et Storage est différé.
+
+**Lot 6B — Tenant + Lease backend réel : NON COMMENCÉ.** Locataires et Baux restent une prévisualisation fictive explicitement signalée. Le prochain gate est la validation fonctionnelle du Lot 6A par Blaise ; 6B ne peut pas démarrer avant cette validation explicite.

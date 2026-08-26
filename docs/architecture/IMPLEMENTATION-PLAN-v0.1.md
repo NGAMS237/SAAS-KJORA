@@ -1,8 +1,8 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-26 : une **prévisualisation UX 6A/6B** est disponible avec un store client éphémère et des données explicitement fictives. Elle ne contient ni migration métier, ni RLS Property/Unit/Tenant/Lease, ni persistance Supabase. Le Lot 5C a démarré après validation fonctionnelle du PIN ; les Lots backend 6A et 6B restent **NON COMMENCÉS** et conservent intégralement leurs gates et critères de sortie ci-dessous.
+> Mise à jour 2026-08-26 : le backend réel du Lot 6A Biens + Unités est **TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Les données Biens/Unités sont persistées dans Supabase ; seules les prévisualisations Locataires/Baux restent fictives. Le Lot 6B reste **NON COMMENCÉ**.
 
-> Gate 2026-08-26 : Blaise a validé fonctionnellement le sous-lot PIN sur staging. Le PIN est **TERMINÉ / TESTÉ / VALIDÉ** et le Lot 5C est autorisé à démarrer. Les Lots backend 6A et 6B restent **NON COMMENCÉS**.
+> Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. Le Lot 6A attend la validation fonctionnelle de Blaise ; le Lot 6B ne doit pas démarrer avant cette validation explicite.
 
 > Statut : **PLAN VALIDÉ PAR BLAISE — D-072 à D-077**  
 > Portée : ordre de développement futur en petits lots testables  
@@ -157,7 +157,7 @@ Les données affichées sont des fixtures de test clairement identifiées, pas u
 
 ## 7. Lot 5C — Membership, RBAC et isolation
 
-> État technique au 2026-08-26 : modèle, capabilities, RLS, invitations, protections Owner, audit et UI Équipe implémentés ; validation automatisée locale et distante réussie ; email transactionnel configuré côté serveur en Production/Preview. Le Lot 5C est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** ; cette validation reste le gate avant tout démarrage de 6A.
+> État au 2026-08-26 : modèle, capabilities, RLS, invitations, protections Owner, audit et UI Équipe implémentés ; validation automatisée locale et distante réussie ; email transactionnel configuré et parcours réel validé par Blaise. Le Lot 5C est **TERMINÉ / TESTÉ / VALIDÉ** et son gate est satisfait.
 
 ### Objectif
 
@@ -210,6 +210,8 @@ Rendre l’application réellement multi-utilisateur et sûre avant d’ajouter 
 
 ## 8. Lot 6A — Property + Unit
 
+> Statut de sortie : **TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Implémentation limitée à Property + Unit ; aucune table Tenant/Lease réelle n’a été ajoutée.
+
 ### Objectif
 
 Implémenter le premier module métier et éprouver le pattern module + RLS + event.
@@ -251,6 +253,15 @@ Implémenter le premier module métier et éprouver le pattern module + RLS + ev
 - contraintes relationnelles ;
 - pagination/recherche limitée au tenant ;
 - event idempotent et Activity tenant-scoped.
+
+### Validation fonctionnelle encore requise
+
+- persistance après refresh et reconnexion ;
+- maison avec Unit unique « Maison entière » ;
+- immeuble avec plusieurs Units, dont Chambre et superficie facultative ;
+- modification et archivage non destructif ;
+- comparaison Owner, gestionnaire et lecture ;
+- refus d’un accès direct Org A → ressource Org B.
 
 ## 9. Lot 6B — Tenant + Lease
 

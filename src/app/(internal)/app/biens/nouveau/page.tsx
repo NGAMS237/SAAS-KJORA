@@ -1,2 +1,8 @@
-import { PropertyCreateExperience } from "@/modules/rental-demo/views";
-export default function NewPropertyPage() { return <PropertyCreateExperience />; }
+import { getActiveAuthorization } from "@/core/authorization/server";
+import { MissingPropertyResource, PropertyCreateForm } from "@/modules/properties/views";
+
+export default async function NewPropertyPage() {
+  const authorization = await getActiveAuthorization();
+  if (!authorization?.capabilities.includes("property.manage")) return <MissingPropertyResource />;
+  return <PropertyCreateForm />;
+}

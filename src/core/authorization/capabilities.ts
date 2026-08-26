@@ -16,6 +16,8 @@ export const CAPABILITIES = [
   "member.manage",
   "property.view",
   "property.manage",
+  "unit.view",
+  "unit.manage",
   "tenant.view",
   "tenant.manage",
   "lease.view",

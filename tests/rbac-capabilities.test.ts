@@ -11,13 +11,17 @@ const ownerHardening = readFileSync(
   new URL("../supabase/migrations/20260826143000_lot_5c_owner_hardening.sql", import.meta.url),
   "utf8",
 );
+const lot6aMigration = readFileSync(
+  new URL("../supabase/migrations/20260826190000_lot_6a_properties_units.sql", import.meta.url),
+  "utf8",
+);
 const teamUi = readFileSync(
   new URL("../src/core/team/team-management.tsx", import.meta.url),
   "utf8",
 );
 
 function grants(role: string, capability: string) {
-  return migration.includes(`('${role}', '${capability}')`);
+  return migration.includes(`('${role}', '${capability}')`) || lot6aMigration.includes(`('${role}', '${capability}')`);
 }
 
 test("le RBAC contient exactement les six rôles internes confirmés", () => {
@@ -41,6 +45,13 @@ test("Owner seul gère membres, paramètres sensibles et audit", () => {
 test("Owner, gestionnaire et encaisseur peuvent enregistrer un paiement", () => {
   for (const role of INTERNAL_ROLES) {
     assert.equal(grants(role, "payment.record"), ["organization_owner", "manager", "collector"].includes(role));
+  }
+});
+
+test("Lot 6A applique les capacités Unit du registre central", () => {
+  for (const role of INTERNAL_ROLES) {
+    assert.equal(grants(role, "unit.view"), true);
+    assert.equal(grants(role, "unit.manage"), ["organization_owner", "manager"].includes(role));
   }
 });
 
