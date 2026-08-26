@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — Lot 6B Locataires + Locations explicitement autorisé et en cours ; validation fonctionnelle 6A toujours en attente
+> Mise à jour : 2026-08-26 — Lot 6B Locataires + Locations terminé, testé et déployé ; validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -13,9 +13,9 @@
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 6B — Tenant + Lease backend : AUTORISÉ / EN COURS**
+- **Lot 6B — Tenant + Lease backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
-- **Biens + Unités : BACKEND RÉEL — persistance Supabase ; remplacement de la prévisualisation Locataires/Baux par le backend réel en cours**
+- **Biens + Unités + Locataires + Locations : BACKEND RÉEL — persistance Supabase ; aucun 6C1 démarré**
 
 ## Terminé
 
@@ -41,7 +41,7 @@
 - Notifications portail essentielles et priorité de langue locataire puis Organization validées.
 - Cinq livrables du Lot 2 alignés sur D-029 à D-068 et enrichis des parcours, écrans et critères du portail minimal.
 - Trois arbitrages UX Q-UX-L3-01 à Q-UX-L3-03 enregistrés comme D-069 à D-071.
-- Navigation interne mobile validée : Accueil, Biens, Locataires, Paiements, Activité, avec fonctions Organization secondaires hors barre principale.
+- Navigation interne centrale mise à jour : Accueil, Biens, Locataires, Locations, Paiements, Activité, avec fonctions Organization secondaires hors barre principale.
 - Navigation portail validée : Accueil, Loyers, Reçus, Compte ; notifications par entrée légère et paiements accessibles contextuellement.
 - Absence de destination Documents globale validée ; reçu, preuve, logo et bail/document essentiel restent contextuels sans copie parallèle.
 - Quatre livrables du Lot 3 validés : synthèse UX, architecture d’information/navigation, flows mobiles et patterns/états.
@@ -73,7 +73,7 @@
 - URL et clé publiable KJORA configurées dans `.env.local`, fichier confirmé ignoré par Git ; aucune clé secrète ou `service_role` ajoutée.
 - Lot 5B validé fonctionnellement par Blaise : email Resend reçu, Magic Link Supabase avec PKCE opérationnel et session SSR persistante créée.
 - Onboarding Organization réel validé ; l’Organization créée est affichée dans `/app`, puis retrouvée après déconnexion et reconnexion.
-- Les données Dashboard, Biens, Locataires et Paiements restent volontairement fictives jusqu’aux lots métier correspondants.
+- Les données Dashboard et Paiements restent volontairement fictives jusqu’aux lots métier correspondants ; Biens, Unités, Locataires et Locations utilisent désormais le backend réel.
 - Sous-lot PIN interne livré : configuration, modification et suppression facultatives dans Paramètres, verrouillage manuel et automatique après 5 minutes, puis écran mobile-first `/verrouillage`.
 - Le PIN interne reste un `quick lock` local sur session Supabase existante : PBKDF2-SHA-256 à 600 000 itérations, sel aléatoire, verifier et compteur d’échecs dans IndexedDB, aucun PIN brut conservé ou transmis.
 - Après cinq erreurs ou choix de l’email, le PIN local est supprimé et la session Supabase est terminée afin d’imposer une authentification forte. La déconnexion interne supprime également le PIN et l’état de déverrouillage locaux.
@@ -94,6 +94,11 @@
 - Les écrans Biens, création, détail et Unit utilisent désormais les données Supabase réelles de l’Organization active. La photo reste un placeholder assumé et Storage est différé.
 - Blaise a explicitement autorisé le Lot 6B sans valider rétroactivement le Lot 6A ; le gate de démarrage antérieur est remplacé par D-081.
 - La destination centrale `Locations` et la chaîne métier complète sont confirmées par D-082 ; le découpage 6C1/6C2/6C3 est confirmé par D-083.
+- Lot 6B implémenté dans KJORA Production : tables `tenants` et `leases`, RLS immédiate, privilèges par colonnes, projections de contacts/identité bornées aux capabilities et aucun accès portail implicite.
+- Tenant réel livré avec contact minimal obligatoire, langue/profession/pièce/expiration/notes facultatives, photo placeholder et aucun scan Storage.
+- Locations réelles livrées avec brouillon/activation/fin, relations explicites Tenant/Property/Unit, loyer hors charges, charges, total dérivé, dépôt, avance, périodicité, jour d’exigibilité, J-X et proratas calendaires motivés.
+- L’occupation des Units est dérivée des Leases actives ; PostgreSQL refuse les mêmes dates, chevauchements partiels et recouvrements totaux lors de l’activation. Une Unit active occupée ne peut pas être archivée.
+- Les routes `/app/locations`, `/app/locations/nouveau`, `/app/locations/[leaseId]` et `/api/tenancy` sont déployées ; les anciennes routes `/app/baux/*` redirigent vers Locations.
 
 ## Testé
 
@@ -167,6 +172,12 @@
 - Advisors Supabase relancés : aucune alerte sécurité liée au Lot 6A ; `private.domain_events` cumule schéma non exposé, aucun grant client et policy de refus explicite. Les index 6A encore signalés comme inutilisés le sont parce que les trois tables sont vides.
 - Le contrôle local anonyme confirme la redirection `/app/biens` vers `/connexion`; le parcours authentifié réel reste à valider par Blaise sur l’alias Production.
 - Commit Lot 6A `3746ef2` poussé sur `main` et présent sur `origin/main` ; alias Vercel Production `https://saas-kjora.vercel.app` vérifié. La nouvelle route `/api/rentals` est servie, refuse le POST anonyme en 401, `/connexion/` répond 200 et `/app/biens` redirige l’anonyme vers la connexion.
+- Lot 6B — 39 assertions pgTAP distantes réussies dans une transaction annulée : téléphone seul, email seul, refus sans contact, données d’identité privées, RLS A/B, brouillon, activation, occupation, mêmes dates, chevauchements partiel/total, fin, libération et bail futur.
+- Régressions distantes 5B (9), 5C (47) et 6A (52) réussies ; total final : 147 assertions pgTAP sans identité, Tenant, Lease ou event de test persisté.
+- Lot 6B — 64 tests Node réussis ; TypeScript, ESLint et build Next.js 16.3.2 réussis avec 36 routes, dont `/api/tenancy` et les trois routes Locations.
+- Migration Supabase `lot_6b_tenants_leases` appliquée au seul projet KJORA (`20260826190157`). `tenants` et `leases` ont RLS active et restent à 0 ligne après les tests.
+- Advisors Supabase : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant. Les RPC `SECURITY DEFINER` 6B sont intentionnelles, révoquées à `PUBLIC`/`anon`, exposées à `authenticated` seulement et revérifient Organization + `tenant.view/manage` avec `search_path` vide. Les index 6B signalés inutilisés le sont parce que les tables sont vides.
+- Commit applicatif Lot 6B `42f9691` poussé sur `origin/main`. L’alias Vercel Production sert `/api/tenancy/` (GET 405, POST anonyme 401) et `/app/locations/` redirige l’anonyme vers `/connexion/`.
 
 ## Bloqué
 
@@ -178,7 +189,8 @@
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
 - La validation fonctionnelle réelle par Blaise du parcours Équipe/invitation et de l’email transactionnel est confirmée ; le gate du Lot 5C est satisfait.
 - La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6A ; elle doit couvrir refresh/reconnexion, maison + « Maison entière », immeuble multi-unités, modification, archivage, rôles et isolation A/B. D-081 autorise néanmoins explicitement l’exécution du Lot 6B.
+- La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6B ; elle doit suivre le parcours Locataires → Locations → Unit occupée/libérée et vérifier refresh/reconnexion, rôles et isolation A/B.
 
 ## Proposé ensuite
 
-**Exécuter uniquement le Lot 6B autorisé, le tester, le déployer sur `main`, puis le faire valider fonctionnellement par Blaise. Ne pas démarrer 6C1. La validation fonctionnelle 6A reste à obtenir séparément.**
+**Faire valider fonctionnellement le Lot 6B par Blaise. Ne pas démarrer 6C1. La validation fonctionnelle 6A reste à obtenir séparément.**

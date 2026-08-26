@@ -1,8 +1,8 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-26 : le backend réel du Lot 6A Biens + Unités est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Blaise autorise explicitement le Lot 6B, désormais **AUTORISÉ / EN COURS**, sans valider rétroactivement 6A.
+> Mise à jour 2026-08-26 : le Lot 6B Locataires + Locations est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Le commit `42f9691` est sur `origin/main`, Supabase KJORA porte la migration réelle et l’alias Vercel Production sert `/api/tenancy` et `/app/locations`. Le Lot 6A conserve séparément sa validation fonctionnelle en attente ; 6C1 reste non commencé.
 
-> Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. D-081 remplace le gate de démarrage 6B antérieur. Le Lot 6A conserve sa validation fonctionnelle en attente et 6C1 ne doit pas démarrer pendant 6B.
+> Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. D-081 a autorisé 6B sans valider rétroactivement 6A. Le prochain gate est la validation fonctionnelle Blaise du Lot 6B ; ne pas démarrer 6C1 avant autorisation distincte.
 
 > Statut : **PLAN VALIDÉ PAR BLAISE — D-072 à D-077**  
 > Portée : ordre de développement futur en petits lots testables  
@@ -267,7 +267,7 @@ Implémenter le premier module métier et éprouver le pattern module + RLS + ev
 
 ## 9. Lot 6B — Tenant + Lease
 
-> Statut d’entrée : **AUTORISÉ / EN COURS** par D-081. Le Lot 6A reste en attente de validation fonctionnelle séparée.
+> Statut de sortie : **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Migration KJORA `20260826190157`, commit `42f9691`, 64 tests Node et 39 assertions pgTAP 6B réussis ; 147 assertions distantes avec régressions. Le Lot 6A reste en attente de validation fonctionnelle séparée.
 
 ### Objectif
 
