@@ -137,6 +137,16 @@ Les rôles sont reliés à des capacités explicites, par exemple `property.view
 
 Seuls `Organization Owner` et gestionnaire peuvent administrer un `Tenant Portal Access`. Ce droit externe ne transforme jamais le locataire en Membership ou en septième rôle.
 
+### Mise en œuvre technique du Lot 5C
+
+- `role_capabilities` est le registre technique unique des six rôles fixes et de leurs capabilities ; les écrans, routes serveur et fonctions base consomment ces mêmes identifiants au lieu de disperser des tests de chaînes de rôles.
+- Une Membership relie un User global à une seule Organization et porte un rôle et un état. Les autorisations sont recalculées depuis une Membership `active` à chaque lecture/action serveur ; une Membership révoquée perd donc immédiatement ses droits même si la session Auth globale existe encore.
+- Les invitations internes sont tenant-scoped, expirent après 7 jours et ne stockent qu’un hash SHA-256 du jeton aléatoire. Elles sont à usage unique ; relancer invalide l’invitation active précédente et l’acceptation exige l’identité email vérifiée correspondante.
+- Les invitations utilisent la frontière serveur et l’email transactionnel séparé de l’email Auth. La clé fournisseur reste uniquement côté serveur ; aucun jeton d’invitation, secret ou `service_role` n’est exposé au navigateur ou conservé en clair en base.
+- Les changements de rôle, révocations et transferts Owner passent par des opérations atomiques tenant-scoped et auditées. Une invitation ou un changement de rôle générique ne peut pas créer un Owner ; l’auto-révocation et la révocation directe d’un Owner sont refusées, et le transfert dédié promeut un User vérifié avant de rétrograder l’Owner courant.
+- L’audit administratif minimal est distinct de l’activité métier et visible uniquement par Owner. Les actions couvertes sont invitation, relance, révocation d’invitation, acceptation, changement de rôle, révocation de membre et transfert Owner.
+- L’Organization active pilote le contexte d’affichage et les données de démonstration, mais la base revérifie toujours la Membership et la capability. Connaître un UUID d’une autre Organization, Membership, invitation ou audit ne confère aucun accès.
+
 ## 6. Configuration par pays
 
 L’architecture prévoit des configurations nationales pour :

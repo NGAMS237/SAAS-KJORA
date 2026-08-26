@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { Capability } from "@/core/authorization/capabilities";
 import {
   Activity,
   Building2,
@@ -18,19 +19,20 @@ export type NavigationItem = {
   label: string;
   icon: LucideIcon;
   exact?: boolean;
+  requiredCapability?: Capability;
 };
 
 export const internalPrimaryNavigation: NavigationItem[] = [
   { href: "/app", label: "Accueil", icon: LayoutDashboard, exact: true },
-  { href: "/app/biens", label: "Biens", icon: Building2 },
-  { href: "/app/locataires", label: "Locataires", icon: Users },
-  { href: "/app/paiements", label: "Paiements", icon: CreditCard },
-  { href: "/app/activite", label: "Activité", icon: Activity },
+  { href: "/app/biens", label: "Biens", icon: Building2, requiredCapability: "property.view" },
+  { href: "/app/locataires", label: "Locataires", icon: Users, requiredCapability: "tenant.view" },
+  { href: "/app/paiements", label: "Paiements", icon: CreditCard, requiredCapability: "payment.view" },
+  { href: "/app/activite", label: "Activité", icon: Activity, requiredCapability: "activity.view" },
 ];
 
 export const internalSecondaryNavigation: NavigationItem[] = [
-  { href: "/app/equipe", label: "Équipe", icon: Users },
-  { href: "/app/parametres", label: "Paramètres", icon: Settings },
+  { href: "/app/equipe", label: "Équipe", icon: Users, requiredCapability: "member.view" },
+  { href: "/app/parametres", label: "Paramètres", icon: Settings, requiredCapability: "organization.profile.manage" },
   { href: "/app/profil", label: "Profil", icon: CircleUserRound },
 ];
 

@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — prévisualisation UX interactive 6A/6B disponible, backend non commencé
+> Mise à jour : 2026-08-26 — PIN validé par Blaise ; socle technique Lot 5C implémenté et testé
 
 ## Lots
 
@@ -10,8 +10,8 @@
 - **Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ**
 - **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
-- **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 5C — Membership/RBAC + isolation : NON COMMENCÉ**
+- **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
+- **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ — DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6A — Property + Unit backend : NON COMMENCÉ**
 - **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
 - **Prévisualisation UX 6A/6B : DISPONIBLE — données fictives, store client éphémère, aucune persistance Supabase**
@@ -81,6 +81,11 @@
 - Le modèle de démonstration respecte `Property → Unit → Lease`, crée « Maison entière » pour une maison, impose un contact locataire minimal, ne crée aucun accès portail et refuse l’activation de périodes Lease qui se chevauchent sur une Unit.
 - Toutes les données de cette prévisualisation sont manifestement fictives, bornées à l’Organization active, conservées uniquement dans un store client réinitialisé au refresh et accompagnées d’une bannière « Mode démonstration — données fictives, non enregistrées ».
 - Cette anticipation UX ne constitue ni le démarrage, ni la réalisation, ni la validation des Lots backend 5C, 6A ou 6B.
+- Lot 5C implémenté : registre `Role → Capabilities` pour les six rôles internes, Membership active tenant-scoped, navigation filtrée et revérification serveur/base à chaque action sensible.
+- Équipe réelle implémentée pour Owner : membres, invitation email, rôle, changement de rôle, révocation, invitations en attente, relance, annulation et audit administratif minimal.
+- Invitations internes sécurisées : expiration 7 jours, token aléatoire stocké uniquement sous forme hashée, usage unique, email vérifié correspondant, relance invalidant l’ancien token et aucune permission avant acceptation.
+- Protections Owner implémentées : aucune création Owner par invitation/changement générique, aucune auto-révocation, aucune révocation directe d’un Owner et transfert atomique vers un User vérifié avant rétrogradation de l’Owner courant.
+- Migration RLS 5C et migration de durcissement Owner appliquées uniquement au projet Supabase KJORA ; aucune table Property/Unit/Tenant/Lease n’a été créée.
 
 ## Testé
 
@@ -139,8 +144,13 @@
 - Validation fonctionnelle réelle par Blaise : réception email Resend, échange Magic Link PKCE, création de session SSR, onboarding Organization, affichage de l’Organization réelle, déconnexion, reconnexion et récupération de l’Organization — succès.
 - Sous-lot PIN — 17 tests Node réussis : format/confirmation, dérivation PBKDF2, absence du PIN brut dans le verifier, comparaison sûre, cinquième échec, timeout 5 minutes, retour interne borné et absence de couplage portail/localStorage.
 - Sous-lot PIN — TypeScript, ESLint et build Next.js production réussis ; `/verrouillage` est une route dynamique protégée, `/app` refuse l’anonyme et les routes `/portal` restent sans logique PIN.
+- Sous-lot PIN — validation fonctionnelle explicite de Blaise sur staging enregistrée le 2026-08-26 ; le gate autorisant le démarrage de 5C est satisfait.
 - Prévisualisation UX — tests purs couvrant création maison + Unit « Maison entière », immeuble multi-unités, vacance, locataire téléphone seul, email seul, refus sans contact, brouillon/activation, occupation après activation, refus de chevauchement et absence d’accès portail.
 - Suite complète après prévisualisation : TypeScript et ESLint réussis, 25 tests Node réussis, build Next.js réussi avec 28 routes recensées.
+- Lot 5C — 47 assertions pgTAP distantes réussies dans une transaction annulée : six rôles, capabilities positives/négatives, invitations, usage unique, expiration, relance, révocation, transfert Owner, révocation en cours de session et refus Org A/Org B/direct UUID.
+- Lot 5C — la suite Node couvre RBAC, refus d’open redirect d’invitation, PIN et régressions du prototype ; TypeScript, ESLint et build Next.js réussis avant déploiement.
+- Les tests 5C n’ont laissé aucune donnée fictive distante : le projet KJORA conserve 2 Organizations, 2 Memberships réelles, 0 invitation et 0 entrée d’audit après rollback.
+- Advisors Supabase exécutés : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant ; les avertissements `SECURITY DEFINER` correspondent aux RPC authentifiées intentionnelles qui revérifient `auth.uid()`, Organization et capability avec retraits `PUBLIC`/`anon`.
 
 ## Bloqué
 
@@ -150,9 +160,9 @@
 - Les paramètres techniques de retry et la politique légale de rétention restent à préciser dans leurs lots concernés sans remettre en cause l’architecture validée.
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
-- La validation fonctionnelle authentifiée du sous-lot PIN sur staging reste à effectuer par Blaise après redéploiement Vercel ; elle ne bloque pas la livraison technique ni ne démarre le Lot 5C.
 - La prévisualisation UX doit être testée par Blaise sur staging ; ses données Biens/Unités/Locataires/Baux ne sont jamais enregistrées dans Supabase et disparaissent au refresh.
+- Les variables serveur `RESEND_TRANSACTIONAL_API_KEY` et `KJORA_TRANSACTIONAL_EMAIL_FROM` ne sont pas encore présentes dans Vercel. Tant qu’elles ne sont pas configurées en Production/Preview, l’UI Équipe refuse proprement l’envoi/relance et aucune invitation ne peut être considérée opérationnelle sur staging.
 
 ## Proposé ensuite
 
-**Préparer le cadrage d’exécution du Lot 5C — Membership/RBAC + isolation, sans le commencer avant instruction explicite.**
+**Configurer l’email transactionnel, déployer puis faire valider fonctionnellement le Lot 5C par Blaise. Le Lot 6A — Biens + Unités backend réel — reste la prochaine étape et ne doit pas démarrer avant cette validation.**

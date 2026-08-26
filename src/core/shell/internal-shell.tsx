@@ -14,6 +14,7 @@ import {
 import { PreferencesControls } from "@/core/preferences/preferences-controls";
 import { DemoNotice } from "@/core/ui/ui";
 import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls";
+import { hasCapability } from "@/core/authorization/capabilities";
 
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -113,6 +114,12 @@ export function InternalShell({
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const primaryNavigation = internalPrimaryNavigation.filter(
+    (item) => !item.requiredCapability || hasCapability(activeOrganization.capabilities, item.requiredCapability),
+  );
+  const secondaryNavigation = internalSecondaryNavigation.filter(
+    (item) => !item.requiredCapability || hasCapability(activeOrganization.capabilities, item.requiredCapability),
+  );
 
   return (
     <div className="app-shell app-shell--internal">
@@ -122,13 +129,13 @@ export function InternalShell({
         </Link>
         <OrganizationSwitcher organizations={organizations} activeOrganization={activeOrganization} />
         <nav className="desktop-rail__primary">
-          {internalPrimaryNavigation.map((item) => (
+          {primaryNavigation.map((item) => (
             <NavigationLink item={item} key={item.href} pathname={pathname} />
           ))}
         </nav>
         <div className="desktop-rail__secondary">
           <p className="nav-caption">Espace secondaire</p>
-          {internalSecondaryNavigation.map((item) => (
+          {secondaryNavigation.map((item) => (
             <NavigationLink item={item} key={item.href} pathname={pathname} />
           ))}
         </div>
@@ -180,7 +187,7 @@ export function InternalShell({
               </button>
             </div>
             <nav>
-              {internalSecondaryNavigation.map((item) => (
+              {secondaryNavigation.map((item) => (
                 <NavigationLink item={item} key={item.href} pathname={pathname} onClick={() => setMenuOpen(false)} />
               ))}
             </nav>
@@ -199,7 +206,7 @@ export function InternalShell({
       <main className="shell-content">{children}</main>
 
       <nav className="mobile-bottom-nav" aria-label="Navigation interne principale">
-        {internalPrimaryNavigation.map((item) => (
+        {primaryNavigation.map((item) => (
           <NavigationLink item={item} key={item.href} pathname={pathname} />
         ))}
       </nav>

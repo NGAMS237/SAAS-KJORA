@@ -1,7 +1,7 @@
 # Kjora — Registre des décisions
 
 > Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
-> Dernière mise à jour : 2026-08-26 — lancement du sous-lot PIN interne 6 chiffres
+> Dernière mise à jour : 2026-08-26 — validation fonctionnelle du sous-lot PIN interne 6 chiffres confirmée par Blaise
 
 ## Statuts
 

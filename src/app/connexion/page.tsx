@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { LoginForm } from "@/core/auth/login-form";
 import { getAuthCallbackMessage } from "@/core/auth/callback-diagnostics";
+import { safeNextPath } from "@/core/auth/safe-next-path";
 
 type LoginPageProps = {
-  searchParams: Promise<{ reason?: string | string[] }>;
+  searchParams: Promise<{ reason?: string | string[]; next?: string | string[] }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const reason = Array.isArray(params.reason) ? params.reason[0] : params.reason;
+  const requestedNext = Array.isArray(params.next) ? params.next[0] : params.next;
+  const nextPath = safeNextPath(requestedNext);
   const callbackMessage = getAuthCallbackMessage(reason);
   const pinMessage = reason === "pin-attempts-exceeded"
     ? "Pour protéger votre compte, reconnectez-vous avec votre email."
@@ -28,7 +31,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             {callbackMessage ?? pinMessage}
           </p>
         ) : null}
-        <LoginForm />
+        <LoginForm nextPath={nextPath} />
         <p className="auth-footnote">Aucun mot de passe à mémoriser. Les accès expirent et ne donnent aucune autorisation hors de vos Organizations.</p>
       </section>
     </main>

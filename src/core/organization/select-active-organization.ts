@@ -1,9 +1,12 @@
+import type { Capability, InternalRole } from "@/core/authorization/capabilities";
+
 export const ACTIVE_ORGANIZATION_COOKIE = "kjora-active-organization";
 
 export type OrganizationOption = {
   id: string;
   name: string;
-  role: string;
+  role: InternalRole;
+  capabilities: Capability[];
   countryCode: string;
   currencyCode: string;
   language: "fr" | "en";

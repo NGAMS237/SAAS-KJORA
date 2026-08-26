@@ -4,8 +4,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { safeNextPath } from "@/core/auth/safe-next-path";
 
-export function LoginForm() {
+export function LoginForm({ nextPath = "/app" }: { nextPath?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
@@ -20,10 +21,12 @@ export function LoginForm() {
     setMessage(null);
     try {
       const supabase = createSupabaseBrowserClient();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", safeNextPath(nextPath));
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: new URL("/auth/callback", window.location.origin).toString(),
+          emailRedirectTo: callbackUrl.toString(),
         },
       });
       if (error) throw error;
@@ -44,7 +47,7 @@ export function LoginForm() {
       const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.verifyOtp({ email, token: token.trim(), type: "email" });
       if (error) throw error;
-      router.replace("/app");
+      router.replace(safeNextPath(nextPath));
       router.refresh();
     } catch {
       setMessage("Code invalide ou expiré. Demandez un nouvel email d’accès.");

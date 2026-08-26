@@ -7,10 +7,12 @@ import {
 
 const organizationA: OrganizationOption = {
   id: "00000000-0000-4000-8000-00000000000a", name: "Org A", role: "organization_owner",
+  capabilities: ["organization.view", "member.manage"],
   countryCode: "CM", currencyCode: "XAF", language: "fr", timezone: "Africa/Douala",
 };
 const organizationB: OrganizationOption = {
   id: "00000000-0000-4000-8000-00000000000b", name: "Org B", role: "organization_owner",
+  capabilities: ["organization.view", "member.manage"],
   countryCode: "CM", currencyCode: "XAF", language: "en", timezone: "Africa/Douala",
 };
 

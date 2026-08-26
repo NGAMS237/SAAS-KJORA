@@ -835,6 +835,66 @@ h2 {
   color: var(--danger);
 }
 
+.button--danger {
+  background: var(--kjora-terracotta);
+  border-color: var(--kjora-terracotta);
+  color: #fff;
+}
+.button--danger:hover { filter: brightness(.94); }
+
+.team-invite-form {
+  align-items: end;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(220px, 1.5fr) minmax(170px, .8fr) auto;
+}
+.team-list { display: grid; gap: var(--space-3); }
+.team-row {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  padding: var(--space-3) 0;
+}
+.team-row:last-child { border-bottom: 0; }
+.team-row__avatar {
+  align-items: center;
+  background: var(--surface-muted);
+  border-radius: var(--radius-control);
+  color: var(--kjora-deep-green);
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+.team-row__identity { display: grid; gap: 3px; min-width: 0; }
+.team-row__identity strong { overflow-wrap: anywhere; }
+.team-row__identity span { color: var(--text-muted); font-size: .78rem; }
+.team-row__actions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
+.team-row__actions select {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  min-height: 38px;
+  padding: 0 var(--space-3);
+}
+.team-audit-list { display: grid; gap: var(--space-3); }
+.team-audit-list > div { border-bottom: 1px solid var(--border); display: grid; gap: 4px; padding-bottom: var(--space-3); }
+.team-audit-list > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.team-audit-list span { color: var(--text-muted); font-size: .78rem; overflow-wrap: anywhere; }
+.invitation-acceptance { display: grid; gap: var(--space-4); }
+.invitation-acceptance h1 { margin: 0; }
+
+@media (max-width: 760px) {
+  .team-invite-form { grid-template-columns: 1fr; }
+  .team-row { align-items: start; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .team-row__actions { grid-column: 1 / -1; justify-content: stretch; }
+  .team-row__actions select { flex: 1 1 150px; }
+  .team-row__actions .button { flex: 1 1 auto; }
+}
+
 .pin-gate,
 .pin-lock-page {
   align-items: center;

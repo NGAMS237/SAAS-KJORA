@@ -5,10 +5,12 @@ import {
   hasPkceVerifierCookie,
 } from "@/core/auth/callback-diagnostics";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { safeNextPath } from "@/core/auth/safe-next-path";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const flowId = request.nextUrl.searchParams.get("sb_flow_id");
+  const nextPath = safeNextPath(request.nextUrl.searchParams.get("next"), request.nextUrl.origin);
 
   if (!code) {
     return NextResponse.redirect(
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (!error) {
-    return applyAuthState(NextResponse.redirect(new URL("/app", request.url)));
+    return applyAuthState(NextResponse.redirect(new URL(nextPath, request.url)));
   }
 
   const cookieNames = request.cookies.getAll().map(({ name }) => name);

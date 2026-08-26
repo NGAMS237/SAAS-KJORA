@@ -1,6 +1,8 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-26 : une **prévisualisation UX 6A/6B** est disponible avec un store client éphémère et des données explicitement fictives. Elle ne contient ni migration métier, ni RLS Property/Unit/Tenant/Lease, ni persistance Supabase. Les Lots backend 5C, 6A et 6B restent **NON COMMENCÉS** et conservent intégralement leurs gates et critères de sortie ci-dessous.
+> Mise à jour 2026-08-26 : une **prévisualisation UX 6A/6B** est disponible avec un store client éphémère et des données explicitement fictives. Elle ne contient ni migration métier, ni RLS Property/Unit/Tenant/Lease, ni persistance Supabase. Le Lot 5C a démarré après validation fonctionnelle du PIN ; les Lots backend 6A et 6B restent **NON COMMENCÉS** et conservent intégralement leurs gates et critères de sortie ci-dessous.
+
+> Gate 2026-08-26 : Blaise a validé fonctionnellement le sous-lot PIN sur staging. Le PIN est **TERMINÉ / TESTÉ / VALIDÉ** et le Lot 5C est autorisé à démarrer. Les Lots backend 6A et 6B restent **NON COMMENCÉS**.
 
 > Statut : **PLAN VALIDÉ PAR BLAISE — D-072 à D-077**  
 > Portée : ordre de développement futur en petits lots testables  
@@ -154,6 +156,8 @@ Les données affichées sont des fixtures de test clairement identifiées, pas u
 - aucun partage d’utilisateur ou secret avec VERALUZ.
 
 ## 7. Lot 5C — Membership, RBAC et isolation
+
+> État technique au 2026-08-26 : modèle, capabilities, RLS, invitations, protections Owner, audit et UI Équipe implémentés ; validation automatisée locale et distante réussie. Le déploiement et la validation fonctionnelle Blaise restent le gate avant tout démarrage de 6A.
 
 ### Objectif
 
