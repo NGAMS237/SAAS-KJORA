@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — sous-lot PIN interne 6 chiffres terminé et testé
+> Mise à jour : 2026-08-26 — prévisualisation UX interactive 6A/6B disponible, backend non commencé
 
 ## Lots
 
@@ -10,8 +10,11 @@
 - **Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ**
 - **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
-- **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ — À VALIDER FONCTIONNELLEMENT PAR BLAISE**
+- **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 5C — Membership/RBAC + isolation : NON COMMENCÉ**
+- **Lot 6A — Property + Unit backend : NON COMMENCÉ**
+- **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
+- **Prévisualisation UX 6A/6B : DISPONIBLE — données fictives, store client éphémère, aucune persistance Supabase**
 
 ## Terminé
 
@@ -74,6 +77,10 @@
 - Le PIN interne reste un `quick lock` local sur session Supabase existante : PBKDF2-SHA-256 à 600 000 itérations, sel aléatoire, verifier et compteur d’échecs dans IndexedDB, aucun PIN brut conservé ou transmis.
 - Après cinq erreurs ou choix de l’email, le PIN local est supprimé et la session Supabase est terminée afin d’imposer une authentification forte. La déconnexion interne supprime également le PIN et l’état de déverrouillage locaux.
 - Le Tenant Portal reste séparé et ne charge aucune logique PIN.
+- Prévisualisation UX interactive livrée pour Biens, Unités, Locataires et Baux : listes, recherche, création minimale, détails contextuels, vacance/occupation, brouillon, résumé, activation et clôture simulées.
+- Le modèle de démonstration respecte `Property → Unit → Lease`, crée « Maison entière » pour une maison, impose un contact locataire minimal, ne crée aucun accès portail et refuse l’activation de périodes Lease qui se chevauchent sur une Unit.
+- Toutes les données de cette prévisualisation sont manifestement fictives, bornées à l’Organization active, conservées uniquement dans un store client réinitialisé au refresh et accompagnées d’une bannière « Mode démonstration — données fictives, non enregistrées ».
+- Cette anticipation UX ne constitue ni le démarrage, ni la réalisation, ni la validation des Lots backend 5C, 6A ou 6B.
 
 ## Testé
 
@@ -132,6 +139,8 @@
 - Validation fonctionnelle réelle par Blaise : réception email Resend, échange Magic Link PKCE, création de session SSR, onboarding Organization, affichage de l’Organization réelle, déconnexion, reconnexion et récupération de l’Organization — succès.
 - Sous-lot PIN — 17 tests Node réussis : format/confirmation, dérivation PBKDF2, absence du PIN brut dans le verifier, comparaison sûre, cinquième échec, timeout 5 minutes, retour interne borné et absence de couplage portail/localStorage.
 - Sous-lot PIN — TypeScript, ESLint et build Next.js production réussis ; `/verrouillage` est une route dynamique protégée, `/app` refuse l’anonyme et les routes `/portal` restent sans logique PIN.
+- Prévisualisation UX — tests purs couvrant création maison + Unit « Maison entière », immeuble multi-unités, vacance, locataire téléphone seul, email seul, refus sans contact, brouillon/activation, occupation après activation, refus de chevauchement et absence d’accès portail.
+- Suite complète après prévisualisation : TypeScript et ESLint réussis, 25 tests Node réussis, build Next.js réussi avec 28 routes recensées.
 
 ## Bloqué
 
@@ -142,6 +151,7 @@
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
 - La validation fonctionnelle authentifiée du sous-lot PIN sur staging reste à effectuer par Blaise après redéploiement Vercel ; elle ne bloque pas la livraison technique ni ne démarre le Lot 5C.
+- La prévisualisation UX doit être testée par Blaise sur staging ; ses données Biens/Unités/Locataires/Baux ne sont jamais enregistrées dans Supabase et disparaissent au refresh.
 
 ## Proposé ensuite
 

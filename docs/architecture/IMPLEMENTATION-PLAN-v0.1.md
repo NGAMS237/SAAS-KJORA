@@ -1,5 +1,7 @@
 # Kjora — Plan d’implémentation v0.1
 
+> Mise à jour 2026-08-26 : une **prévisualisation UX 6A/6B** est disponible avec un store client éphémère et des données explicitement fictives. Elle ne contient ni migration métier, ni RLS Property/Unit/Tenant/Lease, ni persistance Supabase. Les Lots backend 5C, 6A et 6B restent **NON COMMENCÉS** et conservent intégralement leurs gates et critères de sortie ci-dessous.
+
 > Statut : **PLAN VALIDÉ PAR BLAISE — D-072 à D-077**  
 > Portée : ordre de développement futur en petits lots testables  
 > Important : ce document ne démarre ni le Lot 5 ni une implémentation

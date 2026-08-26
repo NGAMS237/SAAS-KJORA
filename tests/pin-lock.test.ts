@@ -47,6 +47,11 @@ test("le verifier PBKDF2 est salé, robuste et ne contient pas le PIN brut", asy
   assert.equal(await verifyPin("654321", record), false);
 });
 
+test("un verifier dont le coût PBKDF2 a été affaibli est rejeté", async () => {
+  const record = await createPinVerifierRecord("123456");
+  assert.equal(isUsablePinRecord({ ...record, iterations: PIN_PBKDF2_ITERATIONS - 1 }), false);
+});
+
 test("la comparaison du verifier traite aussi les longueurs différentes", () => {
   assert.equal(constantTimeEqual(new Uint8Array([1, 2]), new Uint8Array([1, 2])), true);
   assert.equal(constantTimeEqual(new Uint8Array([1, 2]), new Uint8Array([1, 3])), false);
