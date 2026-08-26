@@ -1,0 +1,526 @@
+# Kjora — Contexte officiel du projet
+
+> Statut : source de vérité de travail  
+> Nom commercial : **Kjora** (provisoire)  
+> Marché initial : Cameroun  
+> Dernière mise à jour : 2026-08-25 — Lots 1, 2 et 3 validés
+
+## 1. Vision
+
+Kjora est un SaaS mobile-first de gestion locative destiné en priorité aux personnes et structures qui administrent des biens immobiliers, notamment à distance ou avec délégation à des personnes sur place.
+
+Le Cameroun est le premier pays activé. L’architecture permet une extension progressive vers d’autres pays africains sans développer leurs spécificités avant validation.
+
+La promesse produit est de permettre à l’`Organization Owner` de savoir simplement **ce que l’organisation gère, ce qui est dû, ce qui a été encaissé, ce qui est en retard, qui a effectué une action et ce qui nécessite son attention**.
+
+`Organization Owner` désigne la personne qui contrôle le compte Kjora de l’organisation. Ce rôle ne prouve jamais que cette personne est juridiquement l’unique propriétaire des immeubles enregistrés.
+
+## 2. Principes non négociables
+
+- Mobile-first.
+- Web/PWA d’abord, avec possibilité de publication ultérieure sur Google Play et App Store à partir d’une base de code commune.
+- Multi-utilisateur et multi-tenant.
+- Chaque Organization est un tenant autonome.
+- Un User peut avoir plusieurs Memberships et administrer plusieurs Organizations indépendantes.
+- Chaque action s’exécute dans une seule organisation active explicitement sélectionnée.
+- Aucune agrégation, aucun tableau consolidé et aucun héritage de permission entre organisations au MVP.
+- Toute donnée métier, tout document, fichier, événement, notification, activité, audit et paramètre organisationnel appartient à une organisation.
+- Isolation des organisations imposée côté serveur/base, et dans une phase technique future par RLS, jamais uniquement dans l’interface.
+- Tester systématiquement l’isolation entre au moins deux organisations, le non-membre et le rôle insuffisant.
+- Le MVP utilise un monolithe modulaire Core + modules indépendants ; aucun microservice prématuré.
+- Le modèle multi-tenant doit pouvoir évoluer vers 500, 2 000 puis 10 000+ organisations sans changer son fondement, sans optimisation prématurée.
+- Aucune règle pays variable inscrite en dur dans la logique métier principale.
+- Aucun secret réel dans les prompts, documents ou dépôts.
+- Aucune clé `service_role` dans le navigateur.
+- Travail par petits lots vérifiables avec critères d’acceptation avant développement.
+- Toute décision métier importante nécessite validation de Blaise.
+- Une règle validée ne peut pas être modifiée silencieusement ; les décisions remplacées restent historisées.
+- Le locataire utilise un `Tenant Portal Access` distinct des Memberships internes et n’est jamais un rôle RBAC interne.
+- Il existe une seule source de vérité métier pour les baux, échéances, paiements et reçus ; le portail n’en possède aucune copie indépendante.
+
+## 3. Cible, pays, langues et devise
+
+### Confirmé
+
+- Cible principale : propriétaires immobiliers, administrateurs de biens, structures familiales ou sociétés gérant leur patrimoine.
+- Marché initial : Cameroun, y compris gestion à distance et diaspora.
+- Langues : français et anglais, avec changement simple.
+- Les textes utilisateur sont internationalisables et ne sont pas inscrits en dur dans les composants métier.
+- Devise initiale : XAF.
+- Moyens initiaux : espèces, MTN Mobile Money, Orange Money et virement bancaire.
+
+## 4. Architecture produit validée — Lot 1
+
+### Architecture
+
+Kjora suit une architecture **Core + modules indépendants** dans un **monolithe modulaire au MVP**. Le Core ne dépend d’aucun module métier. Une défaillance ou désactivation de module ne rend pas l’ensemble de l’application inutilisable.
+
+Chaque bloc possède ses données conceptuelles. Les autres blocs utilisent uniquement des contrats publics ou des événements ; aucune lecture ou modification directe des détails internes d’un autre module et aucune dépendance circulaire.
+
+### Core retenu
+
+- Identity / Authentication ;
+- Organizations ;
+- Memberships ;
+- Authorization / RBAC ;
+- Country Configuration ;
+- i18n ;
+- Module Registry / Feature Flags ;
+- Domain Event Core ;
+- Notifications ;
+- Communications ;
+- Audit ;
+- Common Settings.
+
+Organizations couvre conceptuellement des responsabilités distinctes :
+
+- `Organization` : tenant et identité fonctionnelle du compte ;
+- `Organization Profile` : nom commercial, nom légal, téléphone, email, adresse et informations publiques ;
+- `Organization Branding` : logo et éléments utilisés par les documents et communications ;
+- `Organization Settings` : pays, devise, langue, fuseau, informations de reçus/contrats, coordonnées ou informations de paiement et préférences organisationnelles.
+
+Cette séparation est conceptuelle ; elle ne crée pas de microservices.
+
+### Modules métier retenus
+
+- Properties ;
+- Units ;
+- Tenants ;
+- Leases ;
+- Rent / Dues / Schedules ;
+- Payments & Receipts ;
+- Expenses ;
+- Maintenance ;
+- Documents ;
+- Reporting.
+
+Le dashboard simple du MVP utilise un **read model opérationnel** pour attendu, encaissé, restant, en retard et activité récente. Il ne dépend pas de Reporting avancé. Reporting avancé reste hors MVP.
+
+Les frontières, contrats et dépendances validés sont détaillés dans les cinq documents du Lot 1 sous `docs/architecture` et `docs/product`.
+
+## 5. Organisations, Memberships et RBAC
+
+### Confirmé
+
+- Une identité `User` est globale ; les droits métier sont évalués dans une Organization.
+- Un User peut avoir plusieurs Memberships dans plusieurs Organizations.
+- Une seule organisation est active pour une action donnée.
+- Les données et permissions ne sont jamais fusionnées ou héritées entre organisations.
+- Un utilisateur peut administrer plusieurs Organizations indépendantes.
+- `Organization Owner` contrôle le compte Kjora du tenant sans présomption de propriété juridique des immeubles.
+- Le modèle reste compatible avec biens familiaux, sociétés, indivisions, successions, mandataires et copropriétés.
+- Un utilisateur invité ne voit que les organisations dans lesquelles il possède un Membership actif et autorisé.
+- Les permissions sont appliquées côté serveur/base en plus de l’interface.
+- Refus par défaut.
+- Un rôle principal par Membership au MVP.
+- Aucun rôle personnalisé au MVP.
+- Aucune correction financière silencieuse.
+- Gestion des membres et paramètres sensibles réservée à `Organization Owner`.
+
+### Rôles fixes du MVP
+
+- propriétaire / `Organization Owner` ;
+- gestionnaire ;
+- encaisseur ;
+- gardien ;
+- comptable ;
+- consultation.
+
+Les rôles sont reliés à des capacités explicites, par exemple `property.view`, `property.manage`, `payment.record`, `payment.view`, `receipt.share`, `member.manage` ou `audit.view`. La matrice fonctionnelle du Lot 2 est validée par D-040 :
+
+- `Organization Owner` administre le tenant, ses membres et paramètres sensibles, gère la boucle locative, enregistre les paiements et consulte l’audit ;
+- le gestionnaire gère la boucle locative quotidienne, enregistre les paiements et demande une correction, sans gérer membres, paramètres sensibles ou audit ;
+- l’encaisseur enregistre les paiements et accède seulement au contexte nécessaire, sans gestion administrative ou contractuelle ;
+- le gardien voit un contexte local minimal, sans finances ni dossier personnel complet du locataire ;
+- le comptable consulte les données financières et peut demander une correction, sans enregistrer ou modifier directement un paiement ;
+- le rôle consultation lit uniquement le périmètre explicitement accordé et n’obtient aucun contact personnel par implication.
+
+Seuls `Organization Owner` et gestionnaire peuvent administrer un `Tenant Portal Access`. Ce droit externe ne transforme jamais le locataire en Membership ou en septième rôle.
+
+## 6. Configuration par pays
+
+L’architecture prévoit des configurations nationales pour :
+
+- devise ;
+- langue(s) ;
+- fuseau horaire ;
+- format téléphonique ;
+- méthodes de paiement ;
+- fournisseurs Mobile Money ;
+- modèles de reçus et contrats ;
+- règles fiscales et comptables ;
+- fonctionnalités activées ;
+- exigences de protection des données.
+
+Aucune règle camerounaise susceptible de varier par pays n’est inscrite en dur dans la logique métier principale.
+
+### Cameroun — configuration initiale confirmée
+
+- français / anglais ;
+- XAF ;
+- espèces ;
+- MTN Mobile Money ;
+- Orange Money ;
+- virement bancaire.
+- `RENT_DUE_SOON` : 5 jours avant la date d’échéance ;
+- `RENT_OVERDUE` : à partir du lendemain de la date d’échéance ;
+- aucune période de grâce personnalisée par Organization au MVP ; le modèle reste compatible avec un override futur.
+
+## 7. Authentification validée
+
+### Utilisateurs internes
+
+- Email avec OTP et lien sécurisé pour établir l’identité ; un mécanisme principal est présenté selon le contexte et l’autre sert d’alternative/récupération.
+- OTP et lien expirent, sont à usage contrôlé et soumis au throttling.
+- Même vérification forte pour un nouvel appareil et la récupération du compte.
+- Supabase Auth porte l’identité principale et sa session peut persister.
+- Le PIN à 6 chiffres verrouille ou déverrouille rapidement Kjora uniquement sur un appareil déjà autorisé ; il ne crée ni ne remplace la session Auth.
+- Le PIN seul n’est jamais une authentification principale ni une preuve d’identité forte ; il n’est jamais stocké en clair et doit être protégé par limitation des tentatives, throttling et verrouillage.
+- Nouvel appareil et récupération exigent une vérification forte ; une action sensible peut demander un step-up authentication.
+- Biométrie hors MVP.
+- Une invitation de membre interne expire après 7 jours, peut être relancée et une nouvelle invitation invalide l’ancienne invitation active correspondante.
+- Aucune permission tenant n’existe avant acceptation d’une invitation et vérification d’un Membership valide.
+
+L’authentification établit l’identité ; elle n’accorde aucun droit métier sans Membership et capacité valides dans l’organisation active.
+
+### Portail locataire
+
+- Le portail accepte un téléphone ou un email vérifiable.
+- Téléphone : OTP ; email : OTP ou lien sécurisé.
+- Invitation portail : 7 jours ; OTP : 10 minutes ; lien sécurisé : 15 minutes.
+- Jetons et liens sont invalidés après utilisation lorsque applicable.
+- Session persistante : 30 jours maximum.
+- Nouvelle vérification forte pour nouvel appareil, session expirée, changement sensible ou signal de risque.
+- Aucun PIN locataire au MVP.
+- Un changement de téléphone/email vérifie l’identité, l’ancien canal s’il est disponible, puis le nouveau canal ; sinon récupération sécurisée.
+- Aucun accès à une donnée personnelle, un bail, un paiement ou un reçu sans authentification et `Tenant Portal Access` valide.
+
+L’OTP téléphone est limité à l’authentification portail. Il n’autorise pas des SMS métier généraux ou marketing.
+
+Le fournisseur OTP téléphone est une décision technique différée. Le portail dépend d’une abstraction `PhoneOtpProvider`, jamais d’un fournisseur concret dans le métier ; le choix doit être fait avant l’implémentation du Lot 6E et ne bloque pas les lots propriétaires.
+
+## 8. Paiements et reçus
+
+### Frontière validée
+
+Payments et Receipts sont deux capacités séparées dans le même module au MVP.
+
+- Payments possède le paiement, son état et ses allocations.
+- Le paiement est la source de vérité métier.
+- Receipts possède le reçu dérivé.
+- Le reçu ne modifie jamais le paiement.
+- Documents peut fournir un artefact tenant-scoped sans devenir propriétaire du reçu métier.
+
+### Sémantique validée
+
+- `PAYMENT_RECORDED` : paiement saisi ou enregistré, pas nécessairement définitivement encaissé.
+- `PAYMENT_COMPLETED` : paiement reconnu comme effectivement encaissé ou confirmé.
+- Seul `PAYMENT_COMPLETED` autorise la génération du reçu final.
+- Une opération manuelle immédiatement confirmée peut produire `PAYMENT_RECORDED` puis `PAYMENT_COMPLETED` successivement dans la même opération métier.
+
+Les paiements partiels appartiennent au MVP jusqu’au restant dû. Un montant supérieur au restant est bloqué avant confirmation. Crédit automatique, remboursement, transfert vers une autre échéance et workflow financier avancé sont hors MVP. Les corrections restent explicites, autorisées, motivées et auditées ; aucune modification ou suppression silencieuse après `PAYMENT_COMPLETED`.
+
+`Organization Owner`, gestionnaire et encaisseur peuvent enregistrer un paiement après revérification tenant-scoped à la confirmation. Owner, gestionnaire, encaisseur et comptable peuvent demander une correction sans modifier directement le paiement source.
+
+## 9. Mobile Money validé
+
+Au MVP, espèces, MTN Mobile Money, Orange Money et virement bancaire sont enregistrés manuellement.
+
+Pour Mobile Money, prévoir conceptuellement :
+
+- provider / moyen ;
+- référence facultative ;
+- preuve facultative ;
+- date ;
+- montant ;
+- acteur ayant enregistré ;
+- confirmation.
+
+Aucune intégration automatique MTN ou Orange au MVP.
+
+L’évolution événementielle prévue est :
+
+`transaction reçue → PAYMENT_RECORDED → confirmation fournisseur → PAYMENT_COMPLETED → RECEIPT_GENERATED`.
+
+## 10. Événements, notifications, communications et audit
+
+### Confirmé
+
+- Les notifications et emails sont orchestrés autour d’événements métier.
+- Un événement métier est tenant-scoped et décrit un fait passé.
+- Le catalogue v0.1 contient : `PROPERTY_CREATED`, `TENANT_CREATED`, `LEASE_ACTIVATED`, `RENT_DUE_CREATED`, `RENT_DUE_SOON`, `RENT_OVERDUE`, `PAYMENT_RECORDED`, `PAYMENT_COMPLETED`, `RECEIPT_GENERATED`, `DOCUMENT_SHARED`.
+- Les notifications in-app utiles, l’activité et l’audit minimal font partie du MVP.
+- Les événements, notifications, activité et audit appartiennent indépendamment à l’organisation concernée.
+- Les Domain Events restent non localisés ; une communication utilise la préférence du destinataire, puis la langue de l’Organization.
+- L’audit métier MVP est visible uniquement par `Organization Owner` et reste distinct du journal d’accès portail.
+
+### Propositions conservées pour la phase technique
+
+- système événementiel dans le Core ;
+- modules sans contact direct avec un fournisseur externe de communication ;
+- échec email non bloquant pour une opération métier réussie ;
+- retry indépendant et idempotent ;
+- notifications, fil d’activité, historique des communications et audit séparés.
+
+Les canaux SMS/WhatsApp ne sont pas confirmés.
+
+## 11. Tenant autonome, profil et branding
+
+Chaque Organization possède indépendamment :
+
+- Memberships, utilisateurs autorisés et rôles ;
+- biens, unités, locataires, contrats et échéances ;
+- paiements et reçus ;
+- documents et fichiers ;
+- événements, notifications et communications ;
+- activité et audit ;
+- paramètres, profil et branding organisationnels.
+
+Le profil/branding peut contenir :
+
+- nom commercial ;
+- logo ;
+- nom légal ;
+- téléphone ;
+- email ;
+- adresse ;
+- pays ;
+- devise ;
+- langue ;
+- fuseau horaire ;
+- informations affichées sur les reçus et contrats ;
+- coordonnées ou informations de paiement ;
+- préférences organisationnelles.
+
+Les documents et communications utilisent, lorsque pertinent, le branding de leur propre organisation. Un reçu d’Org A utilise les informations d’Org A ; un reçu d’Org B utilise celles d’Org B. Les fichiers et leur stockage restent tenant-scoped.
+
+## 12. Portail locataire minimal validé
+
+### Séparation des accès
+
+`Internal Organization Membership` et `Tenant Portal Access` sont deux mécanismes distincts :
+
+- le Membership porte l’un des six rôles internes et des capacités de gestion ;
+- le `Tenant Portal Access` relie une identité locataire à un Tenant, une Organization, un ou plusieurs Leases autorisés et leurs ressources lisibles ;
+- un contact locataire ne crée jamais automatiquement un accès ;
+- seuls `Organization Owner` et gestionnaire peuvent inviter, relancer ou révoquer cet accès.
+
+### Source unique de vérité
+
+Le portail ne possède aucune copie métier indépendante. Lease, Rent/Dues, Payments et Receipts sont les mêmes vérités métier que celles consultées par l’Organization. Un montant affiché au propriétaire et au locataire provient de la même donnée autorisée ; seuls le contexte, les permissions et la présentation diffèrent.
+
+### Expérience MVP
+
+Le portail minimal inclut : invitation, activation/authentification, accueil, résumé du bail, échéances, attendu, payé, restant, retard, historique des paiements en lecture, reçus et notifications essentielles.
+
+- Une identité ayant plusieurs baux dans la même Organization voit un accueil consolidé limité à cette Organization et sélectionne le bail/logement.
+- Une identité ayant des accès dans plusieurs Organizations sélectionne explicitement l’accès ; aucune agrégation inter-Organization.
+- Org A ne sait jamais que la même identité possède un accès chez Org B.
+- Le locataire peut consulter et télécharger ses reçus ; aucun lien public ni partage public côté serveur au MVP.
+- À la fin du bail, l’accès passe en historique lecture seule ; les anciens reçus restent visibles tant qu’ils existent selon la politique de rétention, sans copie portail.
+- Notifications portail : échéance à venir, retard, paiement confirmé et reçu disponible.
+- Langue : préférence du locataire, sinon langue de l’Organization.
+
+### Journal d’accès et visibilité interne
+
+Le journal d’accès portail est conservé 12 mois et trace, lorsque pertinent : invitation envoyée/ouverte/acceptée, OTP demandé/réussi/échoué, connexion réussie/échouée, nouvel appareil, révocation et expiration de session.
+
+Owner et gestionnaire voient uniquement l’état opérationnel : non activé, invitation envoyée/acceptée, accès actif/révoqué, dernière connexion synthétique et état simple « reçu consulté ». Les détails techniques de sécurité et l’historique détaillé des consultations ne sont pas exposés.
+
+### Isolation
+
+- Un locataire de Org A ne peut lire aucune ressource d’un autre locataire de Org A sans liaison explicite autorisée.
+- Aucun accès Org A ne révèle une ressource Org B.
+- Une identité multi-Organization ne fusionne ni données, notifications, reçus, sessions fonctionnelles ni historique affiché.
+
+## 13. MVP fonctionnel validé
+
+Boucle :
+
+`Bien → Unité → Locataire → Contrat → Échéance / loyer attendu → Paiement → Reçu → Visibilité propriétaire`.
+
+### MVP IN confirmé
+
+- paiements manuels ;
+- paiements partiels avec règles minimales ;
+- reçus ;
+- délégation minimale ;
+- notifications in-app utiles ;
+- activité ;
+- audit ;
+- dashboard propriétaire simple par read model opérationnel ;
+- français / anglais ;
+- Cameroun ;
+- XAF.
+- portail locataire minimal défini au §12 ;
+- onboarding Organization minimal : nom, pays configuré, langue et fuseau ;
+- modèle uniforme Property → Unit → Lease avec Unit explicite ;
+- locataire : nom et au moins téléphone ou email ;
+- périodicités mensuelle, trimestrielle, semestrielle et annuelle, date de fin facultative et clôture explicite ;
+- dashboard sur le mois courant par défaut avec navigation simple ;
+- consultation, téléchargement et email contrôlé des reçus internes ; aucun reçu public.
+
+### MVP OUT confirmé par les décisions du Lot 1
+
+- intégration automatique MTN Mobile Money / Orange Money ;
+- Reporting avancé ;
+- biométrie.
+- surpaiement, crédit automatique, remboursement, transfert et workflow financier avancé ;
+- périodicité libre ;
+- colocation/cotitulaires ;
+- propriété juridique/copropriété ;
+- portail : chat, maintenance, paiement en ligne, signature électronique et documents avancés ;
+- partage public de reçu côté serveur et notifications configurables avancées.
+
+Les autres fonctionnalités proposées hors MVP dans le Lot 1 restent à prioriser ultérieurement et ne sont pas automatiquement autorisées.
+
+## 14. Supabase et stockage futurs
+
+### Confirmé
+
+- Utiliser le même compte Supabase que le propriétaire du projet.
+- Créer ultérieurement un projet Supabase totalement distinct de VERALUZ.
+- Aucun partage avec VERALUZ de tables, utilisateurs Auth, buckets, clés service, Edge Functions ou secrets.
+- Chaque donnée métier et chaque fichier sont rattachés à une organisation.
+- RLS obligatoire pour l’isolation future.
+- `service_role` exclusivement côté serveur.
+- Le stockage des fichiers est tenant-scoped.
+
+Aucun projet réel, schéma SQL ou secret n’est créé à ce stade.
+
+## 15. Resend et emails futurs
+
+Même compte Resend possible que les autres projets, avec séparation stricte pour Kjora :
+
+1. emails Auth : confirmation, invitation, changement d’adresse, réinitialisation ;
+2. emails métier : reçus, rappels de loyers, impayés, rapports et communications transactionnelles validées.
+
+Prévoir clés serveur séparées, domaines et journaux séparés, et aucun domaine définitif avant validation du nom commercial. Les communications utilisent le profil et le branding de l’organisation concernée.
+
+## 16. Design et responsabilités des agents
+
+### Confirmé
+
+- Claude Design : maquettes, système visuel, prototypes.
+- GPT Image : exploration visuelle et assets/concepts validés.
+- ChatGPT : cadrage, architecture, documentation, analyse, coordination et spécification.
+- Codex / Claude Code : développement selon lots validés et critères d’acceptation.
+- Aucun agent n’est la mémoire unique du projet.
+- Le contexte officiel est relu avant tout travail important.
+
+### Direction visuelle officielle
+
+- Direction : **Horizon & héritage**.
+- Style : premium, moderne, épuré, rassurant.
+- Touche africaine subtile ; jamais folklorique.
+- Aucun gimmick visuel « IA ».
+- Thèmes clair et sombre obligatoires.
+- Palette : Vert profond `#1F2D27`, Ivoire chaud `#F3EFE6`, Terre cuite `#C86A4A`, Or muté `#C9A46A`, Gris pierre `#8E908B`.
+- UI : Inter. Titres de marque : Cormorant Garamond.
+
+## 17. Architecture UX validée — Lot 3
+
+### Espace interne
+
+La navigation mobile principale des six rôles internes utilise cinq destinations, affichées selon les permissions :
+
+- Accueil ;
+- Biens ;
+- Locataires ;
+- Paiements ;
+- Activité.
+
+Équipe, profil, paramètres Organization, changement d’Organization et autres fonctions secondaires restent dans un espace secondaire adapté. L’Organization active est clairement identifiable sur toute vue tenant-scoped. Le changement de contexte remplace entièrement les données affichées et recalcule les permissions.
+
+Units, Leases, Rent/Dues, Payments, Receipts et `Tenant Portal Access` sont atteints contextuellement depuis les destinations utiles plutôt que par un onglet global pour chaque module.
+
+### Portail locataire
+
+La navigation mobile principale du `Tenant Portal` utilise :
+
+- Accueil ;
+- Loyers ;
+- Reçus ;
+- Compte.
+
+Les notifications restent accessibles par une icône ou entrée légère dédiée et ne constituent pas un cinquième onglet. L’historique des paiements est accessible contextuellement depuis Accueil, Loyers ou Reçus selon le flow. Cette navigation reste exclusivement liée au `Tenant Portal Access` et ne crée aucun Membership interne.
+
+### Fichiers et Documents
+
+Le MVP ne possède aucune destination globale `Documents` ni bibliothèque documentaire parallèle :
+
+- le reçu reste lié au paiement, à l’échéance et au locataire autorisé ;
+- la preuve de paiement reste liée au paiement ;
+- le logo reste dans les paramètres Organization ;
+- le bail ou document essentiel reste dans le contexte du bail lorsque nécessaire.
+
+Aucune donnée n’est dupliquée pour produire une vue documentaire. Un futur module Documents pourra fournir une vue transversale des mêmes ressources et artefacts tenant-scoped, sans devenir une nouvelle source de vérité.
+
+### Mobile-first et desktop
+
+Les 50 écrans fonctionnels du Lot 2 sont regroupés en flows courts orientés tâche. Les opérations sensibles gardent une séquence saisie → résumé → confirmation. Le desktop reprend la même architecture avec un rail et, lorsque pertinent, du maître-détail, sans capacité supplémentaire.
+
+## 18. Architecture technique validée — Lot 4
+
+### Stack et structure applicative
+
+- Next.js + TypeScript + PWA mobile-first depuis une seule base applicative.
+- Web/PWA d’abord ; Capacitor peut être ajouté plus tard pour les stores sans créer une seconde application.
+- Monolithe modulaire : Core et modules gardent des contrats explicites ; aucune microarchitecture distribuée prématurée.
+- Supabase fournit PostgreSQL, Auth et Storage dans un projet entièrement séparé de VERALUZ.
+
+### Frontières et isolation
+
+- PostgreSQL/Supabase RLS est la barrière fondamentale sur toute donnée tenant-scoped ; l’UI n’est jamais la seule défense.
+- Toute requête tenant est bornée par l’Organization autorisée. L’Organization active pilote le contexte d’affichage, mais ne suffit jamais comme preuve d’autorisation.
+- `Internal Organization Membership` et `Tenant Portal Access` suivent des chemins RLS distincts. Tenant A ne lit jamais Tenant B ; Org A ne lit jamais Org B, même pour une identité commune.
+- Les opérations ordinaires compatibles RLS peuvent utiliser la session utilisateur. Les opérations sensibles ou orchestrées passent par une frontière serveur appropriée.
+- Le navigateur ne reçoit jamais `service_role`, secret fournisseur ou URL privée permanente. Les objets Storage sont privés, tenant-scoped et délivrés après autorisation.
+
+### Transactions, événements et communications
+
+- La transaction métier persiste sa vérité et son outbox ; un worker traite ensuite les effets asynchrones.
+- Les communications ne conditionnent jamais le succès d’un paiement, reçu, bail ou autre fait métier.
+- Idempotence, retry, déduplication et tests d’isolation Org A/Org B sont obligatoires. Le runtime exact du worker est choisi à l’implémentation sans changer l’architecture.
+
+### Environnements
+
+- Trois niveaux : LOCAL/DEV, STAGING, PRODUCTION.
+- PRODUCTION ne partage jamais base, Auth, Storage, secrets ou `service_role` avec STAGING/DEV ni VERALUZ ; aucun secret n’est partagé entre environnements.
+- Vercel est recommandé pour le frontend web ; les environnements Supabase sensibles utilisent des projets isolés conformément à D-074.
+
+### Invariant Lease
+
+Une Unit ne peut avoir deux Leases dont les périodes se chevauchent. Un bail futur peut commencer après la fin du précédent ; deux baux simultanés sur la même Unit sont refusés au MVP mono-titulaire.
+
+## 19. Inspiration et différenciation
+
+Patterns retenus : organisation par domaines métier, suivi payé/partiel/en retard, reçus et rappels, historique de communications, préférences de notifications, dashboard orienté actions et suivi financier lisible.
+
+Différenciation Kjora : simplicité, mobile-first, délégation locale, visibilité à distance, traçabilité et adaptation progressive aux marchés africains.
+
+## 20. Nom
+
+**Kjora** reste le nom de travail préféré mais provisoire. Ne pas figer le domaine ou le nom dans les intégrations ; maintenir le branding produit configurable jusqu’à validation commerciale. Le branding produit Kjora reste distinct du branding propre à chaque Organization.
+
+## 21. Méthode de mise à jour
+
+À chaque idée ou règle :
+
+1. classifier en `CONFIRMÉ`, `HYPOTHÈSE`, `PROPOSITION` ou `REMPLACÉ` ;
+2. si Blaise confirme, créer une entrée dans `DECISIONS.md` ;
+3. mettre à jour ce contexte si la vision ou l’architecture change ;
+4. conserver l’ancienne décision dans l’historique si elle est remplacée ;
+5. ne commencer aucun lot sans critères d’acceptation et autorisation explicite.
+
+## 22. État et prochaine étape
+
+**Lot 1 — Architecture fonctionnelle v0.1 : VALIDÉ.**
+
+**Lot 2 — Parcours et périmètre MVP : VALIDÉ.**
+
+**Lot 3 — UX & architecture d’interface v0.1 : VALIDÉ.**
+
+**Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ.**
+
+**Lot 5A — Bootstrap application, navigation et design tokens : NON COMMENCÉ.** Son démarrage exige une autorisation explicite ; la validation du Lot 4 n’autorise automatiquement aucun code, projet Supabase, secret ni déploiement.

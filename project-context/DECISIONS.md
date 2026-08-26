@@ -1,0 +1,118 @@
+# Kjora — Registre des décisions
+
+> Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
+> Dernière mise à jour : 2026-08-25 — validation du Lot 4 Architecture technique & sécurité
+
+## Statuts
+
+- `CONFIRMÉ` : approuvé par Blaise.
+- `HYPOTHÈSE` : supposé temporairement, validation requise.
+- `PROPOSITION` : recommandation à évaluer.
+- `REMPLACÉ` : ancienne décision conservée pour historique.
+
+## Décisions actives
+
+| ID | Statut | Décision | Date |
+|---|---|---|---|
+| D-001 | CONFIRMÉ | Le produit est un SaaS de gestion locative mobile-first pour propriétaires immobiliers. | 2026-08-24 |
+| D-002 | CONFIRMÉ | Cameroun premier pays activé ; extension africaine prévue par configuration pays. | 2026-08-24 |
+| D-003 | CONFIRMÉ | Français et anglais, changement de langue simple. | 2026-08-24 |
+| D-005 | CONFIRMÉ | Isolation des données appliquée en base avec RLS. | 2026-08-24 |
+| D-006 | CONFIRMÉ | Rôles prévus : propriétaire, gestionnaire, encaisseur, gardien, comptable, consultation. | 2026-08-24 |
+| D-007 | CONFIRMÉ | Web/PWA d’abord, stores mobiles possibles ensuite avec base de code commune. | 2026-08-24 |
+| D-008 | CONFIRMÉ | Architecture Core + modules indépendants. | 2026-08-24 |
+| D-009 | CONFIRMÉ | Paiements initiaux : espèces, MTN MoMo, Orange Money, virement. | 2026-08-24 |
+| D-010 | CONFIRMÉ | Notifications et emails importants, orchestrés autour d’événements métier. | 2026-08-24 |
+| D-011 | CONFIRMÉ | Projet Supabase distinct et isolé de VERALUZ. | 2026-08-24 |
+| D-012 | CONFIRMÉ | RLS obligatoire et `service_role` jamais exposée au navigateur. | 2026-08-24 |
+| D-013 | CONFIRMÉ | Resend : séparation Auth / transactionnel, clés serveur distinctes. | 2026-08-24 |
+| D-014 | CONFIRMÉ | Claude Design et GPT Image peuvent servir à la conception visuelle ; le développement reste séparé. | 2026-08-24 |
+| D-015 | CONFIRMÉ | Aucun agent ne doit être la mémoire unique ; le contexte officiel est versionné. | 2026-08-24 |
+| D-016 | CONFIRMÉ | Travail par petits lots, critères d’acceptation avant développement, état mis à jour après chaque lot. | 2026-08-24 |
+| D-017 | CONFIRMÉ | Kjora est le nom de travail préféré mais non définitif. | 2026-08-24 |
+| D-018 | CONFIRMÉ | Direction visuelle officielle : « Horizon & héritage », premium, moderne, épurée, avec touche africaine subtile et sans esthétique IA visible. | 2026-08-24 |
+| D-019 | CONFIRMÉ | Kjora doit disposer de thèmes clair et sombre cohérents, palette officielle Vert profond / Ivoire chaud / Terre cuite / Or muté / Gris pierre. | 2026-08-24 |
+| D-020 | CONFIRMÉ | Typographie produit : Inter pour l’interface ; Cormorant Garamond pour les grands titres de marque. | 2026-08-24 |
+| D-021 | CONFIRMÉ | **Lot 1 D1 — Multi-organisation, choix B.** Un User peut avoir plusieurs Memberships dans plusieurs Organizations. Chaque action s’exécute dans une seule organisation active explicitement sélectionnée. Au MVP : aucun tableau consolidé, aucune agrégation inter-organisation et aucune permission héritée d’une organisation à une autre. | 2026-08-24 |
+| D-022 | CONFIRMÉ | **Lot 1 D2 — Multi-ownership, choix B.** Un utilisateur peut administrer ou posséder plusieurs Organizations indépendantes. Le rôle `Organization Owner` / administrateur d’organisation contrôle le compte Kjora du tenant ; il ne constitue jamais une preuve de propriété juridique des immeubles. Le modèle doit rester compatible avec biens familiaux, sociétés, indivisions, successions, mandataires et copropriétés. | 2026-08-24 |
+| D-023 | CONFIRMÉ | **Lot 1 D3 — Payments / Receipts, choix A.** Payments et Receipts sont deux capacités séparées dans un même module au MVP. Le paiement est la source de vérité ; le reçu en est dérivé et ne le modifie jamais. `PAYMENT_RECORDED` signifie saisi/enregistré sans confirmation définitive ; `PAYMENT_COMPLETED` signifie effectivement encaissé/confirmé et autorise seul le reçu final. Une opération manuelle immédiatement confirmée peut produire les deux événements successivement. | 2026-08-24 |
+| D-024 | CONFIRMÉ | **Lot 1 D4 — MVP, choix B.** Boucle validée : Bien → Unité → Locataire → Contrat → Échéance/loyer attendu → Paiement → Reçu → Visibilité propriétaire. Le MVP inclut paiements manuels, paiements partiels avec règles minimales, reçus, délégation minimale, notifications in-app utiles, activité, audit, dashboard opérationnel simple, FR/EN, Cameroun et XAF. Le dashboard utilise un read model opérationnel et ne dépend pas de Reporting avancé, qui reste hors MVP. | 2026-08-24 |
+| D-025 | CONFIRMÉ | **Lot 1 D5 — RBAC, choix B.** Le MVP utilise six rôles fixes : propriétaire / `Organization Owner`, gestionnaire, encaisseur, gardien, comptable, consultation. Ils sont reliés à des capacités explicites, avec refus par défaut, un rôle principal par Membership, aucune permission héritée entre organisations, aucun rôle personnalisé au MVP, gestion des membres et paramètres sensibles réservée à `Organization Owner`, et aucune correction financière silencieuse. | 2026-08-24 |
+| D-026 | CONFIRMÉ | **Lot 1 D6 — Authentification, choix B.** Email + OTP ou lien sécurisé établissent l’identité, vérifient un nouvel appareil et permettent la récupération. Le PIN à 6 chiffres sert uniquement à l’accès quotidien sur un appareil déjà autorisé et ne constitue pas une preuve forte à lui seul. Prévoir conceptuellement throttling, limitation des tentatives, verrouillage, révocation d’appareil et nouvelle vérification forte pour certaines actions sensibles. Biométrie hors MVP. | 2026-08-24 |
+| D-027 | CONFIRMÉ | **Lot 1 D7 — Mobile Money, choix B.** Au MVP, espèces, MTN Mobile Money, Orange Money et virement sont enregistrés manuellement. Pour Mobile Money : provider/moyen, référence facultative, preuve facultative, date, montant, acteur et confirmation. Aucune intégration automatique MTN/Orange au MVP. L’évolution prévue est : transaction reçue → `PAYMENT_RECORDED`, confirmation fournisseur → `PAYMENT_COMPLETED`, puis `RECEIPT_GENERATED`. | 2026-08-24 |
+| D-028 | CONFIRMÉ | **Lot 1 D8 — Tenant autonome et branding organisation.** Chaque Organization est un tenant autonome possédant indépendamment Memberships, utilisateurs autorisés, rôles, données métier, documents, événements, notifications, activité, audit, paramètres et identité organisationnelle. Séparer conceptuellement Organization, Organization Profile, Organization Branding et Organization Settings. Documents et communications peuvent utiliser le branding du tenant ; fichiers et stockage restent tenant-scoped. Le modèle doit évoluer vers 500, 2 000 puis 10 000+ organisations sans changer son fondement multi-tenant, sans optimisation prématurée ; le MVP reste un monolithe modulaire. | 2026-08-24 |
+| D-029 | CONFIRMÉ | **Q-L2-01 — choix C.** L’authentification interne par email supporte lien sécurisé et OTP. Un mécanisme principal est présenté selon le contexte et l’autre sert d’alternative ou de récupération. Les deux expirent, sont à usage contrôlé et soumis au throttling ; ils ne créent aucun accès tenant sans autorisation valide. | 2026-08-24 |
+| D-030 | CONFIRMÉ | **Q-L2-02 — choix A.** L’onboarding Organization demande seulement nom, pays Cameroun fourni par configuration, langue et fuseau. Téléphone, email, adresse, logo, nom légal et informations documentaires sont complétés progressivement ; leur absence ne bloque pas la découverte, mais une action peut exiger les informations dont elle dépend. | 2026-08-24 |
+| D-031 | CONFIRMÉ | **Q-L2-03 — choix B.** Toute location utilise le modèle uniforme `Property → Unit → Lease`. Une maison entière reçoit une Unit explicite créée ou préremplie automatiquement ; aucun modèle parallèle de bien directement louable. | 2026-08-24 |
+| D-032 | CONFIRMÉ | **Q-L2-04 — choix B.** Un locataire exige un nom et au moins un téléphone ou un email ; les deux peuvent être renseignés. Un contact ne crée jamais automatiquement un accès portail. | 2026-08-24 |
+| D-033 | CONFIRMÉ | **Q-L2-05 — choix B.** Périodicités MVP : mensuelle par défaut, trimestrielle, semestrielle et annuelle. Date de fin facultative et clôture explicite du contrat. Aucune périodicité libre au MVP. | 2026-08-24 |
+| D-034 | CONFIRMÉ | **Q-L2-06 — choix A.** Les règles d’échéance proviennent de la configuration pays. Pour le Cameroun MVP, `RENT_DUE_SOON` intervient 5 jours avant l’échéance et `RENT_OVERDUE` à partir du lendemain. Aucun délai de grâce personnalisable par Organization au MVP ; un override Organization futur reste possible sans changer le modèle. | 2026-08-24 |
+| D-035 | CONFIRMÉ | **Q-L2-07 — choix A.** Le MVP accepte paiement total et paiement partiel jusqu’au restant dû. Surpaiement, crédit automatique, remboursement, transfert vers une autre échéance et workflow financier avancé sont bloqués avant confirmation avec un message explicite. Aucune correction financière silencieuse. | 2026-08-24 |
+| D-036 | CONFIRMÉ | **Q-L2-08 — choix A.** `Organization Owner`, gestionnaire et encaisseur peuvent enregistrer un paiement, sous contrôle tenant-scoped revérifié à la confirmation. Après `PAYMENT_COMPLETED`, aucune modification ou suppression silencieuse. Les acteurs autorisés peuvent demander une correction ; toute correction effective future doit être autorisée, motivée et auditée. | 2026-08-24 |
+| D-037 | CONFIRMÉ | **Q-L2-09 — choix A.** Le gardien voit seulement l’identité minimale du locataire nécessaire à son activité, sans dossier personnel complet ni finances. Le rôle consultation voit uniquement son périmètre explicite, sans extension implicite aux contacts personnels. Principe de minimisation des données. | 2026-08-24 |
+| D-038 | CONFIRMÉ | **Q-L2-10 — choix A.** Le reçu MVP peut être consulté, téléchargé et envoyé par email contrôlé à un destinataire explicite après vérification de la permission et de l’Organization. Aucun reçu public ni lien public permanent. Un échec email n’annule jamais paiement ou reçu. | 2026-08-24 |
+| D-039 | CONFIRMÉ | **Q-L2-11 — choix A.** Le dashboard propriétaire utilise le mois courant par défaut, permet une navigation simple vers d’autres périodes utiles et affiche toujours la période active. Aucune agrégation multi-Organization. | 2026-08-24 |
+| D-040 | CONFIRMÉ | **Q-L2-12 — choix A.** La matrice RBAC proposée au Lot 2 est validée : six rôles internes fixes, refus par défaut, aucun rôle personnalisé au MVP. Le locataire n’appartient jamais à cette matrice. | 2026-08-24 |
+| D-041 | CONFIRMÉ | **Q-L2-13 — choix A.** Une invitation de membre interne expire après 7 jours ; elle peut être relancée et une nouvelle invitation invalide l’ancienne invitation active correspondante. Aucune permission avant acceptation. Les invitations portail restent distinctes. | 2026-08-24 |
+| D-042 | CONFIRMÉ | **Q-L2-14 — choix A.** Une communication utilise d’abord la préférence du destinataire, puis la langue de l’Organization. Les Domain Events ne contiennent aucune phrase localisée. | 2026-08-24 |
+| D-043 | CONFIRMÉ | **Q-L2-15 — choix A.** L’audit MVP est visible uniquement par `Organization Owner` et couvre les actions sensibles utiles à la sécurité, l’administration et l’intégrité financière. Il reste distinct d’un journal technique et du journal d’accès locataire. | 2026-08-24 |
+| D-044 | CONFIRMÉ | **Q-L2-16 — choix C.** L’expérience utilise une approche UI hybride : parcours simples sur un écran ou une feuille mobile, opérations sensibles en étapes saisie → résumé → confirmation. Le regroupement UI ne supprime aucun contrôle métier ou de sécurité. | 2026-08-24 |
+| D-045 | CONFIRMÉ | **Q-L2-17 — choix A.** Tout User à l’identité vérifiée peut créer une Organization supplémentaire. Chaque création produit un tenant neuf et isolé sans copie automatique de membre, permission, locataire, bien ou donnée métier. | 2026-08-24 |
+| D-046 | CONFIRMÉ | **Q-L2-18 — choix A.** Un contrat possède un seul locataire titulaire au MVP. Colocation et cotitulaires sont hors MVP ; le modèle doit rester extensible. | 2026-08-24 |
+| D-047 | CONFIRMÉ | **Q-L2-19 — choix A.** Le MVP ne modélise pas la propriété juridique ou la copropriété. `Organization Owner` est l’autorité sur le compte Kjora et ne prouve jamais la propriété juridique des immeubles. | 2026-08-24 |
+| D-048 | CONFIRMÉ | **Q-L2-20 — choix B.** Une Organization ne peut rester sans `Organization Owner`. Le transfert vers un autre User vérifié doit être terminé avant la révocation du dernier Owner ; tant que le transfert est incomplet, la révocation est impossible. | 2026-08-24 |
+| D-049 | CONFIRMÉ | **D9 — Portail locataire.** Le locataire utilise un `Tenant Portal Access` distinct des Memberships internes et n’est jamais un septième rôle RBAC. Cet accès est relié au Tenant, à l’Organization, aux Lease(s) autorisés et aux ressources explicitement accessibles. Le portail lit l’unique vérité métier de Leases, Rent/Dues, Payments et Receipts sans copie indépendante. | 2026-08-24 |
+| D-050 | CONFIRMÉ | **Q-D9-01 — choix B.** Le premier MVP inclut un portail locataire minimal : invitation, activation/authentification, accueil, résumé du bail, échéances, attendu/payé/restant/retard, historique des paiements en lecture, reçus et notifications essentielles. Chat, maintenance, paiement en ligne, signature électronique et documents avancés sont hors MVP. | 2026-08-24 |
+| D-051 | CONFIRMÉ | **Q-D9-02 — choix C.** L’activation d’un portail exige au moins un téléphone ou un email vérifiable. | 2026-08-24 |
+| D-052 | CONFIRMÉ | **Q-D9-03 — choix C.** La vérification portail suit le canal disponible : OTP par téléphone ; OTP ou lien sécurisé par email. L’OTP téléphone est limité à l’authentification portail et n’introduit ni SMS métier général ni marketing au MVP. | 2026-08-24 |
+| D-053 | CONFIRMÉ | **Q-D9-04 — choix A.** Durées fixes portail au MVP : invitation 7 jours, OTP 10 minutes, lien sécurisé de connexion/vérification 15 minutes. Les jetons et liens sont invalidés après utilisation lorsque applicable. | 2026-08-24 |
+| D-054 | CONFIRMÉ | **Q-D9-05 — choix B.** Une session portail peut persister au maximum 30 jours. Une nouvelle vérification est exigée pour nouvel appareil, session expirée, changement sensible ou signal de risque ; aucune reconnexion quotidienne obligatoire. | 2026-08-24 |
+| D-055 | CONFIRMÉ | **Q-D9-06 — choix A.** Aucun PIN locataire au MVP ; l’accès quotidien repose sur la session ou l’appareil autorisé. | 2026-08-24 |
+| D-056 | CONFIRMÉ | **Q-D9-07 — choix B.** À la fin du bail, le portail passe en historique lecture seule et ne conserve aucune fonctionnalité liée à un bail actif. | 2026-08-24 |
+| D-057 | CONFIRMÉ | **Q-D9-08 — choix B avec rétention.** Le locataire peut consulter ses anciens reçus tant qu’ils existent dans la source de vérité selon la politique de rétention ; aucune copie portail n’est créée pour prolonger leur conservation. | 2026-08-24 |
+| D-058 | CONFIRMÉ | **Q-D9-09 — choix B.** Owner et gestionnaire voient si le portail est activé et une dernière connexion synthétique, sans historique technique détaillé. | 2026-08-24 |
+| D-059 | CONFIRMÉ | **Q-D9-10 — choix B.** L’Organization peut voir un état simple « reçu consulté » pour un reçu mis à disposition du locataire, sans historique détaillé des consultations au MVP. | 2026-08-24 |
+| D-060 | CONFIRMÉ | **Q-D9-11 — choix A.** Pour changer téléphone ou email, le locataire vérifie son identité, l’ancien canal s’il reste disponible et le nouveau canal avant activation. Si l’ancien canal est inaccessible, un workflow de récupération sécurisé s’applique. | 2026-08-24 |
+| D-061 | CONFIRMÉ | **Q-D9-12 — choix B.** Une identité avec plusieurs baux dans une même Organization voit un accueil consolidé limité à cette Organization et peut sélectionner le bail ou logement concerné. | 2026-08-24 |
+| D-062 | CONFIRMÉ | **Q-D9-13 — choix A.** Une identité locataire ayant accès à plusieurs Organizations sélectionne explicitement l’accès/Organization. Aucune agrégation inter-Organization ; Org A ne sait jamais que l’identité accède aussi à Org B. | 2026-08-24 |
+| D-063 | CONFIRMÉ | **Q-D9-14 — choix B.** Seuls `Organization Owner` et gestionnaire peuvent inviter, relancer et révoquer un `Tenant Portal Access` au MVP. | 2026-08-24 |
+| D-064 | CONFIRMÉ | **Q-D9-15 — choix B.** La vue opérationnelle portail d’Owner/gestionnaire montre : non activé, invitation envoyée, invitation acceptée, accès actif/révoqué et dernière connexion synthétique ; aucun détail technique de sécurité. | 2026-08-24 |
+| D-065 | CONFIRMÉ | **Q-D9-16 — choix A.** Le journal d’accès portail est conservé 12 mois et trace, lorsque pertinent, invitation envoyée/ouverte/acceptée, OTP demandé/réussi/échoué, connexion réussie/échouée, nouvel appareil, révocation et expiration de session, avec minimisation et isolation tenant. | 2026-08-24 |
+| D-066 | CONFIRMÉ | **Q-D9-17 — choix A.** Le locataire peut consulter et télécharger son reçu. Aucun partage public côté serveur au MVP ; après téléchargement, les fonctions de partage de l’appareil peuvent être utilisées. | 2026-08-24 |
+| D-067 | CONFIRMÉ | **Q-D9-18 — choix B.** Les notifications portail MVP couvrent échéance à venir, loyer en retard, paiement confirmé et reçu disponible, sans configuration avancée. | 2026-08-24 |
+| D-068 | CONFIRMÉ | **Q-D9-19 — choix A.** Le portail et ses communications utilisent d’abord la préférence du locataire, puis la langue de l’Organization. | 2026-08-24 |
+| D-069 | CONFIRMÉ | **Q-UX-L3-01.** La navigation interne mobile principale est `Accueil`, `Biens`, `Locataires`, `Paiements`, `Activité`. Équipe, profil, paramètres Organization, changement d’Organization et autres fonctions secondaires restent hors navigation principale dans un espace secondaire adapté. L’Organization active reste clairement identifiable. | 2026-08-25 |
+| D-070 | CONFIRMÉ | **Q-UX-L3-02.** La navigation mobile du `Tenant Portal` est `Accueil`, `Loyers`, `Reçus`, `Compte`. Les notifications utilisent une entrée légère dédiée sans devenir un cinquième onglet. L’historique des paiements reste accessible contextuellement depuis Accueil, Loyers ou Reçus selon le flow. | 2026-08-25 |
+| D-071 | CONFIRMÉ | **Q-UX-L3-03.** Aucune destination globale `Documents` au MVP. Les fichiers restent contextuels : reçu depuis paiement/échéance/locataire, preuve depuis paiement, logo depuis paramètres Organization, bail/document essentiel depuis le bail lorsque nécessaire. Aucune donnée n’est dupliquée pour créer une bibliothèque parallèle ; un futur module Documents pourra fournir une vue transversale des mêmes ressources. | 2026-08-25 |
+| D-072 | CONFIRMÉ | **Q-TECH-L4-01.** La stack MVP est Next.js + TypeScript + PWA mobile-first. Kjora livre d’abord le Web/PWA depuis une seule base applicative ; Capacitor pourra être ajouté ultérieurement pour les stores si nécessaire. Deux applications séparées ne doivent pas être construites. | 2026-08-25 |
+| D-073 | CONFIRMÉ | **Q-TECH-L4-02.** PostgreSQL/Supabase RLS constitue la barrière fondamentale d’isolation tenant et protège toute donnée tenant-scoped. Le navigateur ne reçoit jamais `service_role`. Les opérations ordinaires compatibles RLS peuvent utiliser la session utilisateur ; les opérations sensibles ou orchestrées passent par une frontière serveur appropriée. Les traitements asynchrones utilisent outbox + worker et restent découplés des transactions métier. Le runtime précis du worker est différé à l’implémentation sans modifier cette architecture. | 2026-08-25 |
+| D-074 | CONFIRMÉ | **Q-TECH-L4-03.** Les environnements sont LOCAL/DEV, STAGING et PRODUCTION. Les environnements sensibles sont isolés ; PRODUCTION ne partage jamais base, Auth, Storage, secrets ou `service_role` avec STAGING/DEV ni VERALUZ. Le frontend web recommandé est Vercel et Supabase utilise des projets/environnements séparés selon cette stratégie. Aucun secret n’est partagé entre environnements. | 2026-08-25 |
+| D-075 | CONFIRMÉ | **Q-TECH-L4-04.** L’identité interne principale utilise Supabase Auth avec email OTP/lien sécurisé et une session pouvant persister. Le PIN à 6 chiffres verrouille/déverrouille rapidement Kjora sur un appareil déjà vérifié ; il n’est ni une authentification principale, ni un remplacement de la session Auth, ni une preuve forte. Il est protégé contre la force brute et jamais stocké en clair. Nouvel appareil et récupération exigent une vérification forte ; une action sensible peut exiger un step-up. Un futur conteneur Capacitor pourra utiliser Keychain/Keystore et la biométrie, sans activer la biométrie au MVP. | 2026-08-25 |
+| D-076 | CONFIRMÉ | **Q-TECH-L4-05 — décision différée.** Le fournisseur OTP téléphone n’est pas choisi au Lot 4 et ne bloque ni le Lot 5A ni les lots métier propriétaires. Une abstraction `PhoneOtpProvider` évite tout couplage fournisseur. Le choix réel doit intervenir avant l’implémentation du Lot 6E Tenant Portal, lequel doit supporter téléphone → OTP et email → OTP/lien sécurisé. | 2026-08-25 |
+| D-077 | CONFIRMÉ | **Q-TECH-L4-06.** Au MVP, les périodes de deux Leases d’une même Unit ne peuvent pas se chevaucher. Un bail courant et un bail futur sont autorisés lorsque le futur commence après la fin du précédent ; deux baux couvrant simultanément la même Unit sont interdits. Cette règle s’applique au modèle mono-titulaire du MVP. | 2026-08-25 |
+
+## Hypothèses / propositions ouvertes
+
+| ID | Statut | Sujet |
+|---|---|---|
+| O-005 | PROPOSITION | Le système événementiel fait partie du Core et les modules ne contactent pas directement Resend. |
+| O-007 | PROPOSITION | Centre de notifications in-app + fil d’activité + historique communications + audit séparé. |
+| O-009 | À VALIDER | Canaux futurs SMS et/ou WhatsApp. |
+
+## Hypothèses / propositions remplacées par les validations
+
+| ID | Statut | Ancien sujet | Remplacé par |
+|---|---|---|---|
+| O-001 | REMPLACÉ | Monolithe modulaire pour le MVP plutôt que microservices. | D-028 |
+| O-002 | REMPLACÉ | Email/OTP pour établir l’identité + PIN 6 chiffres pour accès quotidien sur appareil autorisé. | D-026 |
+| O-003 | REMPLACÉ | Un même utilisateur peut appartenir à plusieurs organisations. | D-021 |
+| O-004 | REMPLACÉ | Un même utilisateur peut posséder plusieurs organisations. | D-022 |
+| O-008 | REMPLACÉ | Boucle MVP : Bien → Locataire → Contrat → Loyer → Paiement → Reçu → Visibilité propriétaire. | D-024 |
+| O-010 | REMPLACÉ | Niveau d’intégration automatique MTN MoMo / Orange Money dans le MVP. | D-027 |
+| O-006 | REMPLACÉ | Une panne email ne doit jamais faire échouer une opération métier réussie. | D-038 confirme le comportement fonctionnel non bloquant ; retry/idempotence restent techniques. |
+
+## Historique des décisions remplacées
+
+| ID | Statut | Ancienne décision | Remplacement |
+|---|---|---|---|
+| D-004 | REMPLACÉ | Produit multi-utilisateur et multi-tenant avec une organisation indépendante par propriétaire. Le terme « propriétaire » pouvait être interprété comme une propriété juridique des immeubles. | D-021, D-022 et D-028 précisent l’organisation active, l’`Organization Owner` comme contrôleur du compte Kjora et le tenant autonome sans présomption de propriété juridique. |
