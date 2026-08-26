@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — Lot 6A Biens + Unités terminé et testé ; commit local prêt, push/déploiement en attente d’autorisation explicite
+> Mise à jour : 2026-08-26 — Lot 6A Biens + Unités terminé, testé et déployé ; validation fonctionnelle de Blaise en attente
 
 ## Lots
 
@@ -12,7 +12,7 @@
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ**
-- **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
 - **Biens + Unités : BACKEND RÉEL — persistance Supabase ; Locataires + Baux : PRÉVISUALISATION FICTIVE explicite seulement**
 
@@ -164,6 +164,7 @@
 - Lot 6A — suite Node complète : 43 tests réussis ; TypeScript, ESLint et build Next.js 16.3.2 réussis, avec 33 routes dont `/api/rentals` et les routes Biens/Unités dynamiques.
 - Advisors Supabase relancés : aucune alerte sécurité liée au Lot 6A ; `private.domain_events` cumule schéma non exposé, aucun grant client et policy de refus explicite. Les index 6A encore signalés comme inutilisés le sont parce que les trois tables sont vides.
 - Le contrôle local anonyme confirme la redirection `/app/biens` vers `/connexion`; le parcours authentifié réel reste à valider par Blaise sur l’alias Production.
+- Commit Lot 6A `3746ef2` poussé sur `main` et présent sur `origin/main` ; alias Vercel Production `https://saas-kjora.vercel.app` vérifié. La nouvelle route `/api/rentals` est servie, refuse le POST anonyme en 401, `/connexion/` répond 200 et `/app/biens` redirige l’anonyme vers la connexion.
 
 ## Bloqué
 
@@ -178,4 +179,4 @@
 
 ## Proposé ensuite
 
-**Autoriser le push du commit Lot 6A local vers `https://github.com/NGAMS237/SAAS-KJORA.git`/`main`, vérifier Vercel Production, puis faire valider fonctionnellement le Lot 6A par Blaise. Ne pas démarrer le Lot 6B avant cette validation explicite.**
+**Faire valider fonctionnellement le Lot 6A par Blaise. Ne pas démarrer le Lot 6B avant cette validation explicite.**

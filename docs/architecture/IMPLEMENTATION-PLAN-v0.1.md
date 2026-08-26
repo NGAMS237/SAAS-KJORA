@@ -1,6 +1,6 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-26 : le backend réel du Lot 6A Biens + Unités est **TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Les données Biens/Unités sont persistées dans Supabase ; seules les prévisualisations Locataires/Baux restent fictives. Le Lot 6B reste **NON COMMENCÉ**.
+> Mise à jour 2026-08-26 : le backend réel du Lot 6A Biens + Unités est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Le commit `3746ef2` est sur `origin/main` et l’alias Vercel Production sert la nouvelle API. Les données Biens/Unités sont persistées dans Supabase ; seules les prévisualisations Locataires/Baux restent fictives. Le Lot 6B reste **NON COMMENCÉ**.
 
 > Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. Le Lot 6A attend la validation fonctionnelle de Blaise ; le Lot 6B ne doit pas démarrer avant cette validation explicite.
 
@@ -210,7 +210,7 @@ Rendre l’application réellement multi-utilisateur et sûre avant d’ajouter 
 
 ## 8. Lot 6A — Property + Unit
 
-> Statut de sortie : **TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Implémentation limitée à Property + Unit ; aucune table Tenant/Lease réelle n’a été ajoutée.
+> Statut de sortie : **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Implémentation limitée à Property + Unit ; aucune table Tenant/Lease réelle n’a été ajoutée.
 
 ### Objectif
 

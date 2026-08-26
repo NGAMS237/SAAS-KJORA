@@ -544,6 +544,6 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 
 **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ.** Blaise a confirmé le parcours fonctionnel réel Équipe/invitation et l’email transactionnel sur le déploiement Vercel ; le gate du Lot 6A est satisfait.
 
-**Lot 6A — Property + Unit backend réel : TERMINÉ / TESTÉ — COMMIT LOCAL PRÊT ; PUSH/DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Biens/Unités sont reliés à Supabase et bornés à l’Organization active ; maison → Unit « Maison entière », immeuble multi-unités, archivage non destructif, RBAC/RLS et `PROPERTY_CREATED` sont implémentés. La photo reste un placeholder et Storage est différé.
+**Lot 6A — Property + Unit backend réel : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Biens/Unités sont reliés à Supabase et bornés à l’Organization active ; maison → Unit « Maison entière », immeuble multi-unités, archivage non destructif, RBAC/RLS et `PROPERTY_CREATED` sont implémentés. Le commit `3746ef2` est sur `origin/main` et l’alias Vercel Production sert la nouvelle API. La photo reste un placeholder et Storage est différé.
 
 **Lot 6B — Tenant + Lease backend réel : NON COMMENCÉ.** Locataires et Baux restent une prévisualisation fictive explicitement signalée. Le prochain gate est la validation fonctionnelle du Lot 6A par Blaise ; 6B ne peut pas démarrer avant cette validation explicite.
