@@ -157,7 +157,7 @@ Les données affichées sont des fixtures de test clairement identifiées, pas u
 
 ## 7. Lot 5C — Membership, RBAC et isolation
 
-> État technique au 2026-08-26 : modèle, capabilities, RLS, invitations, protections Owner, audit et UI Équipe implémentés ; validation automatisée locale et distante réussie ; Production Vercel `Ready`. L’email transactionnel d’invitation doit encore être configuré en Production/Preview et la validation fonctionnelle Blaise reste le gate avant tout démarrage de 6A.
+> État technique au 2026-08-26 : modèle, capabilities, RLS, invitations, protections Owner, audit et UI Équipe implémentés ; validation automatisée locale et distante réussie ; email transactionnel configuré côté serveur en Production/Preview. Le Lot 5C est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** ; cette validation reste le gate avant tout démarrage de 6A.
 
 ### Objectif
 

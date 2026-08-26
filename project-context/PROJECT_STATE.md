@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — PIN validé par Blaise ; Lot 5C testé et déployé, configuration email requise
+> Mise à jour : 2026-08-26 — PIN validé par Blaise ; Lot 5C testé et déployé, validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -11,7 +11,7 @@
 - **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
-- **Lot 5C — Membership/RBAC + isolation : PARTIEL / TESTÉ / DÉPLOYÉ — EMAIL TRANSACTIONNEL À CONFIGURER, VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6A — Property + Unit backend : NON COMMENCÉ**
 - **Lot 6B — Tenant + Lease backend : NON COMMENCÉ**
 - **Prévisualisation UX 6A/6B : DISPONIBLE — données fictives, store client éphémère, aucune persistance Supabase**
@@ -152,6 +152,7 @@
 - Les tests 5C n’ont laissé aucune donnée fictive distante : le projet KJORA conserve 2 Organizations, 2 Memberships réelles, 0 invitation et 0 entrée d’audit après rollback.
 - Advisors Supabase exécutés : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant ; les avertissements `SECURITY DEFINER` correspondent aux RPC authentifiées intentionnelles qui revérifient `auth.uid()`, Organization et capability avec retraits `PUBLIC`/`anon`.
 - Commit applicatif Lot 5C `b79cd0d` poussé sur `main` ; déploiement Vercel Production `Ready` et alias stable `https://saas-kjora.vercel.app` vérifié. `/connexion/` répond 200, `/app/` redirige l’anonyme et l’API Équipe refuse l’anonyme en 401.
+- Email transactionnel 5C configuré côté serveur Vercel en Production et Preview : clé Resend d’envoi limitée au domaine vérifié et sender Kjora autorisé ; aucune variable n’est publique, committée ou exposée au navigateur.
 
 ## Bloqué
 
@@ -162,8 +163,8 @@
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
 - La prévisualisation UX doit être testée par Blaise sur staging ; ses données Biens/Unités/Locataires/Baux ne sont jamais enregistrées dans Supabase et disparaissent au refresh.
-- Les variables serveur `RESEND_TRANSACTIONAL_API_KEY` et `KJORA_TRANSACTIONAL_EMAIL_FROM` ne sont pas encore présentes dans Vercel. Tant qu’elles ne sont pas configurées en Production/Preview, l’UI Équipe refuse proprement l’envoi/relance et aucune invitation ne peut être considérée opérationnelle sur staging.
+- La validation fonctionnelle réelle par Blaise reste requise pour confirmer sur staging l’envoi, la relance, l’acceptation unique et la révocation d’une invitation interne avant de marquer le Lot 5C **VALIDÉ**.
 
 ## Proposé ensuite
 
-**Configurer l’email transactionnel, déployer puis faire valider fonctionnellement le Lot 5C par Blaise. Le Lot 6A — Biens + Unités backend réel — reste la prochaine étape et ne doit pas démarrer avant cette validation.**
+**Faire valider fonctionnellement le parcours Équipe/invitation du Lot 5C par Blaise. Le Lot 6A — Biens + Unités backend réel — reste la prochaine étape et ne doit pas démarrer avant cette validation.**
