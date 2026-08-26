@@ -1,7 +1,7 @@
 # Kjora — Registre des décisions
 
 > Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
-> Dernière mise à jour : 2026-08-25 — validation du Lot 4 Architecture technique & sécurité
+> Dernière mise à jour : 2026-08-26 — lancement du sous-lot PIN interne 6 chiffres
 
 ## Statuts
 
@@ -90,6 +90,7 @@
 | D-075 | CONFIRMÉ | **Q-TECH-L4-04.** L’identité interne principale utilise Supabase Auth avec email OTP/lien sécurisé et une session pouvant persister. Le PIN à 6 chiffres verrouille/déverrouille rapidement Kjora sur un appareil déjà vérifié ; il n’est ni une authentification principale, ni un remplacement de la session Auth, ni une preuve forte. Il est protégé contre la force brute et jamais stocké en clair. Nouvel appareil et récupération exigent une vérification forte ; une action sensible peut exiger un step-up. Un futur conteneur Capacitor pourra utiliser Keychain/Keystore et la biométrie, sans activer la biométrie au MVP. | 2026-08-25 |
 | D-076 | CONFIRMÉ | **Q-TECH-L4-05 — décision différée.** Le fournisseur OTP téléphone n’est pas choisi au Lot 4 et ne bloque ni le Lot 5A ni les lots métier propriétaires. Une abstraction `PhoneOtpProvider` évite tout couplage fournisseur. Le choix réel doit intervenir avant l’implémentation du Lot 6E Tenant Portal, lequel doit supporter téléphone → OTP et email → OTP/lien sécurisé. | 2026-08-25 |
 | D-077 | CONFIRMÉ | **Q-TECH-L4-06.** Au MVP, les périodes de deux Leases d’une même Unit ne peuvent pas se chevaucher. Un bail courant et un bail futur sont autorisés lorsque le futur commence après la fin du précédent ; deux baux couvrant simultanément la même Unit sont interdits. Cette règle s’applique au modèle mono-titulaire du MVP. | 2026-08-25 |
+| D-078 | CONFIRMÉ | **Sous-lot PIN interne 6 chiffres.** Le PIN facultatif est un verrou local de confort réservé aux utilisateurs internes déjà authentifiés par Supabase. Il ne crée, ne prolonge et ne remplace jamais une session Auth, n’est jamais envoyé au serveur et n’est jamais proposé au portail locataire. Sur l’appareil, seul un verifier PBKDF2-SHA-256 salé aléatoirement est conservé dans IndexedDB. Kjora se verrouille manuellement ou après 5 minutes d’inactivité. Après cinq erreurs, le PIN local est supprimé et une authentification forte email OTP/lien sécurisé est obligatoire. Une déconnexion Supabase supprime également le PIN et l’état de déverrouillage locaux au MVP. | 2026-08-26 |
 
 ## Hypothèses / propositions ouvertes
 

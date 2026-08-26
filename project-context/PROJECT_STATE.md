@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-25 — validation fonctionnelle finale du Lot 5B par Blaise
+> Mise à jour : 2026-08-26 — sous-lot PIN interne 6 chiffres terminé et testé
 
 ## Lots
 
@@ -10,6 +10,7 @@
 - **Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ**
 - **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
+- **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ — À VALIDER FONCTIONNELLEMENT PAR BLAISE**
 - **Lot 5C — Membership/RBAC + isolation : NON COMMENCÉ**
 
 ## Terminé
@@ -69,6 +70,10 @@
 - Lot 5B validé fonctionnellement par Blaise : email Resend reçu, Magic Link Supabase avec PKCE opérationnel et session SSR persistante créée.
 - Onboarding Organization réel validé ; l’Organization créée est affichée dans `/app`, puis retrouvée après déconnexion et reconnexion.
 - Les données Dashboard, Biens, Locataires et Paiements restent volontairement fictives jusqu’aux lots métier correspondants.
+- Sous-lot PIN interne livré : configuration, modification et suppression facultatives dans Paramètres, verrouillage manuel et automatique après 5 minutes, puis écran mobile-first `/verrouillage`.
+- Le PIN interne reste un `quick lock` local sur session Supabase existante : PBKDF2-SHA-256 à 600 000 itérations, sel aléatoire, verifier et compteur d’échecs dans IndexedDB, aucun PIN brut conservé ou transmis.
+- Après cinq erreurs ou choix de l’email, le PIN local est supprimé et la session Supabase est terminée afin d’imposer une authentification forte. La déconnexion interne supprime également le PIN et l’état de déverrouillage locaux.
+- Le Tenant Portal reste séparé et ne charge aucune logique PIN.
 
 ## Testé
 
@@ -125,6 +130,8 @@
 - Advisor sécurité exécuté : seul avertissement restant = fonction `create_organization` `SECURITY DEFINER` volontairement exposée aux seuls utilisateurs authentifiés, avec vérification `auth.uid()`, identité email vérifiée, validations, `search_path` vide et retraits `PUBLIC`/`anon`.
 - Accès REST avec la seule clé publiable, sans session : HTTP 401 et aucune ligne exposée.
 - Validation fonctionnelle réelle par Blaise : réception email Resend, échange Magic Link PKCE, création de session SSR, onboarding Organization, affichage de l’Organization réelle, déconnexion, reconnexion et récupération de l’Organization — succès.
+- Sous-lot PIN — 17 tests Node réussis : format/confirmation, dérivation PBKDF2, absence du PIN brut dans le verifier, comparaison sûre, cinquième échec, timeout 5 minutes, retour interne borné et absence de couplage portail/localStorage.
+- Sous-lot PIN — TypeScript, ESLint et build Next.js production réussis ; `/verrouillage` est une route dynamique protégée, `/app` refuse l’anonyme et les routes `/portal` restent sans logique PIN.
 
 ## Bloqué
 
@@ -134,6 +141,7 @@
 - Les paramètres techniques de retry et la politique légale de rétention restent à préciser dans leurs lots concernés sans remettre en cause l’architecture validée.
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
+- La validation fonctionnelle authentifiée du sous-lot PIN sur staging reste à effectuer par Blaise après redéploiement Vercel ; elle ne bloque pas la livraison technique ni ne démarre le Lot 5C.
 
 ## Proposé ensuite
 

@@ -1,6 +1,7 @@
 import { ArrowUpRight, Building2, Clock3, ReceiptText, WalletCards } from "lucide-react";
 import { ActionLink, Badge, Card, DemoNotice, KpiCard, ListRow, PageHeader } from "@/core/ui/ui";
 import { requireUser } from "@/core/auth/require-user";
+import { PinSetupPrompt } from "@/core/security/pin-controls";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -14,6 +15,7 @@ export default async function DashboardPage() {
         action={<ActionLink href="/app/paiements">Voir les paiements</ActionLink>}
       />
       <DemoNotice />
+      <PinSetupPrompt />
 
       <section className="kpi-grid" aria-label="Indicateurs de démonstration">
         <KpiCard label="Attendu" value="1 240 000 XAF" note="8 échéances fictives" />

@@ -176,6 +176,9 @@ Aucune règle camerounaise susceptible de varier par pays n’est inscrite en du
 - Supabase Auth porte l’identité principale et sa session peut persister.
 - Le PIN à 6 chiffres verrouille ou déverrouille rapidement Kjora uniquement sur un appareil déjà autorisé ; il ne crée ni ne remplace la session Auth.
 - Le PIN seul n’est jamais une authentification principale ni une preuve d’identité forte ; il n’est jamais stocké en clair et doit être protégé par limitation des tentatives, throttling et verrouillage.
+- Au MVP, le PIN interne est facultatif, exactement composé de 6 chiffres et reste un `quick lock` purement local : une session Supabase valide doit déjà exister et le PIN ne crée, ne prolonge ni ne remplace cette session.
+- Le PIN n’est jamais envoyé à Supabase, au serveur, aux logs ou aux outils de suivi. Le navigateur conserve seulement dans IndexedDB un sel cryptographiquement aléatoire, un verifier PBKDF2-SHA-256 et les paramètres nécessaires ; l’état de déverrouillage ne contient aucun PIN.
+- Si le PIN est configuré, Kjora se verrouille après 5 minutes d’inactivité ou à la demande. Cinq erreurs suppriment le PIN local et forcent une authentification forte email OTP/lien sécurisé. La déconnexion Supabase supprime le PIN et l’état de déverrouillage locaux au MVP.
 - Nouvel appareil et récupération exigent une vérification forte ; une action sensible peut demander un step-up authentication.
 - Biométrie hors MVP.
 - Une invitation de membre interne expire après 7 jours, peut être relancée et une nouvelle invitation invalide l’ancienne invitation active correspondante.

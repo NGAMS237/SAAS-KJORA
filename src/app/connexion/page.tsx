@@ -10,6 +10,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const reason = Array.isArray(params.reason) ? params.reason[0] : params.reason;
   const callbackMessage = getAuthCallbackMessage(reason);
+  const pinMessage = reason === "pin-attempts-exceeded"
+    ? "Pour protéger votre compte, reconnectez-vous avec votre email."
+    : reason === "pin-email-required"
+      ? "Reconnectez-vous avec votre email pour continuer sans le verrou PIN."
+      : null;
 
   return (
     <main className="auth-page">
@@ -18,9 +23,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="eyebrow">Accès sécurisé</p>
         <h1>Retrouvez votre espace locatif.</h1>
         <p className="auth-intro">Recevez un lien sécurisé par email. Le code reste disponible comme alternative.</p>
-        {callbackMessage ? (
+        {callbackMessage || pinMessage ? (
           <p className="form-feedback form-feedback--error" role="alert">
-            {callbackMessage}
+            {callbackMessage ?? pinMessage}
           </p>
         ) : null}
         <LoginForm />

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Bell, Check, ChevronDown, LogOut, Menu, PanelLeftClose, Plus, X } from "lucide-react";
+import { Bell, Check, ChevronDown, Menu, PanelLeftClose, Plus, X } from "lucide-react";
 import type { OrganizationOption } from "@/core/organization/select-active-organization";
 import {
   internalPrimaryNavigation,
@@ -13,6 +13,7 @@ import {
 } from "@/core/navigation/navigation";
 import { PreferencesControls } from "@/core/preferences/preferences-controls";
 import { DemoNotice } from "@/core/ui/ui";
+import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls";
 
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -102,11 +103,13 @@ export function InternalShell({
   organizations,
   activeOrganization,
   userEmail,
+  userId,
 }: {
   children: ReactNode;
   organizations: OrganizationOption[];
   activeOrganization: OrganizationOption;
   userEmail: string | null;
+  userId: string;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -135,7 +138,8 @@ export function InternalShell({
             Aperçu portail locataire
           </Link>
           <PreferencesControls />
-          <form action="/auth/signout" method="post"><button className="portal-preview-link" type="submit"><LogOut aria-hidden="true" size={18} />Déconnexion</button></form>
+          <PinLockButton />
+          <SecureSignOutButton userId={userId} />
           <DemoNotice compact />
         </div>
       </aside>
@@ -185,7 +189,8 @@ export function InternalShell({
               Aperçu portail locataire
             </Link>
             <PreferencesControls />
-            <form action="/auth/signout" method="post"><button className="portal-preview-link" type="submit"><LogOut aria-hidden="true" size={18} />Déconnexion</button></form>
+            <PinLockButton />
+            <SecureSignOutButton userId={userId} />
             <DemoNotice compact />
           </div>
         </div>

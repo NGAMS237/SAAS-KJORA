@@ -724,6 +724,243 @@ h2 {
 .form-separator::before, .form-separator::after { background: var(--border); content: ""; flex: 1; height: 1px; }
 .form-feedback { background: var(--info-soft); border-radius: var(--radius-control); color: var(--info); font-size: 0.76rem; margin: 0; padding: 11px; }
 .form-feedback--error { background: var(--danger-soft); color: var(--danger); }
+.button--danger-quiet {
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--danger);
+}
+
+.pin-gate,
+.pin-lock-page {
+  align-items: center;
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--kjora-gold) 12%, transparent), transparent 26%),
+    var(--background);
+  display: grid;
+  min-height: 100dvh;
+  padding: 24px 16px;
+}
+
+.pin-gate {
+  justify-items: center;
+}
+
+.pin-gate p {
+  color: var(--text-muted);
+  margin: 16px 0 0;
+}
+
+.pin-lock-panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-menu);
+  margin: auto;
+  max-width: 460px;
+  padding: clamp(24px, 6vw, 42px);
+  width: 100%;
+}
+
+.pin-lock-panel .wordmark {
+  color: var(--text);
+  margin-bottom: 34px;
+}
+
+.pin-lock-panel__icon {
+  align-items: center;
+  background: var(--success-soft);
+  border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
+  border-radius: 12px;
+  color: var(--success);
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  margin-bottom: var(--space-5);
+  width: 48px;
+}
+
+.pin-lock-form,
+.pin-setup-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.pin-field {
+  display: grid;
+  gap: 8px;
+}
+
+.pin-field > label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pin-input {
+  border-radius: 13px;
+  position: relative;
+}
+
+.pin-input input {
+  border: 0;
+  height: 100%;
+  inset: 0;
+  opacity: 0.01;
+  position: absolute;
+  width: 100%;
+  z-index: 2;
+}
+
+.pin-input:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--kjora-gold) 78%, white);
+  outline-offset: 3px;
+}
+
+.pin-slots {
+  display: grid;
+  gap: clamp(6px, 2vw, 10px);
+  grid-template-columns: repeat(6, minmax(38px, 1fr));
+}
+
+.pin-slot {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  color: var(--text);
+  display: flex;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  height: 52px;
+  justify-content: center;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.pin-slot--current {
+  background: color-mix(in srgb, var(--kjora-gold) 10%, var(--surface));
+  border-color: var(--kjora-gold);
+  transform: translateY(-1px);
+}
+
+.pin-field__hint,
+.pin-attempts {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.pin-attempts {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+.pin-email-fallback {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--kjora-terracotta);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 750;
+  gap: 8px;
+  justify-content: center;
+  margin-top: var(--space-5);
+  min-height: 44px;
+  padding: 8px;
+  width: 100%;
+}
+
+.pin-prompt {
+  align-items: center;
+  background: color-mix(in srgb, var(--kjora-gold) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--kjora-gold) 35%, var(--border));
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: var(--space-4);
+}
+
+.pin-prompt__icon,
+.pin-security__intro > span {
+  align-items: center;
+  background: var(--kjora-forest);
+  border-radius: 11px;
+  color: var(--kjora-ivory);
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.pin-prompt strong {
+  font-family: var(--font-display);
+}
+
+.pin-prompt p,
+.pin-security__intro p {
+  color: var(--text-muted);
+  font-size: 0.77rem;
+  margin: 3px 0 0;
+}
+
+.pin-prompt__actions,
+.pin-security__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pin-security {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.pin-security__intro {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.pin-security__intro > span {
+  background: var(--success-soft);
+  color: var(--success);
+  flex: 0 0 auto;
+}
+
+.pin-security .form-feedback,
+.pin-lock-panel .form-feedback {
+  margin: 0;
+}
+
+@media (max-width: 620px) {
+  .pin-prompt {
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .pin-prompt__actions {
+    grid-column: 1 / -1;
+  }
+
+  .pin-prompt__actions .button,
+  .pin-security__actions .button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .pin-slots {
+    gap: 6px;
+    grid-template-columns: repeat(6, minmax(34px, 1fr));
+  }
+
+  .pin-slot {
+    height: 48px;
+  }
+}
 .fixed-configuration { background: var(--surface-muted); border-radius: var(--radius-control); display: grid; gap: 10px; grid-template-columns: 1fr 1fr; padding: 13px; }
 .fixed-configuration span { display: grid; }
 .fixed-configuration small { color: var(--text-muted); font-size: 0.65rem; }

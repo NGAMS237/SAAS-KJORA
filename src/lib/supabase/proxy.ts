@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 function isProtectedPage(pathname: string) {
-  return pathname === "/app" || pathname.startsWith("/app/") || pathname.startsWith("/onboarding/organization");
+  return pathname === "/app"
+    || pathname.startsWith("/app/")
+    || pathname.startsWith("/onboarding/organization")
+    || pathname === "/verrouillage"
+    || pathname.startsWith("/verrouillage/");
 }
 
 function loginRedirect(request: NextRequest, reason?: string, cookiesFrom?: NextResponse) {

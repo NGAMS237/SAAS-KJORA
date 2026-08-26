@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Card, PageHeader } from "@/core/ui/ui";
 import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { OrganizationProfileForm } from "@/core/organization/organization-profile-form";
+import { PinSecurityPanel } from "@/core/security/pin-controls";
 
 export default async function SettingsPage() {
   const { activeOrganization } = await loadOrganizationContext();
@@ -21,6 +22,9 @@ export default async function SettingsPage() {
             </div>
           </div>
           <OrganizationProfileForm organization={activeOrganization} />
+      </Card>
+      <Card>
+        <PinSecurityPanel />
       </Card>
     </div>
   );
