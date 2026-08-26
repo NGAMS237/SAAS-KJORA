@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(40);
 
 insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at) values
   ('16000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner-a-6b@kjora.test', now(), now(), now()),
@@ -99,6 +99,7 @@ select throws_ok($$ update public.leases set status = 'active' where id = '66000
 select throws_ok($$ update public.units set status = 'archived' where id = '46000000-0000-4000-8000-00000000000a' $$, '23514', null, 'Unit occupée ne peut être archivée');
 select throws_ok($$ update public.leases set base_rent_xaf = 1 where id = '66000000-0000-4000-8000-00000000000a' $$, '23514', null, 'conditions actives sont immuables');
 select lives_ok($$ update public.leases set status = 'ended', ended_on = '2026-09-30' where id = '66000000-0000-4000-8000-00000000000a' $$, 'clôture explicite libère Unit');
+select throws_ok($$ update public.leases set status = 'active' where id = '66000000-0000-4000-8000-00000000000b' $$, '23P01', null, 'historique terminé ne peut pas être recouvert sur les mêmes dates');
 select lives_ok($$ update public.leases set status = 'active' where id = '66000000-0000-4000-8000-00000000000e' $$, 'bail futur après fin précédente accepté');
 
 select throws_ok($$

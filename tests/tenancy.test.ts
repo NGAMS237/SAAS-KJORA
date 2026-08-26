@@ -29,7 +29,7 @@ test("calendar entry proration uses inclusive remaining days", () => assert.equa
 test("calendar exit proration uses occupied calendar days", () => assert.equal(calendarExitProration(310000, "2026-08-10", "calendar_days"), 100000));
 test("none proration preserves periodic total", () => assert.equal(calendarEntryProration(225000, "2026-08-15", "none"), 225000));
 test("migration derives periodic total and occupancy rather than storing a boolean", () => { assert.match(migration, /periodic_total_xaf bigint generated always/i); assert.doesNotMatch(migration, /occup(?:ied|ancy)\s+boolean/i); });
-test("migration excludes active overlapping periods at database level", () => { assert.match(migration, /constraint leases_active_period_no_overlap exclude using gist/i); assert.match(migration, /where \(status = 'active'\)/i); });
+test("migration excludes overlapping active and ended effective periods at database level", () => { assert.match(migration, /constraint leases_active_period_no_overlap exclude using gist/i); assert.match(migration, /where \(status in \('active', 'ended'\)\)/i); });
 test("draft creation and explicit activation are separate", () => { assert.match(migration, /status text not null default 'draft'/i); assert.match(migration, /LEASE_ACTIVATED/); });
 test("ended leases free units while active leases prevent archival", () => { assert.match(migration, /status = 'ended'/i); assert.match(migration, /prevent_archiving_occupied_unit/i); });
 test("tenant private fields use a capability-checked projection", () => { assert.match(migration, /get_tenant_private_profile/i); assert.match(migration, /has_capability\(target_organization_id, 'tenant.manage'\)/i); });

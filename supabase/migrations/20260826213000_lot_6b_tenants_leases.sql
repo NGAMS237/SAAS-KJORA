@@ -97,8 +97,12 @@ create table public.leases (
   constraint leases_active_period_no_overlap exclude using gist (
     organization_id with =,
     unit_id with =,
-    daterange(start_date, coalesce(end_date, 'infinity'::date), '[]') with &&
-  ) where (status = 'active')
+    daterange(
+      start_date,
+      case when status = 'ended' then ended_on else coalesce(end_date, 'infinity'::date) end,
+      '[]'
+    ) with &&
+  ) where (status in ('active', 'ended'))
 );
 
 create index tenants_organization_created_idx on public.tenants (organization_id, created_at desc);
