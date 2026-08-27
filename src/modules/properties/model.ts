@@ -21,6 +21,7 @@ export type UnitRecord = {
   label: string;
   type: UnitType;
   areaSqm: number | null;
+  referenceRentXaf: number | null;
   status: ResourceStatus;
   occupancy: "vacant" | "occupied";
   activeLeaseId: string | null;
@@ -35,6 +36,7 @@ export type PropertyInput = {
   name: string;
   locality: string;
   type: PropertyType;
+  referenceRentXaf: number | null;
 };
 
 export type UnitInput = {
@@ -42,6 +44,7 @@ export type UnitInput = {
   label: string;
   type: UnitType;
   areaSqm: number | null;
+  referenceRentXaf: number | null;
 };
 
 export type ValidationResult<T> =
@@ -54,19 +57,29 @@ function trimmed(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function optionalReferenceRent(value: unknown) {
+  if (value === "" || value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export function parsePropertyInput(input: Record<string, unknown>): ValidationResult<PropertyInput> {
   const name = trimmed(input.name);
   const locality = trimmed(input.locality);
   const type = input.type;
+  const referenceRentXaf = optionalReferenceRent(input.referenceRentXaf);
   if (name.length < 2 || name.length > 120) return { ok: false, error: "invalid_property_name" };
   if (locality.length < 2 || locality.length > 160) return { ok: false, error: "invalid_property_locality" };
   if (typeof type !== "string" || !(PROPERTY_TYPES as readonly string[]).includes(type)) {
     return { ok: false, error: "invalid_property_type" };
   }
-  return { ok: true, value: { name, locality, type: type as PropertyType } };
+  if (referenceRentXaf === undefined || (type === "building" && referenceRentXaf !== null)) {
+    return { ok: false, error: "invalid_reference_rent" };
+  }
+  return { ok: true, value: { name, locality, type: type as PropertyType, referenceRentXaf } };
 }
 
-export function parsePropertyUpdate(input: Record<string, unknown>): ValidationResult<Omit<PropertyInput, "type">> {
+export function parsePropertyUpdate(input: Record<string, unknown>): ValidationResult<Pick<PropertyInput, "name" | "locality">> {
   const name = trimmed(input.name);
   const locality = trimmed(input.locality);
   if (name.length < 2 || name.length > 120) return { ok: false, error: "invalid_property_name" };
@@ -80,6 +93,7 @@ export function parseUnitInput(input: Record<string, unknown>): ValidationResult
   const type = input.type;
   const rawArea = input.areaSqm;
   const areaSqm = rawArea === "" || rawArea === null || rawArea === undefined ? null : Number(rawArea);
+  const referenceRentXaf = optionalReferenceRent(input.referenceRentXaf);
   if (!UUID_PATTERN.test(propertyId)) return { ok: false, error: "invalid_property" };
   if (label.length < 1 || label.length > 120) return { ok: false, error: "invalid_unit_label" };
   if (typeof type !== "string" || !(UNIT_TYPES as readonly string[]).includes(type) || type === "whole_house") {
@@ -88,7 +102,8 @@ export function parseUnitInput(input: Record<string, unknown>): ValidationResult
   if (areaSqm !== null && (!Number.isFinite(areaSqm) || areaSqm <= 0 || areaSqm > 1_000_000)) {
     return { ok: false, error: "invalid_unit_area" };
   }
-  return { ok: true, value: { propertyId, label, type: type as UnitType, areaSqm } };
+  if (referenceRentXaf === undefined) return { ok: false, error: "invalid_reference_rent" };
+  return { ok: true, value: { propertyId, label, type: type as UnitType, areaSqm, referenceRentXaf } };
 }
 
 export function parseUnitUpdate(
@@ -99,6 +114,7 @@ export function parseUnitUpdate(
   const requestedType = currentType === "whole_house" ? "whole_house" : input.type;
   const rawArea = input.areaSqm;
   const areaSqm = rawArea === "" || rawArea === null || rawArea === undefined ? null : Number(rawArea);
+  const referenceRentXaf = optionalReferenceRent(input.referenceRentXaf);
   if (label.length < 1 || label.length > 120) return { ok: false, error: "invalid_unit_label" };
   if (typeof requestedType !== "string" || !(UNIT_TYPES as readonly string[]).includes(requestedType)) {
     return { ok: false, error: "invalid_unit_type" };
@@ -106,7 +122,8 @@ export function parseUnitUpdate(
   if (areaSqm !== null && (!Number.isFinite(areaSqm) || areaSqm <= 0 || areaSqm > 1_000_000)) {
     return { ok: false, error: "invalid_unit_area" };
   }
-  return { ok: true, value: { label, type: requestedType as UnitType, areaSqm } };
+  if (referenceRentXaf === undefined) return { ok: false, error: "invalid_reference_rent" };
+  return { ok: true, value: { label, type: requestedType as UnitType, areaSqm, referenceRentXaf } };
 }
 
 export function filterProperties(properties: readonly PropertySummary[], query: string) {

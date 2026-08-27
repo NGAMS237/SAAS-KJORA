@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { GLOBAL_OVERDUE_REMINDER_DAYS } from "@/modules/tenancy/model";
 import type {
   BillingFrequency,
   IdentityDocumentType,
@@ -33,12 +34,14 @@ type LeaseRow = {
   start_date: string;
   end_date: string | null;
   ended_on: string | null;
+  end_reason: string | null;
   base_rent_xaf: number | string;
   recurring_charges_xaf: number | string;
   periodic_total_xaf: number | string;
   security_deposit_xaf: number | string;
-  initial_prepayment_periods: number | string;
   initial_prepayment_amount_xaf: number | string;
+  prepaid_full_periods: number | string;
+  prepayment_remainder_xaf: number | string;
   billing_frequency: BillingFrequency;
   due_day: number;
   generate_due_days_before: number;
@@ -52,9 +55,9 @@ type LeaseRow = {
 };
 
 type PropertyRow = { id: string; name: string };
-type UnitRow = { id: string; property_id: string; label: string; type: UnitType };
+type UnitRow = { id: string; property_id: string; label: string; type: UnitType; reference_rent_xaf: number | string | null };
 
-const LEASE_COLUMNS = "id, tenant_id, property_id, unit_id, status, start_date, end_date, ended_on, base_rent_xaf, recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, initial_prepayment_periods, initial_prepayment_amount_xaf, billing_frequency, due_day, generate_due_days_before, overdue_reminder_days_after, entry_proration_mode, exit_proration_mode, entry_proration_override_xaf, entry_proration_override_reason, exit_proration_override_xaf, exit_proration_override_reason";
+const LEASE_COLUMNS = "id, tenant_id, property_id, unit_id, status, start_date, end_date, ended_on, end_reason, base_rent_xaf, recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, initial_prepayment_amount_xaf, prepaid_full_periods, prepayment_remainder_xaf, billing_frequency, due_day, generate_due_days_before, overdue_reminder_days_after, entry_proration_mode, exit_proration_mode, entry_proration_override_xaf, entry_proration_override_reason, exit_proration_override_xaf, exit_proration_override_reason";
 
 function optionalNumber(value: number | string | null) {
   return value === null ? null : Number(value);
@@ -75,12 +78,14 @@ function toLease(
     startDate: row.start_date,
     endDate: row.end_date,
     endedOn: row.ended_on,
+    endReason: row.end_reason,
     baseRentXaf: Number(row.base_rent_xaf),
     recurringChargesXaf: Number(row.recurring_charges_xaf),
     periodicTotalXaf: Number(row.periodic_total_xaf),
     securityDepositXaf: Number(row.security_deposit_xaf),
-    initialPrepaymentPeriods: Number(row.initial_prepayment_periods),
     initialPrepaymentAmountXaf: Number(row.initial_prepayment_amount_xaf),
+    prepaidFullPeriods: Number(row.prepaid_full_periods),
+    prepaymentRemainderXaf: Number(row.prepayment_remainder_xaf),
     billingFrequency: row.billing_frequency,
     dueDay: row.due_day,
     generateDueDaysBefore: row.generate_due_days_before,
@@ -193,7 +198,7 @@ export async function getLeaseOptions(organizationId: string): Promise<LeaseOpti
   const [tenantsResult, propertiesResult, unitsResult, activeResult] = await Promise.all([
     supabase.from("tenants").select("id, full_name").eq("organization_id", organizationId).order("full_name").limit(1000),
     supabase.from("properties").select("id, name").eq("organization_id", organizationId).eq("status", "active").order("name").limit(500),
-    supabase.from("units").select("id, property_id, label, type").eq("organization_id", organizationId).eq("status", "active").order("label").limit(2000),
+    supabase.from("units").select("id, property_id, label, type, reference_rent_xaf").eq("organization_id", organizationId).eq("status", "active").order("label").limit(2000),
     supabase.from("leases").select("unit_id").eq("organization_id", organizationId).eq("status", "active").limit(2000),
   ]);
   if (tenantsResult.error) throw tenantsResult.error;
@@ -211,6 +216,7 @@ export async function getLeaseOptions(organizationId: string): Promise<LeaseOpti
       label: row.label,
       type: row.type,
       occupied: occupied.has(row.id),
+      referenceRentXaf: row.reference_rent_xaf === null ? null : Number(row.reference_rent_xaf),
     })),
   };
 }
@@ -225,12 +231,11 @@ export function leaseInputToRow(input: LeaseInput) {
     base_rent_xaf: input.baseRentXaf,
     recurring_charges_xaf: input.recurringChargesXaf,
     security_deposit_xaf: input.securityDepositXaf,
-    initial_prepayment_periods: input.initialPrepaymentPeriods,
     initial_prepayment_amount_xaf: input.initialPrepaymentAmountXaf,
     billing_frequency: input.billingFrequency,
     due_day: input.dueDay,
     generate_due_days_before: input.generateDueDaysBefore,
-    overdue_reminder_days_after: input.overdueReminderDaysAfter,
+    overdue_reminder_days_after: GLOBAL_OVERDUE_REMINDER_DAYS,
     entry_proration_mode: input.entryProrationMode,
     exit_proration_mode: input.exitProrationMode,
     entry_proration_override_xaf: input.entryProrationOverrideXaf,

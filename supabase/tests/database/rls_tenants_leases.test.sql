@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(40);
+select plan(51);
 
 insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at) values
   ('16000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner-a-6b@kjora.test', now(), now(), now()),
@@ -61,22 +61,31 @@ $$, '42501', null, 'contact personnel indisponible en lecture directe');
 select is((select count(*) from public.get_tenant_private_profile('56000000-0000-4000-8000-00000000000c')), 1::bigint, 'Owner obtient la projection privée autorisée');
 
 select lives_ok($$
+  update public.units set reference_rent_xaf = 190000 where id = '46000000-0000-4000-8000-00000000000a'
+$$, 'Owner renseigne le loyer de référence de Unit');
+select is((select reference_rent_xaf from public.units where id = '46000000-0000-4000-8000-00000000000a'), 190000::bigint, 'le loyer de référence est porté par Unit');
+
+select lives_ok($$
   insert into public.leases (
     id, organization_id, property_id, unit_id, tenant_id, start_date, end_date,
     base_rent_xaf, recurring_charges_xaf, security_deposit_xaf,
-    initial_prepayment_periods, initial_prepayment_amount_xaf,
+    initial_prepayment_amount_xaf,
     billing_frequency, due_day, generate_due_days_before, overdue_reminder_days_after,
     entry_proration_mode, exit_proration_mode, created_by
   ) values (
     '66000000-0000-4000-8000-00000000000a', '26000000-0000-4000-8000-00000000000a',
     '36000000-0000-4000-8000-00000000000a', '46000000-0000-4000-8000-00000000000a',
     '56000000-0000-4000-8000-00000000000a', '2026-09-01', '2026-09-30',
-    200000, 25000, 200000, 1, 225000, 'monthly', 5, 5, 1,
+    200000, 25000, 200000, 225000, 'monthly', 5, 5, 10,
     'calendar_days', 'calendar_days', '16000000-0000-4000-8000-000000000001'
   )
 $$, 'Owner crée un Lease brouillon complet');
 select is((select status from public.leases where id = '66000000-0000-4000-8000-00000000000a'), 'draft', 'Lease commence en brouillon');
 select is((select periodic_total_xaf from public.leases where id = '66000000-0000-4000-8000-00000000000a'), 225000::bigint, 'total périodique est dérivé');
+select is((select prepaid_full_periods from public.leases where id = '66000000-0000-4000-8000-00000000000a'), 1::bigint, 'couverture prépayée dérive une période entière');
+select is((select prepayment_remainder_xaf from public.leases where id = '66000000-0000-4000-8000-00000000000a'), 0::bigint, 'couverture prépayée dérive un reste nul');
+select lives_ok($$ update public.units set reference_rent_xaf = 195000 where id = '46000000-0000-4000-8000-00000000000a' $$, 'modifier le loyer Unit après création reste permis');
+select is((select base_rent_xaf from public.leases where id = '66000000-0000-4000-8000-00000000000a'), 200000::bigint, 'modifier Unit ne réécrit jamais le montant contractuel Lease');
 select is((select count(*) from public.leases where unit_id = '46000000-0000-4000-8000-00000000000a' and status = 'active'), 0::bigint, 'brouillon ne rend pas Unit occupée');
 select lives_ok($$
   update public.leases set status = 'active' where id = '66000000-0000-4000-8000-00000000000a'
@@ -98,9 +107,23 @@ select throws_ok($$ update public.leases set status = 'active' where id = '66000
 select throws_ok($$ update public.leases set status = 'active' where id = '66000000-0000-4000-8000-00000000000d' $$, '23P01', null, 'recouvrement total actif refusé');
 select throws_ok($$ update public.units set status = 'archived' where id = '46000000-0000-4000-8000-00000000000a' $$, '23514', null, 'Unit occupée ne peut être archivée');
 select throws_ok($$ update public.leases set base_rent_xaf = 1 where id = '66000000-0000-4000-8000-00000000000a' $$, '23514', null, 'conditions actives sont immuables');
-select lives_ok($$ update public.leases set status = 'ended', ended_on = '2026-09-30' where id = '66000000-0000-4000-8000-00000000000a' $$, 'clôture explicite libère Unit');
+select lives_ok($$ update public.leases set status = 'ended', ended_on = '2026-09-30', end_reason = 'Départ convenu' where id = '66000000-0000-4000-8000-00000000000a' $$, 'clôture explicite libère Unit');
+select is((select end_reason from public.leases where id = '66000000-0000-4000-8000-00000000000a'), 'Départ convenu', 'motif facultatif de fin est conservé');
 select throws_ok($$ update public.leases set status = 'active' where id = '66000000-0000-4000-8000-00000000000b' $$, '23P01', null, 'historique terminé ne peut pas être recouvert sur les mêmes dates');
 select lives_ok($$ update public.leases set status = 'active' where id = '66000000-0000-4000-8000-00000000000e' $$, 'bail futur après fin précédente accepté');
+
+select throws_ok($$
+  insert into public.leases (organization_id, property_id, unit_id, tenant_id, start_date, base_rent_xaf, billing_frequency, due_day, created_by)
+  values ('26000000-0000-4000-8000-00000000000a', '36000000-0000-4000-8000-00000000000a', '46000000-0000-4000-8000-00000000000c', '56000000-0000-4000-8000-00000000000c', '2028-01-01', 100000, 'monthly', 29, '16000000-0000-4000-8000-000000000001')
+$$, '23514', null, 'jour limite 29 refusé');
+select throws_ok($$
+  insert into public.leases (organization_id, property_id, unit_id, tenant_id, start_date, base_rent_xaf, billing_frequency, due_day, generate_due_days_before, created_by)
+  values ('26000000-0000-4000-8000-00000000000a', '36000000-0000-4000-8000-00000000000a', '46000000-0000-4000-8000-00000000000c', '56000000-0000-4000-8000-00000000000c', '2028-01-01', 100000, 'monthly', 28, 6, '16000000-0000-4000-8000-000000000001')
+$$, '23514', null, 'avis J-6 hors liste refusé');
+select throws_ok($$
+  insert into public.leases (organization_id, property_id, unit_id, tenant_id, start_date, base_rent_xaf, billing_frequency, due_day, overdue_reminder_days_after, created_by)
+  values ('26000000-0000-4000-8000-00000000000a', '36000000-0000-4000-8000-00000000000a', '46000000-0000-4000-8000-00000000000c', '56000000-0000-4000-8000-00000000000c', '2028-01-01', 100000, 'monthly', 28, 7, '16000000-0000-4000-8000-000000000001')
+$$, '23514', null, 'rappel de retard différent de 10 refusé');
 
 select throws_ok($$
   insert into public.leases (organization_id, property_id, unit_id, tenant_id, start_date, base_rent_xaf, billing_frequency, due_day, created_by)
@@ -130,7 +153,8 @@ $$, '42501', null, 'Owner B ne crée pas Tenant A');
 reset role;
 select hasnt_column('public', 'units', 'occupied', 'aucun booléen occupation');
 select has_column('public', 'leases', 'periodic_total_xaf', 'total périodique dérivé disponible');
-select is((select count(*) from private.domain_events where event_type = 'TENANT_CREATED'), 2::bigint, 'TENANT_CREATED produit une fois par Tenant');
+select has_column('public', 'leases', 'prepaid_full_periods', 'couverture prépayée dérivée disponible');
+select is((select count(*) from private.domain_events where event_type = 'TENANT_CREATED' and organization_id in ('26000000-0000-4000-8000-00000000000a', '26000000-0000-4000-8000-00000000000b')), 2::bigint, 'TENANT_CREATED produit une fois par Tenant de test');
 
 do $$
 declare diagnostics text;

@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-26 — Lot 6B Locataires + Locations terminé, testé et déployé ; validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-08-27 — Patch 6B.1 terminé, testé et déployé ; validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -14,6 +14,7 @@
 - **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6B — Tenant + Lease backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6B.1 — Patch UX / préparation financière : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — persistance Supabase ; aucun 6C1 démarré**
 
@@ -178,6 +179,9 @@
 - Migrations Supabase `lot_6b_tenants_leases` (`20260826190157`) et `lot_6b_lease_period_history_hardening` (`20260826192408`) appliquées au seul projet KJORA. `tenants` et `leases` ont RLS active et restent à 0 ligne après les tests.
 - Advisors Supabase : aucune table tenant-scoped sans RLS ni index de clé étrangère manquant. Les RPC `SECURITY DEFINER` 6B sont intentionnelles, révoquées à `PUBLIC`/`anon`, exposées à `authenticated` seulement et revérifient Organization + `tenant.view/manage` avec `search_path` vide. Les index 6B signalés inutilisés le sont parce que les tables sont vides.
 - Commit applicatif Lot 6B `42f9691` et durcissement d’historique `f4dcc72`. L’alias Vercel Production sert `/api/tenancy/` (GET 405, POST anonyme 401) et `/app/locations/` redirige l’anonyme vers `/connexion/`.
+- Lot 6B.1 — 70 tests Node réussis ; TypeScript, ESLint et build Next.js 16.3.2 réussis avec les 36 routes conservées.
+- Lot 6B.1 — loyer de référence Unit, préremplissage Lease indépendant, séparation dépôt/prépaiement, couverture et reste dérivés, date limite 1–28, avis J-X contrôlé, rappel global 10 jours, détail de prorata et fin via modale sont implémentés.
+- Lot 6B.1 — modes liste/cartes, aides XAF, surfaces clair/sombre rééquilibrées et zone de future situation financière Tenant sont implémentés sans Due, Payment, Allocation, Ledger, Receipt ni faux solde.
 
 ## Bloqué
 
@@ -190,7 +194,10 @@
 - La validation fonctionnelle réelle par Blaise du parcours Équipe/invitation et de l’email transactionnel est confirmée ; le gate du Lot 5C est satisfait.
 - La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6A ; elle doit couvrir refresh/reconnexion, maison + « Maison entière », immeuble multi-unités, modification, archivage, rôles et isolation A/B. D-081 autorise néanmoins explicitement l’exécution du Lot 6B.
 - La validation fonctionnelle de Blaise reste requise pour clôturer le Lot 6B ; elle doit suivre le parcours Locataires → Locations → Unit occupée/libérée et vérifier refresh/reconnexion, rôles et isolation A/B.
+- Migration Supabase Production `lot_6b_1_unit_reference_rent_ux` (`20260826211350`) appliquée au seul projet KJORA : colonnes, contraintes, privilèges minimaux et RPC `SECURITY INVOKER` en place ; rappel du Lease Production existant normalisé de 1 à 10 jours et trigger d’immutabilité confirmé actif après migration.
+- Lot 6B.1 — 161 assertions pgTAP distantes réussies : 5B (9), 5C (47), 6A enrichi (54) et 6B/6B.1 (51). Les transactions ont été annulées et aucune Organization, Unit, Tenant ou Lease de test n’a persisté.
+- Advisors relancés après 6B.1 : aucun nouvel avertissement sécurité ou performance lié à la migration ; le nouveau RPC est `SECURITY INVOKER`, refusé à `PUBLIC`/`anon` et accordé à `authenticated` sous RLS existante.
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le Lot 6B par Blaise. Ne pas démarrer 6C1. La validation fonctionnelle 6A reste à obtenir séparément.**
+**Faire valider fonctionnellement le patch 6B.1 par Blaise. Le prochain vrai lot reste 6C1 — Échéances + Charges + Ledger, à ne pas démarrer sans autorisation distincte.**

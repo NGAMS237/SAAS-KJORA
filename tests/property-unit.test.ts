@@ -14,11 +14,15 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260826190000_lot_6a_properties_units.sql", import.meta.url),
   "utf8",
 );
+const patchMigration = readFileSync(
+  new URL("../supabase/migrations/20260826233000_lot_6b_1_unit_reference_rent_ux.sql", import.meta.url),
+  "utf8",
+);
 
 test("la création Property valide le minimum maison/immeuble", () => {
-  assert.deepEqual(parsePropertyInput({ name: " Maison Akwa ", locality: " Douala ", type: "house" }), {
+  assert.deepEqual(parsePropertyInput({ name: " Maison Akwa ", locality: " Douala ", type: "house", referenceRentXaf: "45000" }), {
     ok: true,
-    value: { name: "Maison Akwa", locality: "Douala", type: "house" },
+    value: { name: "Maison Akwa", locality: "Douala", type: "house", referenceRentXaf: 45000 },
   });
   assert.equal(parsePropertyInput({ name: "", locality: "Douala", type: "building" }).ok, false);
   assert.equal(parsePropertyInput({ name: "Test", locality: "Douala", type: "warehouse" }).ok, false);
@@ -40,11 +44,11 @@ test("la recherche Property porte sur nom et localité", () => {
   assert.equal(filterProperties(properties, "inconnu").length, 0);
 });
 
-test("Unit accepte Chambre et superficie facultative", () => {
+test("Unit accepte Chambre, superficie et loyer de référence facultatifs", () => {
   const propertyId = "20000000-0000-4000-8000-00000000000a";
-  assert.deepEqual(parseUnitInput({ propertyId, label: " Chambre 3 ", type: "room", areaSqm: "16.5" }), {
+  assert.deepEqual(parseUnitInput({ propertyId, label: " Chambre 3 ", type: "room", areaSqm: "16.5", referenceRentXaf: "40000" }), {
     ok: true,
-    value: { propertyId, label: "Chambre 3", type: "room", areaSqm: 16.5 },
+    value: { propertyId, label: "Chambre 3", type: "room", areaSqm: 16.5, referenceRentXaf: 40000 },
   });
   assert.equal(parseUnitInput({ propertyId, label: "Studio", type: "studio", areaSqm: "" }).ok, true);
   assert.equal(parseUnitInput({ propertyId, label: "Studio", type: "studio", areaSqm: "-2" }).ok, false);
@@ -53,12 +57,22 @@ test("Unit accepte Chambre et superficie facultative", () => {
 test("Maison entière reste une Unit système non duplicable", () => {
   const propertyId = "20000000-0000-4000-8000-00000000000a";
   assert.equal(parseUnitInput({ propertyId, label: "Maison entière", type: "whole_house" }).ok, false);
-  assert.deepEqual(parseUnitUpdate({ label: "Maison entière", type: "apartment", areaSqm: null }, "whole_house"), {
+  assert.deepEqual(parseUnitUpdate({ label: "Maison entière", type: "apartment", areaSqm: null, referenceRentXaf: "65000" }, "whole_house"), {
     ok: true,
-    value: { label: "Maison entière", type: "whole_house", areaSqm: null },
+    value: { label: "Maison entière", type: "whole_house", areaSqm: null, referenceRentXaf: 65000 },
   });
   assert.match(migration, /units_one_whole_house_idx/i);
   assert.match(migration, /new\.type = 'house'[\s\S]*'Maison entière'[\s\S]*'whole_house'/i);
+});
+
+test("le loyer de référence reste facultatif, positif et porté par Unit", () => {
+  const propertyId = "20000000-0000-4000-8000-00000000000a";
+  assert.equal(parseUnitInput({ propertyId, label: "Studio", type: "studio", referenceRentXaf: "" }).ok, true);
+  assert.equal(parseUnitInput({ propertyId, label: "Studio", type: "studio", referenceRentXaf: 0 }).ok, false);
+  assert.equal(parsePropertyInput({ name: "Immeuble", locality: "Douala", type: "building", referenceRentXaf: 50000 }).ok, false);
+  assert.match(patchMigration, /alter table public\.units[\s\S]*reference_rent_xaf bigint/i);
+  assert.match(patchMigration, /security invoker/i);
+  assert.doesNotMatch(patchMigration, /update public\.leases[\s\S]*base_rent_xaf\s*=\s*unit_reference_rent_xaf/i);
 });
 
 test("la migration protège isolation, archivage et occupation future", () => {

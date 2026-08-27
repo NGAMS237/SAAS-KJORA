@@ -56,11 +56,14 @@ export async function POST(request: Request) {
     const parsed = parsePropertyInput(body);
     if (!parsed.ok) return jsonError(parsed.error, 400);
     const { data, error } = await supabase
-      .from("properties")
-      .insert({ organization_id: organizationId, created_by: userId, ...parsed.value })
-      .select("id")
-      .single();
-    return error || !data ? mutationError(error) : NextResponse.json({ propertyId: data.id }, { status: 201 });
+      .rpc("create_property_with_reference_rent", {
+        target_organization_id: organizationId,
+        property_name: parsed.value.name,
+        property_locality: parsed.value.locality,
+        property_type: parsed.value.type,
+        unit_reference_rent_xaf: parsed.value.referenceRentXaf,
+      });
+    return error || !data ? mutationError(error) : NextResponse.json({ propertyId: data }, { status: 201 });
   }
 
   if (typeof body.propertyId !== "string" || !UUID_PATTERN.test(body.propertyId)) {
@@ -105,6 +108,7 @@ export async function POST(request: Request) {
         label: parsed.value.label,
         type: parsed.value.type,
         area_sqm: parsed.value.areaSqm,
+        reference_rent_xaf: parsed.value.referenceRentXaf,
       })
       .select("id")
       .single();
@@ -129,7 +133,7 @@ export async function POST(request: Request) {
     if (!parsed.ok) return jsonError(parsed.error, 400);
     const { data, error } = await supabase
       .from("units")
-      .update({ label: parsed.value.label, type: parsed.value.type, area_sqm: parsed.value.areaSqm })
+      .update({ label: parsed.value.label, type: parsed.value.type, area_sqm: parsed.value.areaSqm, reference_rent_xaf: parsed.value.referenceRentXaf })
       .eq("organization_id", organizationId)
       .eq("property_id", body.propertyId)
       .eq("id", body.unitId)

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(54);
 
 insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at)
 values
@@ -108,8 +108,9 @@ select lives_ok($$
   update public.properties set locality = 'Douala Akwa' where id = '32000000-0000-4000-8000-00000000000c'
 $$, 'gestionnaire modifie un Property A');
 select lives_ok($$
-  update public.units set label = 'Appartement A01' where id = '42000000-0000-4000-8000-00000000000a'
-$$, 'gestionnaire modifie une Unit A');
+  update public.units set label = 'Appartement A01', reference_rent_xaf = 175000 where id = '42000000-0000-4000-8000-00000000000a'
+$$, 'gestionnaire modifie une Unit A et son loyer de référence');
+select is((select reference_rent_xaf from public.units where id = '42000000-0000-4000-8000-00000000000a'), 175000::bigint, 'loyer de référence Unit est persisté');
 
 select set_config('request.jwt.claim.sub', '12000000-0000-4000-8000-000000000004', true);
 select is((select count(*) from public.properties), 2::bigint, 'consultation lit les Properties A');
@@ -118,8 +119,8 @@ select results_eq($$
   update public.properties set name = 'Refus Viewer' where id = '32000000-0000-4000-8000-00000000000c' returning name
 $$, array[]::text[], 'consultation ne modifie pas Property');
 select results_eq($$
-  update public.units set label = 'Refus Viewer' where id = '42000000-0000-4000-8000-00000000000a' returning label
-$$, array[]::text[], 'consultation ne modifie pas Unit');
+  update public.units set reference_rent_xaf = 1 where id = '42000000-0000-4000-8000-00000000000a' returning id
+$$, array[]::uuid[], 'consultation ne modifie pas le loyer de référence Unit');
 select throws_ok($$
   insert into public.properties (organization_id, name, locality, type, created_by)
   values ('22000000-0000-4000-8000-00000000000a', 'Refus', 'Douala', 'building', '12000000-0000-4000-8000-000000000004')
@@ -162,6 +163,7 @@ $$, '23514', null, 'une Unit archivée ne peut pas être réactivée');
 reset role;
 select hasnt_column('public', 'units', 'occupied', 'aucun booléen occupation ne crée une seconde vérité');
 select has_column('public', 'units', 'area_sqm', 'superficie facultative est disponible');
+select has_column('public', 'units', 'reference_rent_xaf', 'loyer de référence facultatif est disponible');
 select col_not_null('public', 'units', 'property_id', 'parent Property est obligatoire');
 select is((select count(*) from private.domain_events where event_type = 'PROPERTY_CREATED' and organization_id in ('22000000-0000-4000-8000-00000000000a', '22000000-0000-4000-8000-00000000000b')), 3::bigint, 'un event unique existe pour chaque Property créée par le test');
 

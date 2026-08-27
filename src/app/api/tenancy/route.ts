@@ -122,10 +122,14 @@ export async function POST(request: Request) {
   }
   if (action === "end_lease") {
     const endedOn = typeof body.endedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.endedOn) ? body.endedOn : null;
+    const endReason = typeof body.endReason === "string" && body.endReason.trim()
+      ? body.endReason.trim()
+      : null;
     if (!endedOn) return jsonError("invalid_lease_end_date", 400);
+    if (endReason && endReason.length > 500) return jsonError("invalid_lease_end_reason", 400);
     const { data, error } = await supabase
       .from("leases")
-      .update({ status: "ended", ended_on: endedOn })
+      .update({ status: "ended", ended_on: endedOn, end_reason: endReason })
       .eq("organization_id", organizationId)
       .eq("id", body.leaseId)
       .eq("status", "active")

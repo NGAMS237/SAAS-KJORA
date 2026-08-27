@@ -3,6 +3,19 @@
 > Statut : **VALIDÉ PAR BLAISE — D-072 à D-077**  
 > Portée : entités, responsabilités, relations et isolation conceptuelles ; aucun SQL, type physique ou migration
 
+> Amendement 6B.1 : préparation financière du Lease sans création de vérité financière 6C.
+
+### Amendement 6B.1 — frontières des montants
+
+- `Unit.referenceRentXaf` est facultatif, strictement positif lorsqu’il existe, et isolé par Organization. Pour une maison, il appartient à l’Unit système `Maison entière`.
+- À la création d’un Lease, ce montant peut préremplir `baseRentXaf`. Le Lease reste contractuel et indépendant : aucun changement ultérieur dans un sens ou dans l’autre n’est propagé.
+- `securityDepositXaf` est une garantie hors loyers payés. `initialPrepaymentAmountXaf` prépare la couverture de loyers et charges.
+- `periodicTotalXaf = baseRentXaf + recurringChargesXaf`. Les périodes entières prépayées et le reliquat sont dérivés de ce total, sans créer de Due, Payment, Allocation ou entrée Ledger.
+- `dueDay` est limité à 1–28 ; `generateDueDaysBefore` aux valeurs 1, 2, 3, 4, 5, 7 et 10 ; le rappel de retard est globalement fixé à 10 jours.
+- Le prorata calendaire d’entrée 6B.1 est mensuel et inclut loyer plus charges. Une dérogation reste traçable par son montant et son motif.
+- `endReason` est facultatif et n’existe que sur un Lease terminé ; la date effective continue de déterminer la libération de l’Unit.
+- Le futur solde locataire, interne et portail, devra être une projection de l’unique vérité financière 6C. Avant celle-ci, aucune valeur financière synthétique n’est matérialisée ou simulée.
+
 ## 1. Vocabulaire sans ambiguïté
 
 - **Organization** : tenant SaaS isolé.

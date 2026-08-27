@@ -64,6 +64,17 @@
 
 - Les deux thèmes conservent la même hiérarchie, les mêmes statuts et les mêmes affordances.
 - Les composants utilisent les tokens sémantiques de surface, texte, bordure et statut ; aucune duplication de données ou de structure par thème.
+- En clair, le fond ivoire-grège est nettement distinct des surfaces crème et des cartes élevées ; les bordures restent chaudes et perceptibles.
+- En sombre, les surfaces sont charbon neutre plutôt que vertes. Le vert reste réservé à la marque, aux actions et aux états de succès.
+
+## Préparation financière et Locations — patch 6B.1
+
+- Le montant périodique est la valeur financière dominante ; loyer hors charges et charges récurrentes restent lisibles comme composants du calcul.
+- Dépôt de garantie et montant prépayé sont deux blocs sémantiques séparés. Une aide explique que le dépôt n’est pas un loyer payé.
+- Les calculs de couverture et de prorata utilisent des chiffres tabulaires et une surface informative, sans prendre l’apparence d’un paiement ou d’un solde confirmé.
+- La liste Locations propose deux présentations équivalentes : cartes et tableau compact. Le choix de présentation ne modifie jamais les données.
+- Une situation financière indisponible affiche un texte explicite ; elle ne remplace jamais une donnée absente par `0 XAF`.
+- La fin d’une location utilise une modale dédiée avec contexte, conséquence, date effective, motif facultatif et confirmation explicite.
 
 ## À éviter
 

@@ -17,6 +17,7 @@ type UnitRow = {
   label: string;
   type: UnitType;
   area_sqm: number | string | null;
+  reference_rent_xaf: number | string | null;
   status: ResourceStatus;
 };
 
@@ -29,6 +30,7 @@ function toUnit(row: UnitRow, activeLease?: ActiveLeaseRow, tenantName?: string)
     label: row.label,
     type: row.type,
     areaSqm: row.area_sqm === null ? null : Number(row.area_sqm),
+    referenceRentXaf: row.reference_rent_xaf === null ? null : Number(row.reference_rent_xaf),
     status: row.status,
     occupancy: activeLease ? "occupied" : "vacant",
     activeLeaseId: activeLease?.id ?? null,
@@ -48,7 +50,7 @@ export async function listActiveProperties(organizationId: string): Promise<Prop
       .limit(200),
     supabase
       .from("units")
-      .select("id, property_id, label, type, area_sqm, status")
+      .select("id, property_id, label, type, area_sqm, reference_rent_xaf, status")
       .eq("organization_id", organizationId)
       .eq("status", "active")
       .limit(1000),
@@ -89,7 +91,7 @@ export async function getPropertyDetail(
       .maybeSingle(),
     supabase
       .from("units")
-      .select("id, property_id, label, type, area_sqm, status")
+      .select("id, property_id, label, type, area_sqm, reference_rent_xaf, status")
       .eq("organization_id", organizationId)
       .eq("property_id", propertyId)
       .eq("status", "active")
@@ -122,7 +124,7 @@ export async function getUnitDetail(
       .maybeSingle(),
     supabase
       .from("units")
-      .select("id, property_id, label, type, area_sqm, status")
+      .select("id, property_id, label, type, area_sqm, reference_rent_xaf, status")
       .eq("organization_id", organizationId)
       .eq("property_id", propertyId)
       .eq("id", unitId)

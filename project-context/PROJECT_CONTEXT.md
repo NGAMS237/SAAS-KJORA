@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-26 — Lot 5C Membership/RBAC validé fonctionnellement
+> Dernière mise à jour : 2026-08-27 — patch UX / préparation financière 6B.1 terminé, testé et déployé
 
 ## 1. Vision
 
@@ -511,7 +511,13 @@ Une Unit ne peut avoir deux Leases dont les périodes se chevauchent. Un bail fu
 
 La chaîne officielle est `Organization → Property → Unit → Tenant → Lease → Due/Charge → Payment → PaymentAllocation → Receipt → Ledger → Owner visibility`.
 
-Le Lot 6B persiste Tenant et Lease réels. Un Lease relie explicitement Organization, Tenant, Property et Unit ; ses états sont `draft`, `active` et `ended`. L’occupation est dérivée exclusivement des Leases actives et n’est jamais stockée comme booléen. Les montants de loyer hors charges, charges récurrentes, dépôt et avance initiale restent distincts. Le total périodique et les proratas calendaires sont dérivés ; une correction manuelle exige une justification.
+Le Lot 6B persiste Tenant et Lease réels. Un Lease relie explicitement Organization, Tenant, Property et Unit ; ses états sont `draft`, `active` et `ended`. L’occupation est dérivée exclusivement des Leases actives et n’est jamais stockée comme booléen. Les montants de loyer hors charges, charges récurrentes, dépôt et prépaiement restent distincts. Le total périodique et les proratas calendaires sont dérivés ; une correction manuelle exige une justification.
+
+Le patch 6B.1 ajoute un loyer mensuel de référence facultatif sur l’Unit. La maison le porte sur « Maison entière » et Property n’en devient jamais la source contractuelle. Le Lease reçoit cette valeur seulement comme préremplissage modifiable. Les périodes complètes couvertes et le reliquat du prépaiement sont des projections informatives depuis le montant périodique ; ils ne constituent ni Payment, ni allocation, ni crédit Ledger.
+
+Pour le Cameroun MVP, le jour limite de paiement reste dans 1–28, J-5 est la valeur d’avis recommandée parmi J-1/2/3/4/5/7/10 et le rappel de retard est global tous les 10 jours. Le prorata calendaire mensuel inclut loyer et charges et expose sa formule. La fin d’un Lease actif passe par une confirmation dédiée avec date effective et motif facultatif.
+
+Le dossier Tenant réserve une hiérarchie forte à `Solde actuel`, `Montant dû`, `Crédit disponible` et `Prochaine échéance`, mais affiche un état indisponible tant que 6C n’existe pas. Après 6C, l’espace interne et le portail qualifient toujours la valeur en dette, crédit ou à jour et donnent accès au détail, sans nombre signé ambigu.
 
 La suite est découpée en `6C1 — Dues + Charges + Ledger`, `6C2 — Payments + Allocation + Tenant credit`, puis `6C3 — Documents + Notifications + Receipts + Statements`. Les changements futurs de loyer et charges y seront effectifs-datés, sans réécriture historique. 6B n’implémente aucun de ces sous-lots.
 
@@ -556,5 +562,7 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 **Lot 6A — Property + Unit backend réel : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Biens/Unités sont reliés à Supabase et bornés à l’Organization active ; maison → Unit « Maison entière », immeuble multi-unités, archivage non destructif, RBAC/RLS et `PROPERTY_CREATED` sont implémentés. Le commit `3746ef2` est sur `origin/main` et l’alias Vercel Production sert la nouvelle API. La photo reste un placeholder et Storage est différé.
 
 **Lot 6B — Tenant + Lease backend réel : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Locataires et Locations utilisent Supabase réel avec RLS, RBAC, contacts filtrés, occupation dérivée, exclusion des périodes effectives incompatibles — actives ou terminées — et préparation financière sans génération 6C. Les commits `42f9691` et `f4dcc72` portent l’application et le durcissement d’historique ; l’alias Vercel Production sert la nouvelle API. Le Lot 6A conserve séparément sa validation fonctionnelle en attente.
+
+**Lot 6B.1 — PATCH UX / PRÉPARATION FINANCIÈRE : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-086 à D-090 fixent le loyer de référence Unit, le prépaiement calculé, les règles calendaires, la future visibilité explicable du solde et l’autorisation Production, sans démarrer 6C1.
 
 **Lot 6C1 — Dues + Charges + Ledger : NON COMMENCÉ.** Son démarrage exige une autorisation distincte après validation fonctionnelle du Lot 6B.

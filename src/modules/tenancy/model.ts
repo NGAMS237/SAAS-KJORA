@@ -5,6 +5,8 @@ export const IDENTITY_DOCUMENT_TYPES = ["cni", "passport", "other"] as const;
 export const LEASE_STATUSES = ["draft", "active", "ended"] as const;
 export const BILLING_FREQUENCIES = ["monthly", "quarterly", "semiannual", "annual"] as const;
 export const PRORATION_MODES = ["none", "calendar_days"] as const;
+export const DUE_NOTICE_DAYS = [1, 2, 3, 4, 5, 7, 10] as const;
+export const GLOBAL_OVERDUE_REMINDER_DAYS = 10;
 
 export type TenantLanguage = (typeof TENANT_LANGUAGES)[number];
 export type IdentityDocumentType = (typeof IDENTITY_DOCUMENT_TYPES)[number];
@@ -43,12 +45,10 @@ export type LeaseInput = {
   baseRentXaf: number;
   recurringChargesXaf: number;
   securityDepositXaf: number;
-  initialPrepaymentPeriods: number;
   initialPrepaymentAmountXaf: number;
   billingFrequency: BillingFrequency;
   dueDay: number;
   generateDueDaysBefore: number;
-  overdueReminderDaysAfter: number;
   entryProrationMode: ProrationMode;
   exitProrationMode: ProrationMode;
   entryProrationOverrideXaf: number | null;
@@ -61,7 +61,11 @@ export type LeaseSummary = LeaseInput & {
   id: string;
   status: LeaseStatus;
   endedOn: string | null;
+  endReason: string | null;
   periodicTotalXaf: number;
+  prepaidFullPeriods: number;
+  prepaymentRemainderXaf: number;
+  overdueReminderDaysAfter: number;
   tenantName: string;
   propertyName: string;
   unitLabel: string;
@@ -74,6 +78,7 @@ export type LeaseOptionUnit = {
   label: string;
   type: UnitType;
   occupied: boolean;
+  referenceRentXaf: number | null;
 };
 
 export type LeaseOptions = {
@@ -166,12 +171,8 @@ export function parseLeaseInput(input: Record<string, unknown>): ValidationResul
   const recurringChargesXaf = amount(input.recurringChargesXaf);
   const securityDepositXaf = amount(input.securityDepositXaf);
   const initialPrepaymentAmountXaf = amount(input.initialPrepaymentAmountXaf);
-  const initialPrepaymentPeriods = Number(input.initialPrepaymentPeriods);
   if (!baseRentXaf || recurringChargesXaf === null || securityDepositXaf === null || initialPrepaymentAmountXaf === null) {
     return { ok: false, error: "invalid_lease_amount" };
-  }
-  if (!Number.isFinite(initialPrepaymentPeriods) || initialPrepaymentPeriods < 0 || initialPrepaymentPeriods > 9999) {
-    return { ok: false, error: "invalid_initial_prepayment" };
   }
   if (!(BILLING_FREQUENCIES as readonly unknown[]).includes(input.billingFrequency)) {
     return { ok: false, error: "invalid_billing_frequency" };
@@ -180,10 +181,10 @@ export function parseLeaseInput(input: Record<string, unknown>): ValidationResul
     || !(PRORATION_MODES as readonly unknown[]).includes(input.exitProrationMode)) {
     return { ok: false, error: "invalid_proration_mode" };
   }
-  const dueDay = integer(input.dueDay, 1, 31);
-  const generateDueDaysBefore = integer(input.generateDueDaysBefore, 0, 90);
-  const overdueReminderDaysAfter = integer(input.overdueReminderDaysAfter, 1, 90);
-  if (dueDay === null || generateDueDaysBefore === null || overdueReminderDaysAfter === null) {
+  const dueDay = integer(input.dueDay, 1, 28);
+  const generateDueDaysBefore = integer(input.generateDueDaysBefore, 1, 10);
+  if (dueDay === null || generateDueDaysBefore === null
+    || !(DUE_NOTICE_DAYS as readonly number[]).includes(generateDueDaysBefore)) {
     return { ok: false, error: "invalid_due_schedule" };
   }
   const entryProrationOverrideXaf = input.entryProrationOverrideXaf === "" || input.entryProrationOverrideXaf == null
@@ -206,9 +207,9 @@ export function parseLeaseInput(input: Record<string, unknown>): ValidationResul
     ok: true,
     value: {
       tenantId, propertyId, unitId, startDate, endDate, baseRentXaf, recurringChargesXaf,
-      securityDepositXaf, initialPrepaymentPeriods, initialPrepaymentAmountXaf,
+      securityDepositXaf, initialPrepaymentAmountXaf,
       billingFrequency: input.billingFrequency as BillingFrequency,
-      dueDay, generateDueDaysBefore, overdueReminderDaysAfter,
+      dueDay, generateDueDaysBefore,
       entryProrationMode: input.entryProrationMode as ProrationMode,
       exitProrationMode: input.exitProrationMode as ProrationMode,
       entryProrationOverrideXaf, entryProrationOverrideReason,
@@ -217,11 +218,32 @@ export function parseLeaseInput(input: Record<string, unknown>): ValidationResul
   };
 }
 
-export function calendarEntryProration(totalXaf: number, startDate: string, mode: ProrationMode) {
-  if (mode === "none") return totalXaf;
+export function prepaymentCoverage(periodicTotalXaf: number, prepaymentAmountXaf: number) {
+  if (!Number.isSafeInteger(periodicTotalXaf) || periodicTotalXaf <= 0
+    || !Number.isSafeInteger(prepaymentAmountXaf) || prepaymentAmountXaf < 0) {
+    return { fullPeriods: 0, remainderXaf: 0 };
+  }
+  return {
+    fullPeriods: Math.floor(prepaymentAmountXaf / periodicTotalXaf),
+    remainderXaf: prepaymentAmountXaf % periodicTotalXaf,
+  };
+}
+
+export function calendarEntryProrationDetail(totalXaf: number, startDate: string, mode: ProrationMode) {
   const [year, month, day] = startDate.split("-").map(Number);
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return Math.round((totalXaf * (daysInMonth - day + 1)) / daysInMonth);
+  const daysInPeriod = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const occupiedDays = mode === "none" ? daysInPeriod : daysInPeriod - day + 1;
+  return {
+    startDate,
+    endDate: `${year}-${String(month).padStart(2, "0")}-${String(daysInPeriod).padStart(2, "0")}`,
+    occupiedDays,
+    daysInPeriod,
+    amountXaf: mode === "none" ? totalXaf : Math.round((totalXaf * occupiedDays) / daysInPeriod),
+  };
+}
+
+export function calendarEntryProration(totalXaf: number, startDate: string, mode: ProrationMode) {
+  return calendarEntryProrationDetail(totalXaf, startDate, mode).amountXaf;
 }
 
 export function calendarExitProration(totalXaf: number, endedOn: string, mode: ProrationMode) {

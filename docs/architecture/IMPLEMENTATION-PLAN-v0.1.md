@@ -1,6 +1,6 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-26 : le Lot 6B Locataires + Locations est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Les commits `42f9691` et `f4dcc72` portent l’application et le durcissement d’historique, Supabase KJORA porte les migrations réelles et l’alias Vercel Production sert `/api/tenancy` et `/app/locations`. Le Lot 6A conserve séparément sa validation fonctionnelle en attente ; 6C1 reste non commencé.
+> Mise à jour 2026-08-26 : le Lot 6B Locataires + Locations et son patch 6B.1 UX / préparation financière sont **TERMINÉS / TESTÉS / DÉPLOYÉS — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** selon D-086 à D-090. Le Lot 6A conserve séparément sa validation fonctionnelle en attente ; 6C1 reste non commencé.
 
 > Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. D-081 a autorisé 6B sans valider rétroactivement 6A. Le prochain gate est la validation fonctionnelle Blaise du Lot 6B ; ne pas démarrer 6C1 avant autorisation distincte.
 
@@ -316,6 +316,22 @@ Créer le dossier locataire minimal et activer un Lease sur une Unit explicite.
 - activation concurrente et invariant d’occupation validé ;
 - events non dupliqués ;
 - aucune donnée Tenant recopiée dans Lease.
+
+### Patch 6B.1 — UX / préparation financière avant 6C1
+
+Ce patch reste dans le Lot 6B et ne crée aucune vérité financière 6C.
+
+- loyer mensuel de référence facultatif sur Unit, y compris « Maison entière » lors de la création d’une maison ;
+- préremplissage modifiable du loyer contractuel du Lease sans lien de réécriture vers l’Unit ;
+- dépôt et montant prépayé séparés ; périodes complètes et reliquat calculés, jamais saisis comme vérité principale ;
+- jour limite 1–28, avis contrôlé J-1/2/3/4/5/7/10 avec J-5 par défaut et rappel global tous les 10 jours ;
+- prorata mensuel loyer + charges avec formule lisible ;
+- clôture du Lease via confirmation dédiée, date effective et motif facultatif ;
+- vues Locations liste/cartes et hiérarchie de surfaces ajustée en clair/sombre ;
+- placeholders financiers très visibles dans Tenant, sans fausse valeur avant 6C ;
+- même exigence de dette/crédit explicable documentée pour le futur portail.
+
+Critères de sortie : migration additive Unit/Lease, RLS A/B conservée, calculs purs testés, confirmation de fin obligatoire, tests Node/TypeScript/ESLint/build et pgTAP passants. Le prochain vrai lot demeure 6C1.
 
 ## 10. Lot 6C1 — Dues + Charges + Ledger
 

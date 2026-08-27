@@ -45,6 +45,10 @@ function unitLabel(type: UnitType, t: ReturnType<typeof useCopy>) {
   }[type];
 }
 
+function money(value: number) {
+  return `${value.toLocaleString("fr-FR")} XAF`;
+}
+
 function LiveDataNotice() {
   const t = useCopy();
   return (
@@ -144,6 +148,7 @@ export function PropertyCreateForm() {
   const t = useCopy();
   const router = useRouter();
   const [type, setType] = useState<PropertyType>("house");
+  const [referenceRentXaf, setReferenceRentXaf] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -157,6 +162,7 @@ export function PropertyCreateForm() {
       name: form.get("name"),
       locality: form.get("locality"),
       type,
+      referenceRentXaf: type === "house" ? referenceRentXaf : null,
     });
     setBusy(false);
     if (!result.ok || typeof result.body.propertyId !== "string") {
@@ -181,7 +187,7 @@ export function PropertyCreateForm() {
           <label className="field"><span>{t("Nom / repère", "Name / reference")}</span><input name="name" minLength={2} maxLength={120} required placeholder={t("Ex. Maison Bonapriso", "E.g. Bonapriso House")} /></label>
           <label className="field"><span>{t("Ville / localité", "City / locality")}</span><input name="locality" minLength={2} maxLength={160} required placeholder={t("Ex. Douala · Bonapriso", "E.g. Douala · Bonapriso")} /></label>
           <label className="field"><span>{t("Type", "Type")}</span><select value={type} onChange={(event) => setType(event.target.value as PropertyType)}><option value="house">{t("Maison", "House")}</option><option value="building">{t("Immeuble", "Building")}</option></select></label>
-          {type === "house" ? <p className="demo-hint">{t("L’unité « Maison entière » sera créée automatiquement et sans doublon.", "The “Whole house” unit will be created automatically without duplicates.")}</p> : null}
+          {type === "house" ? <><label className="field"><span>{t("Loyer mensuel de référence (XAF) — facultatif", "Monthly reference rent (XAF) — optional")}</span><input inputMode="numeric" min="1" placeholder={t("Ex. 75 000", "E.g. 75,000")} type="number" value={referenceRentXaf} onChange={(event) => setReferenceRentXaf(event.target.value)} /><small>{t("Cette suggestion sera enregistrée sur l’unité « Maison entière ».", "This suggestion will be saved on the “Whole house” unit.")}</small></label><p className="demo-hint">{t("L’unité « Maison entière » sera créée automatiquement et sans doublon.", "The “Whole house” unit will be created automatically without duplicates.")}</p></> : null}
           <button className="button button--primary" disabled={busy} type="submit">{busy ? t("Création…", "Creating…") : t("Créer le bien", "Create property")}</button>
           {message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}
         </form>
@@ -222,7 +228,7 @@ export function PropertyDetailView({
     event.preventDefault();
     setBusy(true);
     const form = new FormData(event.currentTarget);
-    const result = await mutate({ action: "create_unit", propertyId: property.id, label: form.get("label"), type: form.get("type"), areaSqm: form.get("areaSqm") });
+    const result = await mutate({ action: "create_unit", propertyId: property.id, label: form.get("label"), type: form.get("type"), areaSqm: form.get("areaSqm"), referenceRentXaf: form.get("referenceRentXaf") });
     setBusy(false);
     if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
     setAdding(false);
@@ -275,6 +281,7 @@ export function PropertyDetailView({
             <label className="field"><span>{t("Repère de l’unité", "Unit reference")}</span><input name="label" maxLength={120} required placeholder={t("Ex. Appartement A3", "E.g. Apartment A3")} /></label>
             <label className="field"><span>{t("Type", "Type")}</span><select name="type" defaultValue="apartment"><option value="apartment">{t("Appartement", "Apartment")}</option><option value="studio">Studio</option><option value="room">{t("Chambre", "Room")}</option><option value="shop">{t("Boutique", "Shop")}</option><option value="office">{t("Bureau / local", "Office / commercial unit")}</option></select></label>
             <label className="field"><span>{t("Superficie en m² (facultatif)", "Area in m² (optional)")}</span><input inputMode="decimal" min="0.01" name="areaSqm" step="0.01" type="number" /></label>
+            <label className="field"><span>{t("Loyer mensuel de référence (XAF) — facultatif", "Monthly reference rent (XAF) — optional")}</span><input inputMode="numeric" min="1" name="referenceRentXaf" placeholder={t("Ex. 50 000", "E.g. 50,000")} type="number" /><small>{t("Suggestion modifiable lors de la création d’une location.", "Editable suggestion when creating a lease.")}</small></label>
             <div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Ajouter", "Add")}</button><button className="button button--secondary" onClick={() => setAdding(false)} type="button">{t("Annuler", "Cancel")}</button></div>
           </form>
         </Card>
@@ -300,7 +307,7 @@ function UnitRow({ propertyId, unit }: { propertyId: string; unit: UnitRecord })
   return (
     <Link href={`/app/biens/${propertyId}/unites/${unit.id}`} className="demo-list-row">
       <span className="demo-list-row__icon"><Home size={19} /></span>
-      <div><strong>{unit.label}</strong><span>{unitLabel(unit.type, t)}{unit.areaSqm ? ` · ${unit.areaSqm} m²` : ""}</span></div>
+      <div><strong>{unit.label}</strong><span>{unitLabel(unit.type, t)}{unit.areaSqm ? ` · ${unit.areaSqm} m²` : ""}{unit.referenceRentXaf ? ` · ${money(unit.referenceRentXaf)}` : ""}</span></div>
       <Badge tone={unit.occupancy === "occupied" ? "success" : "neutral"}>{unit.occupancy === "occupied" ? t("Occupée", "Occupied") : t("Vacante", "Vacant")}</Badge>
       <ChevronRight size={18} />
     </Link>
@@ -328,7 +335,7 @@ export function UnitDetailView({
     event.preventDefault();
     setBusy(true);
     const form = new FormData(event.currentTarget);
-    const result = await mutate({ action: "update_unit", propertyId: property.id, unitId: unit.id, label: form.get("label"), type: form.get("type"), areaSqm: form.get("areaSqm") });
+    const result = await mutate({ action: "update_unit", propertyId: property.id, unitId: unit.id, label: form.get("label"), type: form.get("type"), areaSqm: form.get("areaSqm"), referenceRentXaf: form.get("referenceRentXaf") });
     setBusy(false);
     if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
     setEditing(false);
@@ -363,12 +370,13 @@ export function UnitDetailView({
             <label className="field"><span>{t("Repère", "Reference")}</span><input defaultValue={unit.label} maxLength={120} name="label" required /></label>
             {unit.type === "whole_house" ? <input name="type" type="hidden" value="whole_house" /> : <label className="field"><span>{t("Type", "Type")}</span><select defaultValue={unit.type} name="type"><option value="apartment">{t("Appartement", "Apartment")}</option><option value="studio">Studio</option><option value="room">{t("Chambre", "Room")}</option><option value="shop">{t("Boutique", "Shop")}</option><option value="office">{t("Bureau / local", "Office / commercial unit")}</option></select></label>}
             <label className="field"><span>{t("Superficie en m² (facultatif)", "Area in m² (optional)")}</span><input defaultValue={unit.areaSqm ?? ""} inputMode="decimal" min="0.01" name="areaSqm" step="0.01" type="number" /></label>
+            <label className="field"><span>{t("Loyer mensuel de référence (XAF) — facultatif", "Monthly reference rent (XAF) — optional")}</span><input defaultValue={unit.referenceRentXaf ?? ""} inputMode="numeric" min="1" name="referenceRentXaf" placeholder={t("Ex. 40 000", "E.g. 40,000")} type="number" /><small>{t("Cette valeur suggère le loyer des nouveaux baux sans modifier les contrats existants.", "This suggests rent for new leases without changing existing contracts.")}</small></label>
             <div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div>
           </form>
         </Card>
       ) : null}
       <Card className="demo-detail-card">
-        <div><Badge tone={unit.occupancy === "occupied" ? "success" : "neutral"}>{unit.occupancy === "occupied" ? t("Occupée", "Occupied") : t("Vacante", "Vacant")}</Badge><h2>{unit.occupancy === "occupied" ? t("Unité occupée", "Occupied unit") : t("Unité vacante", "Vacant unit")}</h2><p>{unit.occupancy === "occupied" ? t(`${unit.activeTenantName ?? "Locataire"} · occupation dérivée de la location active.`, `${unit.activeTenantName ?? "Tenant"} · occupancy derived from the active lease.`) : t("Aucune location active n’est associée.", "No active lease is linked.")}</p>{unit.areaSqm ? <p><strong>{unit.areaSqm} m²</strong></p> : null}</div>
+        <div><Badge tone={unit.occupancy === "occupied" ? "success" : "neutral"}>{unit.occupancy === "occupied" ? t("Occupée", "Occupied") : t("Vacante", "Vacant")}</Badge><h2>{unit.occupancy === "occupied" ? t("Unité occupée", "Occupied unit") : t("Unité vacante", "Vacant unit")}</h2><p>{unit.occupancy === "occupied" ? t(`${unit.activeTenantName ?? "Locataire"} · occupation dérivée de la location active.`, `${unit.activeTenantName ?? "Tenant"} · occupancy derived from the active lease.`) : t("Aucune location active n’est associée.", "No active lease is linked.")}</p>{unit.areaSqm ? <p><strong>{unit.areaSqm} m²</strong></p> : null}<p><strong>{unit.referenceRentXaf ? money(unit.referenceRentXaf) : t("Aucun loyer de référence", "No reference rent")}</strong><br /><small>{t("Suggestion Unit — indépendante de tout loyer contractuel.", "Unit suggestion — independent from contractual rent.")}</small></p></div>
         {unit.activeLeaseId ? <Link className="button button--secondary" href={`/app/locations/${unit.activeLeaseId}`}>{t("Ouvrir la location", "Open lease")}</Link> : canManageLease ? <Link className="button button--primary" href={`/app/locations/nouveau?unit=${unit.id}`}>{t("Créer une location", "Create lease")}</Link> : null}
       </Card>
       {canManage ? <div className="resource-danger-zone"><button className="button button--danger" disabled={busy} onClick={archiveUnit} type="button"><Archive size={17} />{t("Archiver l’unité", "Archive unit")}</button><p>{t("L’unité disparaîtra des listes actives sans être supprimée physiquement.", "The unit will leave active lists without being physically deleted.")}</p></div> : null}

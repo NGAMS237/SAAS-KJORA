@@ -274,3 +274,14 @@ Aucun écran de bibliothèque de documents avancés n’est défini. Reçu, preu
 - Aucun rôle interne ajouté pour le locataire.
 - Aucun pattern de maintenance, chat, e-signature, paiement en ligne, Reporting ou documents avancés.
 - Le mapping visuel final reste à appliquer dans un lot ultérieur autorisé.
+
+## 21. Patch Locations 6B.1 — règles de préparation
+
+- Le loyer de référence appartient à l’Unit et ne sert qu’à préremplir un nouveau Lease. Modifier ensuite le contrat ne réécrit jamais l’Unit.
+- « Loyer hors charges », « Charges récurrentes », « Dépôt de garantie » et « Montant prépayé » restent des notions séparées et accompagnées d’exemples XAF.
+- La couverture du prépaiement affiche le nombre de périodes entières et le reste éventuel à partir du total périodique. Ce calcul informatif ne crée ni échéance, ni paiement, ni crédit Ledger.
+- Le jour limite est choisi de 1 à 28. L’avis J-X est choisi dans `J-1, J-2, J-3, J-4, J-5, J-7, J-10`. Le rappel de retard est un réglage global visible, fixé à tous les 10 jours.
+- Le prorata automatique d’entrée est proposé seulement en mensuel et expose la formule `(loyer + charges) × jours occupés / jours du mois` avec dates et résultat. Toute correction manuelle exige un motif.
+- La fin de location n’utilise pas une confirmation navigateur : une modale montre le bail, le locataire, la date effective, la libération de l’Unit et le gel historique.
+- La liste Locations propose le choix cartes/liste et garde la recherche et les mêmes actions dans les deux modes.
+- Avant l’activation de 6C, le dossier locataire réserve une zone financière clairement indisponible, sans afficher de faux zéro, solde, dette ou crédit.
