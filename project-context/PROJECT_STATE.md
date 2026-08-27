@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-27 — Visual Direction v2B globalisée avec formes signature ; validation visuelle Blaise en attente
+> Mise à jour : 2026-08-27 — Lot 6C1 terminé, testé et déployé ; validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -17,8 +17,9 @@
 - **Lot 6B.1 — Patch UX / préparation financière : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Visual Direction v2A — Design system + 3 écrans pilotes : IMPLÉMENTÉE / TESTÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
 - **Visual Direction v2B — Formes signature + déploiement global : TERMINÉE / TESTÉE / DÉPLOYÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
+- **Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
-- **Biens + Unités + Locataires + Locations : BACKEND RÉEL — persistance Supabase ; aucun 6C1 démarré**
+- **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
 ## Terminé
 
@@ -206,7 +207,10 @@
 - Migration Supabase Production `lot_6b_1_unit_reference_rent_ux` (`20260826211350`) appliquée au seul projet KJORA : colonnes, contraintes, privilèges minimaux et RPC `SECURITY INVOKER` en place ; rappel du Lease Production existant normalisé de 1 à 10 jours et trigger d’immutabilité confirmé actif après migration.
 - Lot 6B.1 — 161 assertions pgTAP distantes réussies : 5B (9), 5C (47), 6A enrichi (54) et 6B/6B.1 (51). Les transactions ont été annulées et aucune Organization, Unit, Tenant ou Lease de test n’a persisté.
 - Advisors relancés après 6B.1 : aucun nouvel avertissement sécurité ou performance lié à la migration ; le nouveau RPC est `SECURITY INVOKER`, refusé à `PUBLIC`/`anon` et accordé à `authenticated` sous RLS existante.
+- Migration Production `lot_6c1_dues_charges_ledger` et ses deux correctifs append-only appliqués sur KJORA : 2 versions financières, 11 Dues dont 2 dépôts, 17 lignes Ledger dont 2 crédits d’ouverture, 2 événements `LEASE_LEDGER_OPENED` et un unique job quotidien actif. Aucun Payment réel n’a été créé.
+- Lot 6C1 — 210 assertions pgTAP distantes réussies et annulées : 5B (9), 5C (47), 6A (54), 6B/6B.1 (51), 6C1 (49). Aucune Organization de test n’a persisté.
+- Advisors relancés après 6C1 : les nouveaux avertissements sécurité concernent uniquement les deux RPC `SECURITY DEFINER` intentionnels, tous deux bornés par `lease.manage`; les nouveaux avis performance sont des index encore inutilisés juste après création, conservés pour les clés étrangères et les lectures Ledger. Aucun défaut RLS ni exposition `anon` n’est signalé.
 
 ## Proposé ensuite
 
-**Faire valider visuellement la v2B par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile. Le prochain lot possible reste 6C1, non commencé et soumis à une autorisation distincte.**
+**Faire valider fonctionnellement le Lot 6C1 par Blaise. Prochaine implémentation autorisable ensuite : Lot 6C2 — Paiements + Allocation + Crédits + Corrections. Ne pas commencer 6C2 sans gate distinct.**

@@ -1,0 +1,96 @@
+import "server-only";
+
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type {
+  DueStatus,
+  DueSummary,
+  LeaseFinancialDetail,
+  LedgerEntrySummary,
+  TenantFinancialDetail,
+} from "@/modules/finance/model";
+
+type DueRow = {
+  id: string; lease_id: string; kind: DueSummary["kind"]; reference: string;
+  period_start: string; period_end: string; due_date: string; notice_date: string; generated_at: string;
+  rent_amount_xaf: number | string; recurring_charges_amount_xaf: number | string;
+  deposit_amount_xaf: number | string; adjustment_amount_xaf: number | string;
+  adjustment_direction: DueSummary["adjustmentDirection"];
+  expected_amount_xaf: number | string; net_expected_amount_xaf: number | string;
+  covered_by_opening_credit_xaf: number | string; remaining_amount_xaf: number | string;
+  derived_status: DueStatus; next_reminder_date: string | null;
+};
+
+type LedgerRow = {
+  id: string; lease_id: string; entry_type: LedgerEntrySummary["type"]; reference: string;
+  description_code: string; occurred_on: string; period_start: string | null; period_end: string | null;
+  debit_xaf: number | string; credit_xaf: number | string; running_balance_xaf: number | string;
+};
+
+const DUE_COLUMNS = "id, lease_id, kind, reference, period_start, period_end, due_date, notice_date, generated_at, rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, adjustment_direction, expected_amount_xaf, net_expected_amount_xaf, covered_by_opening_credit_xaf, remaining_amount_xaf, derived_status, next_reminder_date";
+const LEDGER_COLUMNS = "id, lease_id, entry_type, reference, description_code, occurred_on, period_start, period_end, debit_xaf, credit_xaf, running_balance_xaf";
+
+function due(row: DueRow): DueSummary {
+  return {
+    id: row.id, leaseId: row.lease_id, kind: row.kind, reference: row.reference,
+    periodStart: row.period_start, periodEnd: row.period_end, dueDate: row.due_date,
+    noticeDate: row.notice_date, generatedAt: row.generated_at,
+    rentXaf: Number(row.rent_amount_xaf), recurringChargesXaf: Number(row.recurring_charges_amount_xaf),
+    depositXaf: Number(row.deposit_amount_xaf), adjustmentXaf: Number(row.adjustment_amount_xaf),
+    adjustmentDirection: row.adjustment_direction, expectedXaf: Number(row.expected_amount_xaf),
+    netExpectedXaf: Number(row.net_expected_amount_xaf), coveredXaf: Number(row.covered_by_opening_credit_xaf),
+    remainingXaf: Number(row.remaining_amount_xaf), status: row.derived_status,
+    nextReminderDate: row.next_reminder_date,
+  };
+}
+
+function ledger(row: LedgerRow): LedgerEntrySummary {
+  return {
+    id: row.id, leaseId: row.lease_id, type: row.entry_type, reference: row.reference,
+    descriptionCode: row.description_code, occurredOn: row.occurred_on,
+    periodStart: row.period_start, periodEnd: row.period_end,
+    debitXaf: Number(row.debit_xaf), creditXaf: Number(row.credit_xaf),
+    runningBalanceXaf: Number(row.running_balance_xaf),
+  };
+}
+
+export async function getLeaseFinancialDetail(organizationId: string, leaseId: string): Promise<LeaseFinancialDetail> {
+  const supabase = await createSupabaseServerClient();
+  const [duesResult, ledgerResult] = await Promise.all([
+    supabase.from("dues_with_status").select(DUE_COLUMNS).eq("organization_id", organizationId).eq("lease_id", leaseId).order("due_date").order("period_start"),
+    supabase.from("ledger_statement").select(LEDGER_COLUMNS).eq("organization_id", organizationId).eq("lease_id", leaseId).order("occurred_on").order("sort_order"),
+  ]);
+  if (duesResult.error) throw duesResult.error;
+  if (ledgerResult.error) throw ledgerResult.error;
+  return {
+    dues: ((duesResult.data ?? []) as DueRow[]).map(due),
+    ledger: ((ledgerResult.data ?? []) as LedgerRow[]).map(ledger),
+  };
+}
+
+export async function getTenantFinancialDetail(organizationId: string, tenantId: string): Promise<TenantFinancialDetail> {
+  const supabase = await createSupabaseServerClient();
+  const [positionResult, duesResult, ledgerResult] = await Promise.all([
+    supabase.from("tenant_financial_positions").select("amount_due_xaf, residual_opening_credit_xaf, covered_periods, last_covered_period_end, next_uncovered_due_date, next_due_date, last_ledger_date").eq("organization_id", organizationId).eq("tenant_id", tenantId).maybeSingle(),
+    supabase.from("dues_with_status").select(DUE_COLUMNS).eq("organization_id", organizationId).eq("tenant_id", tenantId).order("due_date").order("period_start"),
+    supabase.from("ledger_statement").select(LEDGER_COLUMNS).eq("organization_id", organizationId).eq("tenant_id", tenantId).order("occurred_on").order("sort_order"),
+  ]);
+  if (positionResult.error) throw positionResult.error;
+  if (duesResult.error) throw duesResult.error;
+  if (ledgerResult.error) throw ledgerResult.error;
+  const position = positionResult.data as null | {
+    amount_due_xaf: number | string; residual_opening_credit_xaf: number | string; covered_periods: number | string;
+    last_covered_period_end: string | null; next_uncovered_due_date: string | null; next_due_date: string | null;
+    last_ledger_date: string | null;
+  };
+  return {
+    amountDueXaf: Number(position?.amount_due_xaf ?? 0),
+    residualOpeningCreditXaf: Number(position?.residual_opening_credit_xaf ?? 0),
+    coveredPeriods: Number(position?.covered_periods ?? 0),
+    lastCoveredPeriodEnd: position?.last_covered_period_end ?? null,
+    nextUncoveredDueDate: position?.next_uncovered_due_date ?? null,
+    nextDueDate: position?.next_due_date ?? null,
+    lastLedgerDate: position?.last_ledger_date ?? null,
+    dues: ((duesResult.data ?? []) as DueRow[]).map(due),
+    ledger: ((ledgerResult.data ?? []) as LedgerRow[]).map(ledger),
+  };
+}

@@ -12,6 +12,7 @@ import {
 
 const migration = readFileSync(new URL("../supabase/migrations/20260826213000_lot_6b_tenants_leases.sql", import.meta.url), "utf8");
 const patchMigration = readFileSync(new URL("../supabase/migrations/20260826233000_lot_6b_1_unit_reference_rent_ux.sql", import.meta.url), "utf8");
+const financeMigration = readFileSync(new URL("../supabase/migrations/20260827013000_lot_6c1_dues_charges_ledger.sql", import.meta.url), "utf8");
 const navigation = readFileSync(new URL("../src/core/navigation/navigation.ts", import.meta.url), "utf8");
 const views = readFileSync(new URL("../src/modules/tenancy/views.tsx", import.meta.url), "utf8");
 
@@ -43,4 +44,7 @@ test("tenant private fields use a capability-checked projection", () => { assert
 test("locations is a central capability-filtered navigation item", () => assert.match(navigation, /href: "\/app\/locations"[\s\S]*requiredCapability: "lease.view"/));
 test("Lot 6B does not create financial truth tables", () => { assert.doesNotMatch(migration, /create table public\.(dues|charges|ledger|payments|payment_allocations|receipts)/i); });
 test("Lot 6B.1 keeps coverage informational and the global reminder fixed", () => { assert.match(patchMigration, /prepaid_full_periods bigint generated always/i); assert.match(patchMigration, /overdue_reminder_days_after = 10/i); assert.doesNotMatch(patchMigration, /create table public\.(dues|ledger|payments)/i); });
-test("tenant balance placeholder and end modal avoid fake financial truth", () => { assert.match(views, /Disponible avec le suivi financier 6C/); assert.match(views, /Aucune dette, aucun crédit et aucune échéance ne sont estimés/); assert.match(views, /className="confirmation-modal"/); assert.doesNotMatch(views, /window\.confirm\(t\("Terminer la location/); });
+test("Lot 6C1 creates no payment, allocation or receipt table", () => { assert.match(financeMigration, /create table public\.dues/i); assert.match(financeMigration, /create table public\.ledger_entries/i); assert.doesNotMatch(financeMigration, /create table public\.(payments|payment_allocations|receipts)/i); });
+test("Lot 6C1 keeps financial history append-only and generation idempotent", () => { assert.match(financeMigration, /financial_history_is_append_only/i); assert.match(financeMigration, /dues_generation_key unique/i); assert.match(financeMigration, /on conflict \(organization_id, lease_id, generation_key\) do nothing/i); });
+test("Lot 6C1 opening credit is documented without fabricating a Payment", () => { assert.match(financeMigration, /validated_lease_opening_prepayment/i); assert.match(financeMigration, /'is_payment', false/i); });
+test("tenant and lease detail activate live 6C1 components while retaining the explicit end modal", () => { assert.match(views, /TenantFinancialSummary/); assert.match(views, /LeaseDuesPanel/); assert.match(views, /className="confirmation-modal"/); assert.doesNotMatch(views, /window\.confirm\(t\("Terminer la location/); });

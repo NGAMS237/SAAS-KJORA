@@ -3057,6 +3057,92 @@ a.portfolio-metric:hover {
   margin-top: 20px;
 }
 
+.financial-truth-card {
+  border-color: color-mix(in srgb, var(--kjora-gold) 28%, var(--border));
+}
+
+.financial-summary-actions {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.76rem;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.dues-card,
+.statement-card {
+  overflow: hidden;
+}
+
+.financial-table,
+.ledger-table {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.financial-table__head,
+.financial-table__row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1.35fr 0.8fr repeat(4, 0.9fr) 1fr;
+  padding: 13px 16px;
+}
+
+.ledger-table__head,
+.ledger-table__row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 0.7fr 1.35fr 0.85fr repeat(3, 0.9fr);
+  padding: 13px 16px;
+}
+
+.financial-table__head,
+.ledger-table__head {
+  background: var(--brand-ink);
+  color: #fffaf0;
+  font-size: 0.66rem;
+  font-weight: 720;
+}
+
+.financial-table__row,
+.ledger-table__row {
+  border-top: 1px solid var(--border);
+  font-size: 0.73rem;
+}
+
+.financial-table__row:nth-child(odd),
+.ledger-table__row:nth-child(odd) {
+  background: var(--surface-muted);
+}
+
+.financial-table__row > span,
+.ledger-table__row > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.financial-table__row small,
+.ledger-table__row small {
+  color: var(--text-muted);
+  font-size: 0.63rem;
+}
+
+.statement-filters {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (max-width: 980px) {
   .tenant-profile-hero {
     grid-template-columns: auto minmax(0, 1fr);
@@ -3088,6 +3174,27 @@ a.portfolio-metric:hover {
 
   .lease-hero__metric--primary {
     grid-column: 1 / -1;
+  }
+
+  .financial-table__head,
+  .ledger-table__head {
+    display: none;
+  }
+
+  .financial-table__row,
+  .ledger-table__row {
+    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px;
+  }
+
+  .financial-table__row > span::before,
+  .ledger-table__row > span::before {
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.58rem;
+    font-weight: 720;
+    text-transform: uppercase;
   }
 }
 
@@ -3147,5 +3254,17 @@ a.portfolio-metric:hover {
   .future-module-card .badge {
     grid-column: 2;
     justify-self: start;
+  }
+
+  .financial-summary-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .statement-filters,
+  .financial-table__row,
+  .ledger-table__row {
+    grid-template-columns: 1fr;
   }
 }

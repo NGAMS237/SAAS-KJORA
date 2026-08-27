@@ -1,6 +1,6 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-27 : la **Visual Direction v2B** est terminée, testée et déployée sur les écrans principaux selon D-092, avec géométrie organique sélective et placeholders honnêtes. Sa validation visuelle par Blaise reste en attente ; 6C1 n’est pas commencé.
+> Mise à jour 2026-08-27 : le **Lot 6C1** est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** selon D-093 à D-099. Les 210 assertions pgTAP cumulées passent avec rollback et les validations Node/TypeScript/ESLint/build sont vertes. 6C2 n’est pas commencé.
 
 > Jalon 2026-08-27 : la **Visual Direction v2A** a été implémentée sur les tokens globaux et trois écrans pilotes (Dashboard, détail Locataire, détail Location), selon D-091. À ce jalon, v2B et 6C1 étaient non commencés.
 
@@ -565,4 +565,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Le lot métier **6C1** reste non commencé et soumis à une autorisation explicite distincte.
+Faire valider fonctionnellement le **Lot 6C1** par Blaise. La prochaine étape autorisable sera **Lot 6C2 — Paiements + Allocation + Crédits + Corrections**. Ne pas commencer 6C2 sans gate distinct.

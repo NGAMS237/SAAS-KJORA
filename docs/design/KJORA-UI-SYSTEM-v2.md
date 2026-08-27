@@ -239,4 +239,13 @@ v2B ne modifie aucun schéma, RLS, Auth, Membership, Tenant, Lease ou contrat m�
 
 Les données réelles restent utilisées pour Biens, Units, Locataires et Locations. Toute fonction future utilise une carte courte avec icône, statut **À venir** et lot de disponibilité explicite ; aucun grand rectangle gris ou chiffre fictif.
 
-**Visual Direction v2B est terminée, testée et déployée ; sa validation visuelle par Blaise reste en attente. Le Lot 6C1 reste non commencé.**
+## 17. Extension financière Lot 6C1
+
+- Le dossier locataire qualifie le montant principal en **Solde dû**, **Crédit disponible** ou **À jour** ; aucun signe comptable nu.
+- Le détail Location affiche un tableau mobile des périodes, dates limites, loyer, charges, total, restant et statut.
+- L’état de compte utilise une grille Ink/Navy, des montants tabulaires et des filtres période/type ; chaque ligne conserve date, opération, référence, débit, crédit, solde et période.
+- Dette utilise le rouge sémantique ; crédit/couverture le vert ; Gold reste un accent de hiérarchie.
+- `covered` signifie couvert par un crédit d’ouverture documenté et ne doit jamais être traduit visuellement par un faux paiement.
+- Les rôles sans `due.view` ne reçoivent ni composant financier ni valeur masquée.
+
+**Visual Direction v2B reste déployée et sa validation visuelle par Blaise est en attente. Le Lot 6C1 étend le système avec la vérité financière réelle, sans démarrer les paiements 6C2 ni le portail sécurisé 6E.**

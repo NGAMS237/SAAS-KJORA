@@ -5,6 +5,7 @@ import test from "node:test";
 const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
 const dashboard = readFileSync(new URL("../src/app/(internal)/app/page.tsx", import.meta.url), "utf8");
 const tenancyViews = readFileSync(new URL("../src/modules/tenancy/views.tsx", import.meta.url), "utf8");
+const financeViews = readFileSync(new URL("../src/modules/finance/views.tsx", import.meta.url), "utf8");
 const ui = readFileSync(new URL("../src/core/ui/ui.tsx", import.meta.url), "utf8");
 const preferences = readFileSync(new URL("../src/core/preferences/preferences-provider.tsx", import.meta.url), "utf8");
 const designSystem = readFileSync(new URL("../docs/design/KJORA-UI-SYSTEM-v2.md", import.meta.url), "utf8");
@@ -42,16 +43,16 @@ test("dashboard pilot uses live portfolio data and no fake financial totals", ()
   assert.doesNotMatch(dashboard, /1 240 000 XAF|920 000 XAF|320 000 XAF|échéances fictives/i);
 });
 
-test("tenant and lease pilots expose honest future financial states", () => {
+test("tenant and lease pilots expose live, qualified financial states", () => {
   assert.match(ui, /export function FinancialStateCard/);
-  assert.match(tenancyViews, /Solde actuel/);
-  assert.match(tenancyViews, /Crédit disponible/);
-  assert.match(tenancyViews, /Prochaine échéance/);
+  assert.match(financeViews, /Solde dû/);
+  assert.match(financeViews, /Crédit disponible/);
+  assert.match(financeViews, /Prochaine échéance non couverte/);
   assert.match(tenancyViews, /Total périodique/);
   assert.match(tenancyViews, /Date limite/);
   assert.match(tenancyViews, /Avis préparé/);
-  assert.match(tenancyViews, /Disponible avec Dues \+ Ledger 6C1/);
-  assert.doesNotMatch(tenancyViews, />-55 000</);
+  assert.match(tenancyViews, /LeaseDuesPanel/);
+  assert.doesNotMatch(financeViews, />-55 000</);
 });
 
 test("theme selection supports persistence and the device preference", () => {
@@ -103,5 +104,5 @@ test("v2 documentation records global scope and future financial semantics", () 
   assert.match(designSystem, /Vous devez \/ Solde dû/);
   assert.match(designSystem, /Crédit disponible/);
   assert.match(designSystem, /À jour/);
-  assert.match(designSystem, /Le Lot 6C1 reste non commencé/);
+  assert.match(designSystem, /Lot 6C1/);
 });

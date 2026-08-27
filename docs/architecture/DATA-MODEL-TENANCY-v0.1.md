@@ -228,3 +228,18 @@ Les projections, références et artefacts versionnés sont autorisés lorsqu’
 - Deux Leases d’une même Unit ne couvrent jamais simultanément la même période.
 
 Ce modèle conceptuel est **VALIDÉ** pour le Lot 4. Aucun schéma physique n’est créé dans ce lot et le Lot 5A reste non commencé.
+
+## 15. Réalisation physique Lot 6C1
+
+Le Lot 6C1 matérialise la chaîne `Lease → Due → Ledger` sans créer `Payment`, `PaymentAllocation` ou `Receipt` :
+
+- `lease_financial_terms` conserve les versions effectives-datées de loyer, charges, jour limite et J-X ; aucune version n’est modifiée ou supprimée ;
+- `dues` conserve une obligation par clé idempotente de bail/période avec loyer, charges, dépôt ou ajustement explicitement ventilés ;
+- `ledger_entries` conserve les débits/crédits append-only par composante ;
+- `dues_with_status`, `ledger_statement` et `tenant_financial_positions` sont des projections `security_invoker` reconstruisibles ;
+- chaque table porte `organization_id`, des clés étrangères composites et des index commençant par le tenant ;
+- `opening_credit` reprend uniquement la valeur validée `Lease.initial_prepayment_amount_xaf` et déclare explicitement `is_payment = false` ;
+- une modification future crée un nouveau `lease_financial_terms`, tandis qu’une sortie après génération ajoute une correction liée à la Due originale ;
+- le solde Ledger est `crédit - débit`, mais l’interface qualifie toujours le résultat en dette, crédit ou à jour.
+
+La lecture interne exige `due.view`. Le portail n’accède pas encore à ces vues : le lien sécurisé `TenantPortalAccess` demeure exclusivement au Lot 6E.
