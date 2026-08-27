@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, ArrowRight, Inbox } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock3, Inbox } from "lucide-react";
 
 export function DemoNotice({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? "demo-notice demo-notice--compact" : "demo-notice"}>
       <span className="demo-notice__dot" aria-hidden="true" />
-      <span>Certaines vues restent en démonstration</span>
+      <span>Certaines fonctions restent à venir</span>
     </div>
   );
 }
@@ -93,6 +93,35 @@ export function FinancialStateCard({
       <strong className={unavailable ? undefined : "financial-value"}>{value}</strong>
       <small>{helper}</small>
     </section>
+  );
+}
+
+export function FutureState({
+  title,
+  description,
+  availability,
+  icon: Icon = Clock3,
+  className = "",
+}: {
+  title: string;
+  description: string;
+  availability: string;
+  icon?: LucideIcon;
+  className?: string;
+}) {
+  return (
+    <Card className={`future-state-card ${className}`}>
+      <span className="future-state-card__icon" aria-hidden="true">
+        <Icon size={22} strokeWidth={1.8} />
+      </span>
+      <div>
+        <p className="eyebrow">Fonction future</p>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      <Badge tone="info">À venir</Badge>
+      <small>{availability}</small>
+    </Card>
   );
 }
 

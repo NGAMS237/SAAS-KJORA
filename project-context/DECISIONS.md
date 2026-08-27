@@ -1,7 +1,7 @@
 # Kjora — Registre des décisions
 
 > Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
-> Dernière mise à jour : 2026-08-27 — direction visuelle v2A confirmée et bornée aux trois écrans pilotes
+> Dernière mise à jour : 2026-08-27 — direction visuelle v2B globalisée avec géométrie organique signature
 
 ## Statuts
 
@@ -104,6 +104,7 @@
 | D-089 | CONFIRMÉ | **Lot 6B.1 — visibilité financière future.** Le dossier Tenant interne et le futur portail rendent immédiatement compréhensibles dette, crédit, périodes couvertes et prochaine échéance depuis l’unique vérité 6C. Avant 6C, les emplacements restent très visibles mais affichent un état indisponible honnête, jamais zéro ni solde fictif. Après 6C, tout montant est qualifié en langage naturel comme dû, crédit disponible ou à jour, avec accès au détail des échéances, paiements et allocations. | 2026-08-26 |
 | D-090 | CONFIRMÉ | **Autorisation Production Lot 6B.1.** Blaise autorise explicitement l’application de `lot_6b_1_unit_reference_rent_ux` sur Supabase Production KJORA, y compris la normalisation du rappel du Lease existant de 1 à 10 jours, puis les tests pgTAP, le commit et le push sur `main` déclenchant Vercel Production. Cette autorisation ne démarre pas 6C1. | 2026-08-26 |
 | D-091 | CONFIRMÉ | **Kjora Visual Direction v2.** Kjora conserve « Horizon & héritage » et adopte une structure Ink/Navy, un accent Kjora Gold/Amber ponctuel, un Horizon Blue secondaire, le vert réservé aux états métier positifs et le rouge aux états négatifs/destructifs. Les surfaces claires sont teintées, le sombre devient neutre/bleu, la typographie Inter Tight/Inter est renforcée, les cartes sont plus généreuses et la hiérarchie financière qualifie toujours dette, crédit ou équilibre. Le sous-lot v2A applique cette direction uniquement au Dashboard, au dossier Tenant, au détail Lease et aux tokens/navigation partagés ; v2B et 6C1 restent non commencés. | 2026-08-27 |
+| D-092 | CONFIRMÉ | **Kjora v2B — géométrie organique et déploiement global.** KJORA adopte des formes arrondies généreuses et certaines surfaces clés utilisent un rayon asymétrique accentué comme signature visuelle. Cette asymétrie reste réservée aux heroes, synthèses majeures, cartes financières ou éditoriales ; formulaires, champs, tableaux, petites lignes et contrôles courants restent réguliers. La cohérence clair/sombre/mobile, les placeholders honnêtes et l’absence de changement métier sont obligatoires. Le design v2 est déployé sur les écrans principaux ; 6C1 reste non commencé. | 2026-08-27 |
 
 ## Hypothèses / propositions ouvertes
 

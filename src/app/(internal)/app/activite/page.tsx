@@ -1,5 +1,5 @@
-import { BellRing, Building2, ReceiptText, ShieldCheck } from "lucide-react";
-import { Badge, Card, DemoNotice, ListRow, PageHeader } from "@/core/ui/ui";
+import { BellRing } from "lucide-react";
+import { FutureState, PageHeader } from "@/core/ui/ui";
 
 export default function ActivityPage() {
   return (
@@ -7,24 +7,15 @@ export default function ActivityPage() {
       <PageHeader
         eyebrow="Organization active uniquement"
         title="Activité"
-        description="Notifications et faits utiles restent séparés de l’audit technique."
+        description="Notifications, activité métier et audit resteront séparés et bornés à l’Organization active."
       />
-      <DemoNotice />
-      <Card>
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Chronologie fictive</p>
-            <h2>Activité récente</h2>
-          </div>
-          <Badge tone="info">3 nouvelles</Badge>
-        </div>
-        <div className="list-stack">
-          <ListRow icon={ReceiptText} title="Reçu disponible" description="Paiement fictif · aujourd’hui à 09:42" trailing={<Badge tone="success">Succès</Badge>} />
-          <ListRow icon={BellRing} title="Loyer bientôt dû" description="Rappel fictif · hier à 16:10" trailing={<Badge tone="info">À venir</Badge>} />
-          <ListRow icon={Building2} title="Bien ajouté" description="Activité fictive · lundi à 11:05" />
-          <ListRow icon={ShieldCheck} title="Accès équipe consulté" description="Trace d’interface fictive · lundi à 08:32" />
-        </div>
-      </Card>
+      <FutureState
+        className="future-state-card--signature"
+        icon={BellRing}
+        title="Chronologie opérationnelle"
+        description="Aucune notification ou activité métier simulée n’est présentée comme un fait réel."
+        availability="Disponible avec le Lot 6D — Dashboard + notifications + Activity/Audit"
+      />
     </div>
   );
 }

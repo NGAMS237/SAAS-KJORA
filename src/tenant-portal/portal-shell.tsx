@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import type { ReactNode } from "react";
-import { Bell, ChevronLeft, X } from "lucide-react";
-import { demoPortalContext } from "@/core/demo/demo-context";
+import { Bell, ChevronLeft } from "lucide-react";
 import { portalNavigation, type NavigationItem } from "@/core/navigation/navigation";
 import { DemoNotice } from "@/core/ui/ui";
 
@@ -32,7 +30,6 @@ function PortalLink({ item, pathname }: { item: NavigationItem; pathname: string
 
 export function PortalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   return (
     <div className="app-shell app-shell--portal">
@@ -42,8 +39,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </Link>
         <div className="portal-context">
           <span>Espace locataire</span>
-          <strong>{demoPortalContext.organizationName}</strong>
-          <small>{demoPortalContext.home}</small>
+          <strong>Accès à venir</strong>
+          <small>Disponible avec le Lot 6E</small>
         </div>
         <nav className="desktop-rail__primary">
           {portalNavigation.map((item) => (
@@ -51,7 +48,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="desktop-rail__footer">
-          <button className="portal-preview-link" type="button" onClick={() => setNotificationsOpen(true)}>
+          <button className="portal-preview-link" type="button" disabled aria-label="Notifications disponibles avec le Lot 6E">
             <Bell aria-hidden="true" size={18} />
             Notifications
           </button>
@@ -68,38 +65,12 @@ export function PortalShell({ children }: { children: ReactNode }) {
           <Link className="wordmark wordmark--mobile" href="/portal">
             Kjora<span>.</span>
           </Link>
-          <p>Espace locataire · {demoPortalContext.organizationName}</p>
+          <p>Espace locataire · Lot 6E</p>
         </div>
-        <button className="icon-button" type="button" onClick={() => setNotificationsOpen(true)} aria-label="Ouvrir les notifications">
+        <button className="icon-button" type="button" disabled aria-label="Notifications disponibles avec le Lot 6E">
           <Bell aria-hidden="true" size={20} />
-          <span className="notification-dot" />
         </button>
       </header>
-
-      {notificationsOpen ? (
-        <div className="notification-panel" role="dialog" aria-modal="true" aria-label="Notifications du portail">
-          <button className="mobile-drawer__backdrop" type="button" onClick={() => setNotificationsOpen(false)} aria-label="Fermer" />
-          <section className="notification-panel__card">
-            <div className="mobile-drawer__header">
-              <div>
-                <p className="eyebrow">Portail locataire</p>
-                <strong>Notifications</strong>
-              </div>
-              <button className="icon-button" type="button" onClick={() => setNotificationsOpen(false)} aria-label="Fermer les notifications">
-                <X aria-hidden="true" size={20} />
-              </button>
-            </div>
-            <div className="notification-item">
-              <span className="notification-item__mark" aria-hidden="true" />
-              <div>
-                <strong>Reçu disponible</strong>
-                <p>Votre reçu fictif de démonstration est prêt à être consulté.</p>
-              </div>
-            </div>
-            <p className="panel-hint">Entrée légère : les notifications ne sont pas un cinquième onglet.</p>
-          </section>
-        </div>
-      ) : null}
 
       <main className="shell-content">{children}</main>
 

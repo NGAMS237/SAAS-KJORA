@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-27 — Visual Direction v2A implémentée sur les trois écrans pilotes ; validation visuelle Blaise en attente
+> Mise à jour : 2026-08-27 — Visual Direction v2B globalisée avec formes signature ; validation visuelle Blaise en attente
 
 ## Lots
 
@@ -16,6 +16,7 @@
 - **Lot 6B — Tenant + Lease backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6B.1 — Patch UX / préparation financière : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Visual Direction v2A — Design system + 3 écrans pilotes : IMPLÉMENTÉE / TESTÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
+- **Visual Direction v2B — Formes signature + déploiement global : TERMINÉE / TESTÉE / DÉPLOYÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — persistance Supabase ; aucun 6C1 démarré**
 
@@ -186,6 +187,10 @@
 - Visual Direction v2A — tokens clair/sombre, navigation partagée, Dashboard réel, détail Locataire et détail Location adoptent la direction Horizon & héritage de D-091.
 - Visual Direction v2A — le Dashboard ne fabrique aucun revenu ; les états Solde, Crédit, Prochaine échéance, Échéances, Paiements et Documents indiquent explicitement leur disponibilité future avec 6C.
 - Visual Direction v2A — 76 tests Node réussis ; TypeScript, ESLint et build Production Next.js 16.3.2 réussis avec 36 pages générées.
+- Visual Direction v2B — échelle de rayons, formes asymétriques douces/signature et réduction mobile documentées et appliquées sélectivement aux heroes, synthèses majeures et panneaux d’authentification.
+- Visual Direction v2B — Biens, Units, Locataires, Locations, Équipe, Profil, Paramètres, Auth et navigation utilisent le système v2 global ; formulaires, tableaux et petites lignes restent réguliers.
+- Visual Direction v2B — Paiements, Activité et portail futur ne contiennent plus de chiffres financiers de démonstration ; chaque capacité absente affiche un placeholder « À venir » et son lot.
+- Visual Direction v2B — 79 tests Node réussis ; TypeScript, ESLint et build Production Next.js 16.3.2 réussis avec 36 routes. La connexion publique a aussi été contrôlée à 390 × 844 sans débordement horizontal, avec réduction mobile de la forme signature.
 
 ## Bloqué
 
@@ -204,4 +209,4 @@
 
 ## Proposé ensuite
 
-**Faire valider visuellement la v2A par Blaise sur Dashboard clair/sombre, détail Locataire, détail Location et mobile. v2B et 6C1 restent non commencés et exigent chacun une autorisation distincte.**
+**Faire valider visuellement la v2B par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile. Le prochain lot possible reste 6C1, non commencé et soumis à une autorisation distincte.**

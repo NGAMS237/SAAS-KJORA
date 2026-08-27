@@ -44,11 +44,21 @@
   --shadow-soft: 0 12px 34px rgb(23 38 52 / 0.065);
   --shadow-card: 0 18px 44px rgb(23 38 52 / 0.085);
   --shadow-menu: 0 24px 64px rgb(12 24 36 / 0.18);
-  --radius-sm: 10px;
-  --radius-surface: 26px;
-  --radius-card: 22px;
+  --radius-sm: 14px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-organic: 48px;
+  --radius-signature: 64px;
+  --radius-surface: var(--radius-xl);
+  --radius-card: var(--radius-lg);
   --radius-control: 15px;
-  --radius-pill: 999px;
+  --radius-pill: 9999px;
+  --shape-standard: var(--radius-lg);
+  --shape-soft-right: var(--radius-lg) var(--radius-lg) var(--radius-organic) var(--radius-lg);
+  --shape-soft-left: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-organic);
+  --shape-signature-right: var(--radius-lg) var(--radius-lg) var(--radius-signature) var(--radius-lg);
+  --shape-signature-left: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-signature);
   --motion-fast: 150ms;
   --motion-standard: 180ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -433,7 +443,7 @@ h2 {
     radial-gradient(circle at 88% 18%, rgb(200 137 47 / 0.2), transparent 24%),
     linear-gradient(135deg, #13253a, #182f47 64%, #213b52);
   border: 1px solid rgb(255 255 255 / 0.08);
-  border-radius: var(--radius-surface);
+  border-radius: var(--shape-signature-right);
   box-shadow: var(--shadow-card);
   color: #f8f4eb;
   display: grid;
@@ -649,6 +659,7 @@ a.portfolio-metric:hover {
 
 .dashboard-finance-card {
   align-content: start;
+  border-radius: var(--shape-soft-left);
   display: grid;
   gap: 16px;
   grid-template-columns: auto minmax(0, 1fr);
@@ -2117,6 +2128,43 @@ a.portfolio-metric:hover {
   }
 }
 
+@media (min-width: 980px) {
+  .desktop-rail {
+    background: linear-gradient(180deg, #101f31 0%, #13283d 58%, #102033 100%);
+    border-right: 1px solid rgb(215 164 78 / .13);
+    gap: 24px;
+  }
+
+  .desktop-rail .organization-switcher__button {
+    border-radius: var(--radius-md);
+    padding: 11px;
+  }
+
+  .desktop-rail .nav-link {
+    border-radius: var(--radius-md);
+    min-height: 46px;
+    padding: 10px 12px;
+  }
+
+  .desktop-rail .nav-link--active {
+    background: rgb(215 164 78 / .15);
+    box-shadow: inset 3px 0 0 var(--brand-gold), 0 8px 22px rgb(4 12 20 / .14);
+  }
+}
+
+@media (max-width: 979px) {
+  .mobile-header,
+  .mobile-bottom-nav {
+    background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+    border-color: color-mix(in srgb, var(--border) 82%, transparent);
+  }
+
+  .organization-switcher__button,
+  .mobile-bottom-nav .nav-link {
+    border-radius: var(--radius-md);
+  }
+}
+
 @media (max-width: 430px) {
   .mobile-header .organization-switcher__mark,
   .mobile-header .organization-switcher__text small {
@@ -2311,7 +2359,7 @@ a.portfolio-metric:hover {
 
 @media (max-width: 520px) {
   .dashboard-hero {
-    border-radius: 22px;
+    border-radius: var(--shape-signature-right);
     padding: 24px 20px;
   }
 
@@ -2343,6 +2391,204 @@ a.portfolio-metric:hover {
 
   .dashboard-finance-card .badge {
     grid-column: 1;
+  }
+}
+
+/* Visual Direction v2B — Organic Signature Geometry */
+.signature-surface {
+  overflow: hidden;
+  position: relative;
+}
+
+.signature-surface--right {
+  border-radius: var(--shape-signature-right);
+}
+
+.signature-surface--left {
+  border-radius: var(--shape-signature-left);
+}
+
+.page-header {
+  background:
+    radial-gradient(circle at 94% 4%, color-mix(in srgb, var(--brand-gold) 12%, transparent), transparent 27%),
+    var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: var(--shape-soft-right);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  padding: clamp(20px, 4vw, 32px);
+  position: relative;
+}
+
+.page-header::after {
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 18%, transparent);
+  border-radius: 50%;
+  content: "";
+  height: 120px;
+  pointer-events: none;
+  position: absolute;
+  right: -56px;
+  top: -70px;
+  width: 120px;
+}
+
+.page-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.card {
+  background: var(--surface-raised);
+  border-radius: var(--shape-standard);
+}
+
+.property-photo-placeholder,
+.future-state-card {
+  border-radius: var(--shape-soft-left);
+}
+
+.demo-detail-card,
+.tenant-profile-hero,
+.lease-contract-card,
+.profile-card,
+.settings-card--organization {
+  border-radius: var(--shape-signature-right);
+}
+
+.lease-hero,
+.tenant-financial-preview-v2,
+.tenant-history-card,
+.team-invite-card,
+.auth-panel,
+.pin-lock-panel {
+  border-radius: var(--shape-signature-left);
+}
+
+.tenant-current-lease-card,
+.portal-preferences-card {
+  border-radius: var(--shape-soft-right);
+}
+
+.resource-index-v2 .demo-resource-card {
+  background: var(--surface-raised);
+  border-radius: var(--shape-standard);
+  box-shadow: var(--shadow-soft);
+}
+
+.resource-index-v2 .demo-resource-card:nth-child(3n + 1) {
+  border-bottom-right-radius: var(--radius-organic);
+}
+
+.form-page-v2 > .card {
+  padding: clamp(20px, 4vw, 30px);
+}
+
+.future-state-card {
+  align-items: start;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 210px;
+  padding: clamp(22px, 4vw, 34px);
+}
+
+.future-state-card--signature {
+  border-radius: var(--shape-signature-left);
+}
+
+.future-state-card__icon {
+  align-items: center;
+  background: var(--brand-gold-soft);
+  border-radius: var(--radius-md);
+  color: var(--brand-gold);
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.future-state-card h2 {
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  margin: 0;
+}
+
+.future-state-card p:not(.eyebrow) {
+  color: var(--text-secondary);
+  margin: 10px 0 0;
+  max-width: 720px;
+}
+
+.future-state-card > small {
+  color: var(--text-muted);
+  font-size: .72rem;
+  grid-column: 2 / -1;
+}
+
+.settings-card,
+.profile-card,
+.team-management-v2 > .card {
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.team-row,
+.team-audit-list > div,
+.list-row,
+.lease-table__row {
+  border-color: color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.team-row__avatar {
+  color: var(--brand-ink);
+}
+
+:root[data-theme="dark"] .page-header {
+  background:
+    radial-gradient(circle at 94% 4%, color-mix(in srgb, var(--brand-gold) 10%, transparent), transparent 28%),
+    var(--surface-raised);
+}
+
+.button:disabled,
+.icon-button:disabled,
+.control-button:disabled {
+  cursor: not-allowed;
+  opacity: .62;
+}
+
+@media (max-width: 620px) {
+  :root {
+    --radius-organic: 40px;
+    --radius-signature: 48px;
+  }
+
+  .page-header {
+    align-items: stretch;
+    padding: 20px;
+  }
+
+  .future-state-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 190px;
+    padding: 20px;
+  }
+
+  .future-state-card > .badge,
+  .future-state-card > small {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 430px) {
+  :root {
+    --radius-organic: 34px;
+    --radius-signature: 42px;
+  }
+
+  .page-header,
+  .card,
+  .demo-resource-card,
+  .future-state-card {
+    max-width: 100%;
   }
 }
 

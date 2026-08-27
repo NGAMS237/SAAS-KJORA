@@ -41,10 +41,10 @@ export function TeamManagement({ currentUserId, initialData, organizationName }:
     }
   }
 
-  return <div className="page-stack">
+  return <div className="page-stack team-management-v2">
     <PageHeader eyebrow={english ? "Internal Organization Membership" : "Membership interne"} title={english ? "Team" : "Équipe"} description={english ? `Members and invitations for ${organizationName}.` : `Membres et invitations de ${organizationName}.`} />
     {message ? <p className="form-feedback" role="status">{message}</p> : null}
-    <Card><div className="section-heading"><div><p className="eyebrow">{english ? "Invite" : "Invitation"}</p><h2>{english ? "Invite a member" : "Inviter un membre"}</h2></div><MailPlus aria-hidden="true" size={22}/></div>
+    <Card className="team-invite-card signature-surface signature-surface--left"><div className="section-heading"><div><p className="eyebrow">{english ? "Invite" : "Invitation"}</p><h2>{english ? "Invite a member" : "Inviter un membre"}</h2></div><MailPlus aria-hidden="true" size={22}/></div>
       <form className="team-invite-form" onSubmit={invite}><label className="field"><span>Email</span><input autoComplete="email" inputMode="email" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="membre@exemple.com" /></label><label className="field"><span>{english ? "Role" : "Rôle"}</span><select value={role} onChange={(event) => setRole(event.target.value as InternalRole)}>{ASSIGNABLE_ROLES.map((value) => <option value={value} key={value}>{ROLE_LABELS[value][english ? "en" : "fr"]}</option>)}</select></label><button className="button button--primary" disabled={busyKey !== null} type="submit"><MailPlus aria-hidden="true" size={17}/>{busyKey === "invite" ? (english ? "Sending…" : "Envoi…") : (english ? "Send invitation" : "Envoyer l’invitation")}</button></form>
       <p className="demo-hint">{english ? "The invitation expires after 7 days. A role grants no permission before acceptance." : "L’invitation expire après 7 jours. Le rôle n’accorde aucune permission avant acceptation."}</p>
     </Card>

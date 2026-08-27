@@ -1,37 +1,21 @@
-import { CalendarDays, CircleDollarSign, ReceiptText, WalletCards } from "lucide-react";
-import { Badge, Card, DemoNotice, ListRow, PageHeader } from "@/core/ui/ui";
+import { WalletCards } from "lucide-react";
+import { FutureState, PageHeader } from "@/core/ui/ui";
 
 export default function PaymentsPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Août 2026 · Période active"
+        eyebrow="Cycle financier"
         title="Paiements"
-        description="Une vue mobile centrée sur les échéances, sans traitement financier réel dans ce lot."
-        action={
-          <button className="button button--primary" disabled type="button">
-            <CircleDollarSign aria-hidden="true" size={17} />
-            Enregistrer un paiement
-          </button>
-        }
+        description="Les encaissements seront reliés aux échéances et au crédit locataire sans créer de chiffre provisoire."
       />
-      <DemoNotice />
-
-      <Card>
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Statuts dérivés · aperçu</p>
-            <h2>Échéances fictives</h2>
-          </div>
-          <button className="button button--secondary button--small" type="button">Filtrer</button>
-        </div>
-        <div className="list-stack">
-          <ListRow icon={CalendarDays} title="Loyer · Appartement A2" description="Échéance fictive · 05 août" trailing={<Badge tone="danger">En retard</Badge>} />
-          <ListRow icon={WalletCards} title="Loyer · Studio B1" description="160 000 XAF payés sur 240 000" trailing={<Badge tone="warning">Partiellement payé</Badge>} />
-          <ListRow icon={ReceiptText} title="Loyer · Maison entière" description="Paiement fictif confirmé" trailing={<Badge tone="success">Payé</Badge>} />
-          <ListRow icon={CalendarDays} title="Loyer · Appartement C3" description="Échéance fictive · 28 août" trailing={<Badge tone="info">À venir</Badge>} />
-        </div>
-      </Card>
+      <FutureState
+        className="future-state-card--signature"
+        icon={WalletCards}
+        title="Suivi des paiements"
+        description="Aucun paiement, montant encaissé ou reste à payer n’est affiché avant la mise en place de la vérité financière."
+        availability="Disponible avec le Lot 6C2 — Payments + Allocation + Tenant credit"
+      />
     </div>
   );
 }

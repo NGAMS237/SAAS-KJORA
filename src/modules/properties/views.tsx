@@ -89,7 +89,7 @@ export function PropertiesView({
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => filterProperties(properties, query), [properties, query]);
   return (
-    <div className="page-stack">
+    <div className="page-stack resource-index-v2">
       <PageHeader
         eyebrow={t("Patrimoine", "Portfolio")}
         title={t("Biens", "Properties")}
@@ -174,7 +174,7 @@ export function PropertyCreateForm() {
   }
 
   return (
-    <div className="page-stack demo-narrow">
+    <div className="page-stack demo-narrow form-page-v2">
       <Link className="demo-back" href="/app/biens"><ArrowLeft size={17} />{t("Retour aux biens", "Back to properties")}</Link>
       <PageHeader
         eyebrow="SCR-PROP-02"
@@ -248,7 +248,7 @@ export function PropertyDetailView({
 
   const vacant = property.units.filter((unit) => unit.occupancy === "vacant").length;
   return (
-    <div className="page-stack">
+    <div className="page-stack resource-detail-v2 property-detail-v2">
       <Link className="demo-back" href="/app/biens"><ArrowLeft size={17} />{t("Tous les biens", "All properties")}</Link>
       <PageHeader
         eyebrow={propertyLabel(property.type, t)}
@@ -354,7 +354,7 @@ export function UnitDetailView({
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack resource-detail-v2 unit-detail-v2">
       <Link className="demo-back" href={`/app/biens/${property.id}`}><ArrowLeft size={17} />{property.name}</Link>
       <PageHeader
         eyebrow="SCR-UNIT-03"
@@ -375,7 +375,7 @@ export function UnitDetailView({
           </form>
         </Card>
       ) : null}
-      <Card className="demo-detail-card">
+      <Card className="demo-detail-card signature-surface signature-surface--right">
         <div><Badge tone={unit.occupancy === "occupied" ? "success" : "neutral"}>{unit.occupancy === "occupied" ? t("Occupée", "Occupied") : t("Vacante", "Vacant")}</Badge><h2>{unit.occupancy === "occupied" ? t("Unité occupée", "Occupied unit") : t("Unité vacante", "Vacant unit")}</h2><p>{unit.occupancy === "occupied" ? t(`${unit.activeTenantName ?? "Locataire"} · occupation dérivée de la location active.`, `${unit.activeTenantName ?? "Tenant"} · occupancy derived from the active lease.`) : t("Aucune location active n’est associée.", "No active lease is linked.")}</p>{unit.areaSqm ? <p><strong>{unit.areaSqm} m²</strong></p> : null}<p><strong>{unit.referenceRentXaf ? money(unit.referenceRentXaf) : t("Aucun loyer de référence", "No reference rent")}</strong><br /><small>{t("Suggestion Unit — indépendante de tout loyer contractuel.", "Unit suggestion — independent from contractual rent.")}</small></p></div>
         {unit.activeLeaseId ? <Link className="button button--secondary" href={`/app/locations/${unit.activeLeaseId}`}>{t("Ouvrir la location", "Open lease")}</Link> : canManageLease ? <Link className="button button--primary" href={`/app/locations/nouveau?unit=${unit.id}`}>{t("Créer une location", "Create lease")}</Link> : null}
       </Card>

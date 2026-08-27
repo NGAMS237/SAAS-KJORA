@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-27 — Visual Direction v2A implémentée sur les trois écrans pilotes ; validation visuelle en attente
+> Dernière mise à jour : 2026-08-27 — Visual Direction v2B globalisée avec formes signature ; validation visuelle en attente
 
 ## 1. Vision
 
@@ -432,8 +432,9 @@ Prévoir clés serveur séparées, domaines et journaux séparés, et aucun doma
 - Sémantique : vert réservé aux états financiers positifs ; rouge réservé aux états négatifs et aux actions destructives.
 - Surfaces : fond clair légèrement bleuté, cartes ivoire/blanc chaud ; fond sombre bleu-noir et surfaces bleu ardoise.
 - UI : Inter ; titres et montants renforcés avec Inter Tight. Le serif reste réservé au wordmark Kjora.
-- Référence active : `docs/design/KJORA-UI-SYSTEM-v2.md` et décision D-091. Le système v1 est conservé comme historique.
-- v2A couvre seulement les tokens globaux, la navigation partagée si nécessaire et les écrans pilotes Dashboard, détail Locataire et détail Location. v2B et 6C1 restent non commencés.
+- Référence active : `docs/design/KJORA-UI-SYSTEM-v2.md` et décisions D-091/D-092. Le système v1 est conservé comme historique.
+- v2B généralise les tokens et composants v2 aux écrans principaux. Les grandes surfaces peuvent utiliser un coin asymétrique accentué ; champs, tableaux, petites lignes et contrôles restent réguliers.
+- Les placeholders des fonctions futures indiquent leur lot de disponibilité et n’affichent aucun chiffre fictif. Le Lot 6C1 reste non commencé.
 
 ## 17. Architecture UX validée — Lot 3
 
@@ -569,6 +570,8 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 
 **Lot 6B.1 — PATCH UX / PRÉPARATION FINANCIÈRE : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-086 à D-090 fixent le loyer de référence Unit, le prépaiement calculé, les règles calendaires, la future visibilité explicable du solde et l’autorisation Production, sans démarrer 6C1.
 
-**Visual Direction v2A — DESIGN SYSTEM + 3 ÉCRANS PILOTES : IMPLÉMENTÉE / TESTÉE — VALIDATION VISUELLE BLAISE EN ATTENTE.** D-091 fixe la nouvelle direction et limite sa portée au Dashboard, au détail Locataire, au détail Location, aux tokens globaux et aux adaptations de navigation partagée nécessaires. Les indicateurs financiers indisponibles sont affichés honnêtement ; v2B et 6C1 restent non commencés.
+**Visual Direction v2A — DESIGN SYSTEM + 3 ÉCRANS PILOTES : IMPLÉMENTÉE / TESTÉE.** D-091 a fixé la nouvelle direction et limité ce premier jalon au Dashboard, au détail Locataire, au détail Location, aux tokens globaux et aux adaptations de navigation partagée nécessaires. Les indicateurs financiers indisponibles y sont affichés honnêtement.
+
+**Visual Direction v2B — FORMES SIGNATURE + DÉPLOIEMENT GLOBAL : TERMINÉE / TESTÉE / DÉPLOYÉE — VALIDATION VISUELLE BLAISE EN ATTENTE.** D-092 généralise la direction v2 aux écrans principaux, formalise la géométrie organique asymétrique sur les seules surfaces majeures et remplace les anciennes données de démonstration financières par des placeholders explicites. Aucun schéma, RLS, Auth logique ou contrat métier n’est modifié.
 
 **Lot 6C1 — Dues + Charges + Ledger : NON COMMENCÉ.** Son démarrage exige une autorisation distincte après validation fonctionnelle du Lot 6B.

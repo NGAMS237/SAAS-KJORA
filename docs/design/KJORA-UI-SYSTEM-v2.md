@@ -1,10 +1,10 @@
 # Kjora UI System v2
 
-> Statut : **v2A PILOTE — Dashboard, dossier locataire et détail Location**
+> Statut : **v2B GLOBAL — TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION VISUELLE BLAISE EN ATTENTE**
 >
 > Direction : **Horizon & héritage — immobilier africain premium, chaleureux, patrimonial et lisible**
 >
-> Portée actuelle : tokens globaux, navigation interne partagée et trois écrans pilotes. Le déploiement global v2B n’est pas commencé.
+> Portée actuelle : design system v2 déployé sur les écrans principaux internes, l’authentification et les états futurs du portail, sans changement métier.
 
 ## 1. Principes
 
@@ -56,8 +56,8 @@ Un montant important doit être lisible immédiatement, par exemple `55 000 XAF`
 ## 4. Espacement, rayons et ombres
 
 - Échelle d’espacement conservée : `4, 8, 12, 16, 20, 24, 32 px`.
-- Grande surface / hero : `26 px`.
-- Carte standard : `22 px`.
+- Grande surface / hero : `32 px` de base.
+- Carte standard : `24 px`.
 - Champ et bouton : `15 px`.
 - Petit bloc d’icône : `10–15 px`.
 - Badge : pill.
@@ -65,7 +65,47 @@ Un montant important doit être lisible immédiatement, par exemple `55 000 XAF`
 - Ombre élevée : `0 18px 44px` pour un hero ou une carte interactive importante.
 - Les bordures restent fines et secondaires ; aucun glassmorphism.
 
-## 5. Iconographie
+## 5. Organic Signature Geometry
+
+### Radius scale
+
+| Token | Valeur desktop | Usage |
+|---|---:|---|
+| `radius-sm` | `14 px` | petit bloc régulier |
+| `radius-md` | `18 px` | navigation, icône, contrôle composé |
+| `radius-lg` | `24 px` | carte standard |
+| `radius-xl` | `32 px` | grande surface régulière |
+| `radius-organic` | `48 px` | variante asymétrique douce |
+| `radius-signature` | `64 px` | coin signature fortement accentué |
+| `radius-pill` | `9999 px` | badge et contrôle pill uniquement |
+
+Sur smartphone, `radius-organic` descend à `40–34 px` et `radius-signature` à `48–42 px` afin de préserver la composition sans débordement.
+
+### Variantes
+
+- **Standard card** : `24 px` sur les quatre coins pour formulaires secondaires, listes, tableaux et statistiques simples.
+- **Soft asymmetric right** : `24 / 24 / 48 / 24 px` pour un bloc éditorial ou une surface de contexte.
+- **Soft asymmetric left** : `24 / 24 / 24 / 48 px` comme complément dans une composition.
+- **Signature asymmetric right** : `24 / 24 / 64 / 24 px` pour un hero ou une synthèse majeure.
+- **Signature asymmetric left** : `24 / 24 / 24 / 64 px` pour une carte contractuelle, financière ou d’authentification forte.
+
+### Usage
+
+- Dashboard : hero signature à droite ; capacité financière future en complément doux à gauche.
+- Dossier Locataire : hero à droite, zone financière et historique à gauche, Location actuelle en variante douce.
+- Détail Location : hero à gauche et carte contractuelle à droite.
+- Biens / Units : headers majeurs et synthèses importantes asymétriques ; cartes de listes et formulaires réguliers.
+- Équipe, Profil et Paramètres : une seule surface forte par composition ; les listes de membres restent régulières.
+- Auth et verrouillage : panneau principal signature, champs strictement réguliers.
+
+### Anti-patterns
+
+- Ne jamais appliquer l’asymétrie aux inputs, selects, textareas, cellules de tableau, petites lignes ou tous les boutons.
+- Ne pas donner un coin signature à chaque carte d’une grille.
+- Ne pas combiner plusieurs coins extrêmes sur une même petite surface.
+- Ne pas sacrifier le contraste, la cible tactile, le focus ou la lisibilité pour la forme.
+
+## 6. Iconographie
 
 - Une seule famille : Lucide.
 - Épaisseur standard : `1.8`.
@@ -73,7 +113,7 @@ Un montant important doit être lisible immédiatement, par exemple `55 000 XAF`
 - Les cartes importantes peuvent utiliser un petit bloc arrondi Ink, Blue, Gold ou neutre.
 - Une icône n’est pas répétée sur chaque ligne si elle n’aide pas la lecture.
 
-## 6. Boutons
+## 7. Boutons
 
 - **Primary** : Ink/Navy. Une seule action dominante par vue.
 - **Accent CTA** : Gold/Amber, réservé aux actions ponctuelles majeures.
@@ -84,7 +124,7 @@ Un montant important doit être lisible immédiatement, par exemple `55 000 XAF`
 - Cible tactile minimale : `44 px`.
 - Focus visible avec le token `focus`.
 
-## 7. Champs
+## 8. Champs
 
 - Hauteur minimale `48 px`.
 - Fond `surface`, légèrement teinté en clair et neutre bleu/charbon en sombre.
@@ -93,7 +133,7 @@ Un montant important doit être lisible immédiatement, par exemple `55 000 XAF`
 - Focus Gold visible ; erreur Danger avec texte explicite.
 - Aucun fond vert en mode sombre hors succès métier.
 
-## 8. Cartes financières
+## 9. Cartes financières
 
 Variants préparés :
 
@@ -115,7 +155,7 @@ Après 6C :
 
 Un nombre signé isolé, par exemple `-55 000`, est interdit.
 
-## 9. Mode clair
+## 10. Mode clair
 
 - Fond page bleu-gris chaud, jamais une grande nappe blanche pure.
 - Cartes ivoire très clair distinctes du fond.
@@ -123,7 +163,7 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - Bordures atténuées et ombres diffuses.
 - Ink porte les titres, Gold l’accent et Green seulement les succès.
 
-## 10. Mode sombre
+## 11. Mode sombre
 
 - Fond charbon bleu `#0C141E`.
 - Surfaces `#141F2A`, `#1A2733` et `#22313E`.
@@ -131,7 +171,7 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - Aucun panneau vert dominant.
 - Gold reste ponctuel, Blue structure l’information, Green indique uniquement un état positif.
 
-## 11. Navigation interne
+## 12. Navigation interne
 
 - Sidebar desktop Ink/Navy conservée.
 - Organization active compacte avec monogramme Gold.
@@ -140,7 +180,7 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - Navigation mobile inchangée fonctionnellement et adaptée aux capacités du rôle.
 - Aucun onglet, droit ou parcours métier supplémentaire.
 
-## 12. Écrans pilotes
+## 13. Écrans et déploiement global
 
 ### Dashboard
 
@@ -164,7 +204,18 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - Informations complètes ; Échéances, Paiements, Documents et Activité restent explicitement futurs.
 - Fin de Location conservée dans sa modale sécurisée existante.
 
-## 13. Tables et listes
+### Écrans globalisés en v2B
+
+- Biens : liste, création, détail, édition et Units contextuelles.
+- Units : création contextuelle, détail et édition.
+- Locataires : liste, création, dossier et édition.
+- Locations : liste cartes/tableau, création, détail et édition brouillon.
+- Équipe : invitation, membres, rôles, transfert Owner et audit.
+- Profil / Paramètres : identité, préférences, Organization et sécurité PIN.
+- Auth : connexion email, OTP alternatif, onboarding Organization et verrouillage PIN.
+- Paiements, Activité et portail non encore réels : placeholders v2 explicites, sans chiffres fictifs.
+
+## 14. Tables et listes
 
 - Fond calme et carte élevée.
 - Header compact mais lisible.
@@ -173,7 +224,7 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - Badges sobres et limités.
 - Sur mobile, une liste ou des cartes remplacent toujours le tableau horizontal lorsque nécessaire.
 
-## 14. Accessibilité et motion
+## 15. Accessibilité et motion
 
 - Focus clavier global visible.
 - Cibles tactiles de `44 px` minimum.
@@ -182,12 +233,10 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - `prefers-reduced-motion` réduit toutes les animations et transitions à une durée quasi nulle.
 - Micro-interactions uniquement : hover, focus, légère translation et apparition courte.
 
-## 15. Portée de la version
+## 16. Portée de la version
 
-v2A ne modifie aucun schéma, RLS, Auth, Membership, Tenant, Lease ou contrat métier. Elle ne crée ni Due, Payment, Ledger, Receipt, solde ou revenu.
+v2B ne modifie aucun schéma, RLS, Auth, Membership, Tenant, Lease ou contrat métier. Elle ne crée ni Due, Payment, Ledger, Receipt, solde ou revenu.
 
-Le déploiement global reste une étape séparée :
+Les données réelles restent utilisées pour Biens, Units, Locataires et Locations. Toute fonction future utilise une carte courte avec icône, statut **À venir** et lot de disponibilité explicite ; aucun grand rectangle gris ou chiffre fictif.
 
-**Visual Direction v2B — déploiement global du design system**, seulement après validation visuelle de Blaise.
-
-**v2B et 6C1 restent non commencés.**
+**Visual Direction v2B est terminée, testée et déployée ; sa validation visuelle par Blaise reste en attente. Le Lot 6C1 reste non commencé.**

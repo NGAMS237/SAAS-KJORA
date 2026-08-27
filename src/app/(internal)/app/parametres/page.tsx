@@ -8,13 +8,13 @@ export default async function SettingsPage() {
   const { activeOrganization } = await loadOrganizationContext();
   if (!activeOrganization) redirect("/onboarding/organization");
   return (
-    <div className="page-stack">
+    <div className="page-stack settings-v2">
       <PageHeader
         eyebrow="Espace secondaire"
         title="Paramètres"
         description="Informations minimales de l’Organization active. Le branding avancé viendra plus tard."
       />
-      <Card>
+      <Card className="settings-card settings-card--organization">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Organization</p>
@@ -23,7 +23,7 @@ export default async function SettingsPage() {
           </div>
           <OrganizationProfileForm organization={activeOrganization} />
       </Card>
-      <Card>
+      <Card className="settings-card">
         <PinSecurityPanel />
       </Card>
     </div>

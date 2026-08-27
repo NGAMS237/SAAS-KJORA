@@ -157,7 +157,7 @@ export function InternalShell({
         </Link>
         <OrganizationSwitcher organizations={organizations} activeOrganization={activeOrganization} />
         <div className="mobile-header__actions">
-          <button className="icon-button" type="button" aria-label="Notifications de démonstration">
+          <button className="icon-button" disabled type="button" aria-label="Notifications à venir dans un prochain lot">
             <Bell aria-hidden="true" size={19} />
           </button>
           <button
