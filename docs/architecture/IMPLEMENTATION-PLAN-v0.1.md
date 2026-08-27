@@ -1,5 +1,7 @@
 # Kjora — Plan d’implémentation v0.1
 
+> Mise à jour 2026-08-27 : la **Visual Direction v2A** est implémentée sur les tokens globaux et trois écrans pilotes (Dashboard, détail Locataire, détail Location), selon D-091. La prochaine gate associée est la validation visuelle de Blaise ; v2B et 6C1 restent non commencés.
+
 > Mise à jour 2026-08-26 : le Lot 6B Locataires + Locations et son patch 6B.1 UX / préparation financière sont **TERMINÉS / TESTÉS / DÉPLOYÉS — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** selon D-086 à D-090. Le Lot 6A conserve séparément sa validation fonctionnelle en attente ; 6C1 reste non commencé.
 
 > Gate 2026-08-26 : PIN et Lot 5C sont **TERMINÉS / TESTÉS / VALIDÉS**. D-081 a autorisé 6B sans valider rétroactivement 6A. Le prochain gate est la validation fonctionnelle Blaise du Lot 6B ; ne pas démarrer 6C1 avant autorisation distincte.
@@ -559,6 +561,6 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 ## 18. Prochaine action proposée
 
-Le Lot 4 et ses six décisions sont validés. La prochaine étape possible est **Lot 5A — Bootstrap application, navigation et design tokens**, uniquement après autorisation explicite distincte de Blaise.
+Faire valider visuellement la **Visual Direction v2A** par Blaise sur Dashboard clair/sombre, détail Locataire, détail Location et mobile.
 
-Le Lot 5A n’est pas commencé par ce plan.
+Le déploiement global **v2B** et le lot métier **6C1** restent deux étapes séparées, non commencées, chacune soumise à une autorisation explicite distincte.

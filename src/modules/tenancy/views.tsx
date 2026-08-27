@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  ArrowLeft, Building2, CalendarDays, ChevronRight, CircleAlert, FileText, History,
-  Home, ImageIcon, KeyRound, LayoutGrid, List, Mail, Pencil, Phone, Plus, Search,
-  UserRound, UserRoundPlus, WalletCards, X,
+  ArrowLeft, Building2, CalendarClock, CalendarDays, ChevronRight, CircleAlert,
+  CircleDollarSign, Coins, FileText, History, Home, KeyRound, LayoutGrid, List,
+  Mail, Pencil, Phone, Plus, Search, ShieldCheck, StickyNote, UserRound,
+  UserRoundPlus, WalletCards, X,
 } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
-import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
+import { Badge, Card, EmptyState, FinancialStateCard, PageHeader } from "@/core/ui/ui";
 import {
   calendarEntryProration,
   calendarEntryProrationDetail,
@@ -39,6 +40,10 @@ function LiveDataNotice() {
 
 function money(value: number) {
   return `${value.toLocaleString("fr-FR")} XAF`;
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
 function frequencyLabel(value: BillingFrequency, t: ReturnType<typeof useCopy>) {
@@ -134,20 +139,112 @@ export function TenantCreateForm() {
 }
 
 export function TenantDetailView({ tenant, canManage }: { tenant: TenantDetail; canManage: boolean }) {
-  const t = useCopy(); const router = useRouter();
-  const [editing, setEditing] = useState(false); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null);
+  const t = useCopy();
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const current = tenant.leases.find((lease) => lease.status === "active") ?? null;
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); const result = await mutate({ action: "update_tenant", tenantId: tenant.id, ...tenantPayload(new FormData(event.currentTarget)) }); setBusy(false); if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t)); setEditing(false); setMessage(t("Dossier modifié.", "Record updated.")); router.refresh(); }
-  return <div className="page-stack"><Link className="demo-back" href="/app/locataires"><ArrowLeft size={17} />{t("Tous les locataires", "All tenants")}</Link><PageHeader eyebrow="SCR-TEN-03" title={tenant.fullName} description={tenant.profession ?? t("Dossier locataire", "Tenant record")} action={canManage ? <button className="button button--secondary" onClick={() => setEditing((value) => !value)} type="button"><Pencil size={17} />{t("Modifier", "Edit")}</button> : undefined} /><LiveDataNotice />{message ? <p className="form-feedback" role="status">{message}</p> : null}
-    {editing ? <Card><form className="form-stack" onSubmit={submit}><TenantFields tenant={tenant} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
-    <section className="property-photo-placeholder"><ImageIcon size={25} /><div><strong>{t("Photo locataire facultative", "Optional tenant photo")}</strong><span>{t("Placeholder uniquement — aucun fichier Storage au Lot 6B.", "Placeholder only — no Storage file in Lot 6B.")}</span></div></section>
-    <div className="content-grid"><Card><div className="section-heading"><div><p className="eyebrow">{t("Profil", "Profile")}</p><h2>{t("Coordonnées", "Contact")}</h2></div><UserRound size={21} /></div><div className="tenancy-contact-list"><span><Phone size={16} />{tenant.phone ?? "—"}</span><span><Mail size={16} />{tenant.email ?? "—"}</span><span>{t("Langue", "Language")} : {tenant.preferredLanguage?.toUpperCase() ?? "—"}</span>{canManage && tenant.identityDocumentType ? <span>{tenant.identityDocumentType.toUpperCase()} · {tenant.identityDocumentNumber}</span> : null}</div></Card>
-      <Card><div className="section-heading"><div><p className="eyebrow">{t("Location actuelle", "Current lease")}</p><h2>{current ? current.unitLabel : t("Aucun bail actif", "No active lease")}</h2></div><KeyRound size={21} /></div>{current ? <><p>{current.propertyName}</p><Link className="button button--secondary" href={`/app/locations/${current.id}`}>{t("Ouvrir la location", "Open lease")}</Link></> : canManage ? <Link className="button button--primary" href={`/app/locations/nouveau?tenant=${tenant.id}`}>{t("Créer une location", "Create lease")}</Link> : null}</Card>
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    const result = await mutate({ action: "update_tenant", tenantId: tenant.id, ...tenantPayload(new FormData(event.currentTarget)) });
+    setBusy(false);
+    if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
+    setEditing(false);
+    setMessage(t("Dossier modifié.", "Record updated."));
+    router.refresh();
+  }
+
+  return (
+    <div className="page-stack tenant-detail-v2">
+      <Link className="demo-back" href="/app/locataires"><ArrowLeft size={17} />{t("Tous les locataires", "All tenants")}</Link>
+      <section className="tenant-profile-hero">
+        <div className="tenant-profile-hero__avatar" aria-label={t("Photo locataire non disponible", "Tenant photo unavailable")}>
+          <span>{initials(tenant.fullName)}</span>
+          <small>{t("Photo à venir", "Photo coming later")}</small>
+        </div>
+        <div className="tenant-profile-hero__identity">
+          <p className="eyebrow">{t("Dossier locataire", "Tenant record")}</p>
+          <h1>{tenant.fullName}</h1>
+          <p>{tenant.profession ?? t("Profession non renseignée", "Profession not provided")}</p>
+          <div className="tenant-profile-hero__contacts">
+            {tenant.phone ? <span><Phone size={15} />{tenant.phone}</span> : null}
+            {tenant.email ? <span><Mail size={15} />{tenant.email}</span> : null}
+          </div>
+        </div>
+        <div className="tenant-profile-hero__lease">
+          <div>
+            <small>{t("Location actuelle", "Current lease")}</small>
+            <strong>{current ? current.unitLabel : t("Aucune location active", "No active lease")}</strong>
+            <span>{current?.propertyName ?? t("Dossier disponible pour une nouvelle location", "Record ready for a new lease")}</span>
+          </div>
+          {current ? statusBadge(current.status, t) : <Badge tone="neutral">{t("Sans location", "No lease")}</Badge>}
+          {current
+            ? <Link className="button button--on-dark" href={`/app/locations/${current.id}`}>{t("Ouvrir la location", "Open lease")}</Link>
+            : canManage ? <Link className="button button--accent" href={`/app/locations/nouveau?tenant=${tenant.id}`}>{t("Créer une location", "Create lease")}</Link> : null}
+        </div>
+        {canManage ? <button className="button button--on-dark tenant-profile-hero__edit" onClick={() => setEditing((value) => !value)} type="button"><Pencil size={17} />{t("Modifier", "Edit")}</button> : null}
+      </section>
+
+      <LiveDataNotice />
+      {message ? <p className="form-feedback" role="status">{message}</p> : null}
+      {editing ? <Card><form className="form-stack" onSubmit={submit}><TenantFields tenant={tenant} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
+
+      <nav className="record-tabs" aria-label={t("Sections du dossier locataire", "Tenant record sections")}>
+        <a aria-current="page" href="#profil">{t("Profil", "Profile")}</a>
+        <a href="#location-actuelle">{t("Location actuelle", "Current lease")}</a>
+        <a href="#historique">{t("Historique", "History")}</a>
+        <span>{t("Paiements · 6C2", "Payments · 6C2")}</span>
+        <span>{t("Documents · 6C3", "Documents · 6C3")}</span>
+        <a href="#notes">{t("Notes", "Notes")}</a>
+      </nav>
+
+      <Card className="tenant-financial-preview-v2">
+        <div className="section-heading">
+          <div><p className="eyebrow">{t("Préparation 6C", "6C preparation")}</p><h2>{t("Situation financière", "Financial position")}</h2></div>
+          <WalletCards size={22} />
+        </div>
+        <p>{t("Cette zone est prête pour la vérité financière 6C. Aucune dette, aucun crédit et aucune échéance ne sont estimés aujourd’hui.", "This area is ready for the 6C financial truth. No debt, credit or due date is estimated today.")}</p>
+        <div className="financial-state-grid">
+          <FinancialStateCard icon={CircleDollarSign} label={t("Solde actuel", "Current balance")} value={t("Disponible avec le suivi financier 6C", "Available with 6C financial tracking")} helper={t("Sera qualifié : dû, crédit ou à jour.", "Will be qualified as due, credit or up to date.")} tone="neutral" unavailable />
+          <FinancialStateCard icon={Coins} label={t("Crédit disponible", "Available credit")} value={t("Disponible avec le suivi financier 6C", "Available with 6C financial tracking")} helper={t("Aucun montant fictif avant le Ledger.", "No fictional amount before the Ledger.")} tone="positive" unavailable />
+          <FinancialStateCard icon={CalendarClock} label={t("Prochaine échéance", "Next due date")} value={t("Disponible avec le suivi financier 6C", "Available with 6C financial tracking")} helper={t("Issue des échéances réelles du bail.", "Based on real lease dues.")} tone="info" unavailable />
+        </div>
+      </Card>
+
+      <div className="tenant-record-grid">
+        <Card id="profil" className="tenant-record-card">
+          <div className="section-heading"><div><p className="eyebrow">{t("Profil", "Profile")}</p><h2>{t("Coordonnées et identité", "Contact and identity")}</h2></div><UserRound size={21} /></div>
+          <dl className="record-detail-list">
+            <div><dt>{t("Téléphone", "Phone")}</dt><dd>{tenant.phone ?? "—"}</dd></div>
+            <div><dt>Email</dt><dd>{tenant.email ?? "—"}</dd></div>
+            <div><dt>{t("Langue", "Language")}</dt><dd>{tenant.preferredLanguage?.toUpperCase() ?? "—"}</dd></div>
+            {canManage ? <div><dt>{t("Pièce d’identité", "Identity document")}</dt><dd>{tenant.identityDocumentType ? `${tenant.identityDocumentType.toUpperCase()} · ${tenant.identityDocumentNumber}` : "—"}</dd></div> : null}
+          </dl>
+        </Card>
+        <Card id="location-actuelle" className="tenant-record-card tenant-current-lease-card">
+          <div className="section-heading"><div><p className="eyebrow">{t("Location actuelle", "Current lease")}</p><h2>{current ? current.unitLabel : t("Aucune location active", "No active lease")}</h2></div><KeyRound size={21} /></div>
+          {current ? <>
+            <p>{current.propertyName}</p>
+            <div className="tenant-current-lease-card__facts"><span><strong>{money(current.periodicTotalXaf)}</strong>{t("Total périodique contractuel", "Contractual periodic total")}</span><span><strong>{t(`Le ${current.dueDay}`, `Day ${current.dueDay}`)}</strong>{t("Jour limite", "Due day")}</span></div>
+            <Link className="button button--secondary" href={`/app/locations/${current.id}`}>{t("Voir le détail", "View details")}</Link>
+          </> : <p>{t("Aucun bail actif n’est relié à ce dossier.", "No active lease is linked to this record.")}</p>}
+        </Card>
+      </div>
+
+      <Card id="historique" className="tenant-history-card">
+        <div className="section-heading"><div><p className="eyebrow">{t("Historique", "History")}</p><h2>{t("Locations", "Leases")}</h2></div><History size={21} /></div>
+        {tenant.leases.length ? <div className="demo-list">{tenant.leases.map((lease) => <Link className="demo-list-row" href={`/app/locations/${lease.id}`} key={lease.id}><span className="demo-list-row__icon"><Home size={19} /></span><div><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.startDate}{lease.endDate ? ` → ${lease.endDate}` : ""}</span></div>{statusBadge(lease.status, t)}<ChevronRight size={18} /></Link>)}</div> : <EmptyState title={t("Aucune location", "No leases")} description={t("Le dossier est prêt à être relié à une Unit.", "The record is ready to be linked to a Unit.")} />}
+      </Card>
+
+      <div className="future-module-grid">
+        <Card className="future-module-card"><span className="future-module-card__icon"><CircleDollarSign size={20} /></span><div><strong>{t("Paiements", "Payments")}</strong><span>{t("Disponible avec le suivi financier 6C2", "Available with 6C2 financial tracking")}</span></div><Badge tone="info">6C2</Badge></Card>
+        <Card className="future-module-card"><span className="future-module-card__icon"><FileText size={20} /></span><div><strong>{t("Documents", "Documents")}</strong><span>{t("Disponible avec les artefacts privés 6C3", "Available with private 6C3 artifacts")}</span></div><Badge tone="neutral">6C3</Badge></Card>
+        <Card id="notes" className="future-module-card tenant-notes-card"><span className="future-module-card__icon"><StickyNote size={20} /></span><div><strong>{t("Notes internes", "Internal notes")}</strong><span>{tenant.internalNotes ?? t("Aucune note interne enregistrée.", "No internal note recorded.")}</span></div><Badge tone="neutral">{t("Interne", "Internal")}</Badge></Card>
+      </div>
     </div>
-    <Card className="tenant-financial-preview"><div className="section-heading"><div><p className="eyebrow">{t("Suivi financier", "Financial tracking")}</p><h2>{t("Situation du locataire", "Tenant financial position")}</h2></div><WalletCards size={22} /></div><p>{t("Les montants apparaîtront ici dès l’activation de l’unique vérité financière 6C.", "Amounts will appear here once the single 6C financial truth is activated.")}</p><div className="tenant-financial-preview__grid">{[t("Solde actuel", "Current balance"), t("Montant dû", "Amount due"), t("Crédit disponible", "Available credit"), t("Prochaine échéance", "Next due date")].map((label) => <div key={label}><span>{label}</span><strong>{t("Disponible après activation du suivi financier", "Available after financial tracking is activated")}</strong></div>)}</div><small>{t("Aucun zéro ni solde estimé n’est affiché avant 6C.", "No zero or estimated balance is shown before 6C.")}</small></Card>
-    <Card><div className="section-heading"><div><p className="eyebrow">{t("Historique", "History")}</p><h2>{t("Locations", "Leases")}</h2></div><History size={21} /></div>{tenant.leases.length ? <div className="demo-list">{tenant.leases.map((lease) => <Link className="demo-list-row" href={`/app/locations/${lease.id}`} key={lease.id}><span className="demo-list-row__icon"><Home size={19} /></span><div><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.startDate}{lease.endDate ? ` → ${lease.endDate}` : ""}</span></div>{statusBadge(lease.status, t)}<ChevronRight size={18} /></Link>)}</div> : <EmptyState title={t("Aucune location", "No leases")} description={t("Le dossier est prêt à être relié à une Unit.", "The record is ready to be linked to a Unit.")} />}</Card>
-    <div className="tenancy-placeholder-grid"><Card muted><FileText size={20} /><strong>{t("Paiements", "Payments")}</strong><span>{t("Prévu au Lot 6C2", "Planned for Lot 6C2")}</span></Card><Card muted><FileText size={20} /><strong>{t("Documents", "Documents")}</strong><span>{t("Prévu au Lot 6C3", "Planned for Lot 6C3")}</span></Card></div>
-  </div>;
+  );
 }
 
 export function LeasesView({ leases, canManage }: { leases: LeaseSummary[]; canManage: boolean }) {
@@ -213,21 +310,110 @@ export function LeaseCreateForm({ options, initialTenantId, initialUnitId }: { o
 }
 
 export function LeaseDetailView({ lease, options, canManage }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean }) {
-  const t = useCopy(); const router = useRouter(); const [editing, setEditing] = useState(false); const [draft, setDraft] = useState<LeaseDraft>(lease); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null); const [ending, setEnding] = useState(false); const [endedOn, setEndedOn] = useState(new Date().toISOString().slice(0, 10)); const [endReason, setEndReason] = useState("");
+  const t = useCopy();
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<LeaseDraft>(lease);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [ending, setEnding] = useState(false);
+  const [endedOn, setEndedOn] = useState(new Date().toISOString().slice(0, 10));
+  const [endReason, setEndReason] = useState("");
   const entryProration = lease.entryProrationOverrideXaf ?? calendarEntryProration(lease.periodicTotalXaf, lease.startDate, lease.entryProrationMode);
-  async function update(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); const result = await mutate({ action: "update_lease", leaseId: lease.id, ...draft }); setBusy(false); if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t)); setEditing(false); setMessage(t("Brouillon modifié.", "Draft updated.")); router.refresh(); }
-  async function activate() { if (!window.confirm(t("Activer cette location ? L’unité deviendra occupée et les conditions seront figées.", "Activate this lease? The unit will become occupied and terms will be locked."))) return; setBusy(true); const result = await mutate({ action: "activate_lease", leaseId: lease.id }); setBusy(false); if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t)); router.refresh(); }
-  async function endLease() { setBusy(true); const result = await mutate({ action: "end_lease", leaseId: lease.id, endedOn, endReason }); setBusy(false); if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t)); setEnding(false); router.refresh(); }
-  return <div className="page-stack"><Link className="demo-back" href="/app/locations"><ArrowLeft size={17} />{t("Toutes les locations", "All leases")}</Link><PageHeader eyebrow="SCR-LEASE-04" title={`${lease.propertyName} · ${lease.unitLabel}`} description={lease.tenantName} action={canManage && lease.status === "draft" ? <button className="button button--secondary" onClick={() => setEditing((value) => !value)} type="button"><Pencil size={17} />{t("Modifier", "Edit")}</button> : undefined} /><LiveDataNotice />{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}
-    {editing ? <Card><form className="form-stack" onSubmit={update}><LeaseFields value={draft} options={options} onChange={setDraft} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
-    <nav className="tenancy-tabs" aria-label={t("Sections de la location", "Lease sections")}><a aria-current="page" href="#informations">{t("Informations", "Information")}</a><span>{t("Échéances · 6C1", "Dues · 6C1")}</span><span>{t("Paiements · 6C2", "Payments · 6C2")}</span><span>{t("Documents · 6C3", "Documents · 6C3")}</span><span>{t("Activité", "Activity")}</span></nav>
-    <Card className="demo-lease-summary" id="informations"><div className="tenancy-card-heading">{statusBadge(lease.status, t)}<span>{frequencyLabel(lease.billingFrequency, t)}</span></div><div className="tenancy-links"><Link href={`/app/locataires/${lease.tenantId}`}><UserRound size={16} />{lease.tenantName}</Link><Link href={`/app/biens/${lease.propertyId}`}><Building2 size={16} />{lease.propertyName}</Link><Link href={`/app/biens/${lease.propertyId}/unites/${lease.unitId}`}><Home size={16} />{lease.unitLabel}</Link></div><dl><div><dt>{t("Loyer hors charges", "Base rent")}</dt><dd>{money(lease.baseRentXaf)}</dd></div><div><dt>{t("Charges récurrentes", "Recurring charges")}</dt><dd>{money(lease.recurringChargesXaf)}</dd></div><div><dt>{t("Montant périodique", "Periodic amount")}</dt><dd className="financial-value">{money(lease.periodicTotalXaf)}</dd></div><div><dt>{t("Dépôt de garantie", "Security deposit")}</dt><dd>{money(lease.securityDepositXaf)} · {t("hors loyers payés", "not rent paid")}</dd></div><div><dt>{t("Montant prépayé", "Prepaid amount")}</dt><dd>{money(lease.initialPrepaymentAmountXaf)} · {prepaymentLabel(lease.prepaidFullPeriods, lease.prepaymentRemainderXaf, lease.billingFrequency, t)}</dd></div><div><dt>{t("Période", "Period")}</dt><dd>{lease.startDate}{lease.endDate ? ` → ${lease.endDate}` : " → —"}</dd></div><div><dt>{t("Jour limite de paiement", "Payment due day")}</dt><dd>{t(`Le ${lease.dueDay} · avis J-${lease.generateDueDaysBefore}`, `Day ${lease.dueDay} · notice J-${lease.generateDueDaysBefore}`)}</dd></div><div><dt>{t("Rappel de retard", "Overdue reminder")}</dt><dd>{t("Tous les 10 jours · automatique KJORA", "Every 10 days · automatic KJORA")}</dd></div><div><dt>{t("Prorata du premier loyer", "First rent proration")}</dt><dd>{money(entryProration)}{lease.entryProrationOverrideXaf !== null ? ` · ${t("corrigé avec motif", "overridden with reason")}` : ""}</dd></div>{lease.endedOn ? <><div><dt>{t("Sortie effective", "Effective end")}</dt><dd>{lease.endedOn} · {money(lease.exitProrationOverrideXaf ?? calendarExitProration(lease.periodicTotalXaf, lease.endedOn, lease.exitProrationMode))}</dd></div>{lease.endReason ? <div><dt>{t("Motif de fin", "End reason")}</dt><dd>{lease.endReason}</dd></div> : null}</> : null}</dl><p className="financial-preparation-note">{t("Préparation uniquement : aucune échéance, aucun paiement et aucun crédit comptable ne sont créés avant 6C.", "Preparation only: no due, payment or accounting credit is created before 6C.")}</p>
-      {canManage && lease.status === "draft" ? <div className="tenancy-sensitive-action"><p>{t("L’activation rend l’unité occupée et fige les conditions. Le chevauchement est revérifié par PostgreSQL.", "Activation marks the unit occupied and locks terms. PostgreSQL rechecks overlap.")}</p><button className="button button--primary" disabled={busy} onClick={activate} type="button">{t("Activer la location", "Activate lease")}</button></div> : null}
-      {canManage && lease.status === "active" ? <div className="tenancy-sensitive-action"><p>{t("La date de sortie n’est modifiable que dans l’action dédiée avec confirmation explicite.", "The effective end date is only editable in the dedicated action with explicit confirmation.")}</p><button className="button button--secondary" disabled={busy} onClick={() => setEnding(true)} type="button">{t("Terminer la location", "End lease")}</button></div> : null}
-    </Card>
-    {ending ? <div className="confirmation-modal" role="presentation"><button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={() => setEnding(false)} type="button" /><section aria-labelledby="end-lease-title" aria-modal="true" className="confirmation-modal__panel" role="dialog"><div className="confirmation-modal__header"><div><p className="eyebrow">{t("Action sensible", "Sensitive action")}</p><h2 id="end-lease-title">{t("Terminer la location", "End lease")}</h2></div><button aria-label={t("Fermer", "Close")} className="icon-button" onClick={() => setEnding(false)} type="button"><X size={18} /></button></div><div className="confirmation-modal__warning"><CircleAlert size={21} /><p>{t("La fin de la location libérera l’unité à partir de la date effective. L’historique du bail restera protégé.", "Ending the lease will free the Unit from the effective date. Lease history remains protected.")}</p></div><label className="field"><span>{t("Date de sortie effective", "Effective end date")}</span><input min={lease.startDate} type="date" value={endedOn} onChange={(event) => setEndedOn(event.target.value)} required /></label><label className="field"><span>{t("Motif (facultatif)", "Reason (optional)")}</span><textarea maxLength={500} placeholder={t("Ex. départ convenu avec le locataire", "E.g. departure agreed with the tenant")} rows={3} value={endReason} onChange={(event) => setEndReason(event.target.value)} /></label><div className="confirmation-modal__summary"><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.tenantName}</span><span>{t("Conséquence : unité libérée, bail figé en historique.", "Consequence: Unit freed, lease locked in history.")}</span></div><div className="demo-form-actions"><button className="button button--secondary" disabled={busy} onClick={() => setEnding(false)} type="button">{t("Annuler", "Cancel")}</button><button className="button button--danger" disabled={busy || !endedOn} onClick={endLease} type="button">{busy ? t("Clôture…", "Ending…") : t("Confirmer la fin", "Confirm end")}</button></div></section></div> : null}
-    <div className="tenancy-placeholder-grid"><Card muted><CalendarDays size={20} /><strong>{t("Échéances + Ledger", "Dues + Ledger")}</strong><span>{t("Placeholder 6C1", "6C1 placeholder")}</span></Card><Card muted><FileText size={20} /><strong>{t("Paiements", "Payments")}</strong><span>{t("Placeholder 6C2", "6C2 placeholder")}</span></Card><Card muted><FileText size={20} /><strong>{t("Documents", "Documents")}</strong><span>{t("Placeholder 6C3", "6C3 placeholder")}</span></Card></div>
-  </div>;
+  async function update(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    const result = await mutate({ action: "update_lease", leaseId: lease.id, ...draft });
+    setBusy(false);
+    if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
+    setEditing(false);
+    setMessage(t("Brouillon modifié.", "Draft updated."));
+    router.refresh();
+  }
+  async function activate() {
+    if (!window.confirm(t("Activer cette location ? L’unité deviendra occupée et les conditions seront figées.", "Activate this lease? The unit will become occupied and terms will be locked."))) return;
+    setBusy(true);
+    const result = await mutate({ action: "activate_lease", leaseId: lease.id });
+    setBusy(false);
+    if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
+    router.refresh();
+  }
+  async function endLease() {
+    setBusy(true);
+    const result = await mutate({ action: "end_lease", leaseId: lease.id, endedOn, endReason });
+    setBusy(false);
+    if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
+    setEnding(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="page-stack lease-detail-v2">
+      <Link className="demo-back" href="/app/locations"><ArrowLeft size={17} />{t("Toutes les locations", "All leases")}</Link>
+      <section className="lease-hero">
+        <div className="lease-hero__heading">
+          <p className="eyebrow">{t("Détail de la location", "Lease details")}</p>
+          <div className="lease-hero__title-row"><h1>{lease.unitLabel}</h1>{statusBadge(lease.status, t)}</div>
+          <p>{lease.propertyName} · {lease.tenantName}</p>
+          <div className="lease-hero__links">
+            <Link href={`/app/locataires/${lease.tenantId}`}><UserRound size={15} />{lease.tenantName}</Link>
+            <Link href={`/app/biens/${lease.propertyId}`}><Building2 size={15} />{lease.propertyName}</Link>
+          </div>
+        </div>
+        <div className="lease-hero__metrics" aria-label={t("Synthèse contractuelle", "Contract summary")}>
+          <div className="lease-hero__metric lease-hero__metric--primary"><small>{t("Total périodique", "Periodic total")}</small><strong className="financial-value">{money(lease.periodicTotalXaf)}</strong><span>{frequencyLabel(lease.billingFrequency, t)}</span></div>
+          <div className="lease-hero__metric"><small>{t("Date limite", "Due date")}</small><strong>{t(`${lease.dueDay} du mois`, `Day ${lease.dueDay}`)}</strong><span>{t("Paiement attendu", "Payment expected")}</span></div>
+          <div className="lease-hero__metric"><small>{t("Avis préparé", "Notice prepared")}</small><strong>J-{lease.generateDueDaysBefore}</strong><span>{t("Avant la date limite", "Before due date")}</span></div>
+        </div>
+        {canManage && lease.status === "draft" ? <button className="button button--on-dark lease-hero__edit" onClick={() => setEditing((value) => !value)} type="button"><Pencil size={17} />{t("Modifier", "Edit")}</button> : null}
+      </section>
+
+      <LiveDataNotice />
+      {message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}
+      {editing ? <Card><form className="form-stack" onSubmit={update}><LeaseFields value={draft} options={options} onChange={setDraft} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
+
+      <nav className="record-tabs" aria-label={t("Sections de la location", "Lease sections")}>
+        <a aria-current="page" href="#informations">{t("Informations", "Information")}</a>
+        <span>{t("Échéances · 6C1", "Dues · 6C1")}</span>
+        <span>{t("Paiements · 6C2", "Payments · 6C2")}</span>
+        <span>{t("Documents · 6C3", "Documents · 6C3")}</span>
+        <span>{t("Activité · à venir", "Activity · coming later")}</span>
+      </nav>
+
+      <Card className="lease-contract-card" id="informations">
+        <div className="section-heading">
+          <div><p className="eyebrow">{t("Informations", "Information")}</p><h2>{t("Conditions contractuelles", "Contract terms")}</h2></div>
+          <ShieldCheck size={22} />
+        </div>
+        <div className="lease-money-grid">
+          <div><span>{t("Loyer hors charges", "Base rent")}</span><strong className="financial-value">{money(lease.baseRentXaf)}</strong></div>
+          <div><span>{t("Charges récurrentes", "Recurring charges")}</span><strong className="financial-value">{money(lease.recurringChargesXaf)}</strong></div>
+          <div><span>{t("Dépôt de garantie", "Security deposit")}</span><strong className="financial-value">{money(lease.securityDepositXaf)}</strong><small>{t("Hors loyers payés", "Not rent paid")}</small></div>
+          <div><span>{t("Montant prépayé", "Prepaid amount")}</span><strong className="financial-value">{money(lease.initialPrepaymentAmountXaf)}</strong><small>{prepaymentLabel(lease.prepaidFullPeriods, lease.prepaymentRemainderXaf, lease.billingFrequency, t)}</small></div>
+        </div>
+        <dl className="lease-contract-grid">
+          <div><dt>{t("Période", "Period")}</dt><dd>{shortDate(lease.startDate)}{lease.endDate ? ` → ${shortDate(lease.endDate)}` : " → —"}</dd></div>
+          <div><dt>{t("Périodicité", "Frequency")}</dt><dd>{frequencyLabel(lease.billingFrequency, t)}</dd></div>
+          <div><dt>{t("Jour limite et avis", "Due day and notice")}</dt><dd>{t(`Le ${lease.dueDay} · avis J-${lease.generateDueDaysBefore}`, `Day ${lease.dueDay} · notice J-${lease.generateDueDaysBefore}`)}</dd></div>
+          <div><dt>{t("Rappel de retard", "Overdue reminder")}</dt><dd>{t("Tous les 10 jours · automatique KJORA", "Every 10 days · automatic KJORA")}</dd></div>
+          <div><dt>{t("Prorata du premier loyer", "First rent proration")}</dt><dd>{money(entryProration)}{lease.entryProrationOverrideXaf !== null ? ` · ${t("corrigé avec motif", "overridden with reason")}` : ""}</dd></div>
+          {lease.endedOn ? <div><dt>{t("Sortie effective", "Effective end")}</dt><dd>{shortDate(lease.endedOn)} · {money(lease.exitProrationOverrideXaf ?? calendarExitProration(lease.periodicTotalXaf, lease.endedOn, lease.exitProrationMode))}</dd></div> : null}
+          {lease.endReason ? <div><dt>{t("Motif de fin", "End reason")}</dt><dd>{lease.endReason}</dd></div> : null}
+        </dl>
+        <p className="financial-preparation-note">{t("Préparation uniquement : aucune échéance, aucun paiement et aucun crédit comptable ne sont créés avant 6C.", "Preparation only: no due, payment or accounting credit is created before 6C.")}</p>
+        {canManage && lease.status === "draft" ? <div className="tenancy-sensitive-action"><p>{t("L’activation rend l’unité occupée et fige les conditions. Le chevauchement est revérifié par PostgreSQL.", "Activation marks the unit occupied and locks terms. PostgreSQL rechecks overlap.")}</p><button className="button button--primary" disabled={busy} onClick={activate} type="button">{t("Activer la location", "Activate lease")}</button></div> : null}
+        {canManage && lease.status === "active" ? <div className="tenancy-sensitive-action"><p>{t("La date de sortie n’est modifiable que dans l’action dédiée avec confirmation explicite.", "The effective end date is only editable in the dedicated action with explicit confirmation.")}</p><button className="button button--secondary" disabled={busy} onClick={() => setEnding(true)} type="button">{t("Terminer la location", "End lease")}</button></div> : null}
+      </Card>
+
+      {ending ? <div className="confirmation-modal" role="presentation"><button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={() => setEnding(false)} type="button" /><section aria-labelledby="end-lease-title" aria-modal="true" className="confirmation-modal__panel" role="dialog"><div className="confirmation-modal__header"><div><p className="eyebrow">{t("Action sensible", "Sensitive action")}</p><h2 id="end-lease-title">{t("Terminer la location", "End lease")}</h2></div><button aria-label={t("Fermer", "Close")} className="icon-button" onClick={() => setEnding(false)} type="button"><X size={18} /></button></div><div className="confirmation-modal__warning"><CircleAlert size={21} /><p>{t("La fin de la location libérera l’unité à partir de la date effective. L’historique du bail restera protégé.", "Ending the lease will free the Unit from the effective date. Lease history remains protected.")}</p></div><label className="field"><span>{t("Date de sortie effective", "Effective end date")}</span><input min={lease.startDate} type="date" value={endedOn} onChange={(event) => setEndedOn(event.target.value)} required /></label><label className="field"><span>{t("Motif (facultatif)", "Reason (optional)")}</span><textarea maxLength={500} placeholder={t("Ex. départ convenu avec le locataire", "E.g. departure agreed with the tenant")} rows={3} value={endReason} onChange={(event) => setEndReason(event.target.value)} /></label><div className="confirmation-modal__summary"><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.tenantName}</span><span>{t("Conséquence : unité libérée, bail figé en historique.", "Consequence: Unit freed, lease locked in history.")}</span></div><div className="demo-form-actions"><button className="button button--secondary" disabled={busy} onClick={() => setEnding(false)} type="button">{t("Annuler", "Cancel")}</button><button className="button button--danger" disabled={busy || !endedOn} onClick={endLease} type="button">{busy ? t("Clôture…", "Ending…") : t("Confirmer la fin", "Confirm end")}</button></div></section></div> : null}
+
+      <div className="future-module-grid lease-future-grid">
+        <Card className="future-module-card"><span className="future-module-card__icon"><CalendarDays size={20} /></span><div><strong>{t("Échéances", "Dues")}</strong><span>{t("Disponible avec Dues + Ledger 6C1", "Available with 6C1 Dues + Ledger")}</span></div><Badge tone="info">6C1</Badge></Card>
+        <Card className="future-module-card"><span className="future-module-card__icon"><CircleDollarSign size={20} /></span><div><strong>{t("Paiements", "Payments")}</strong><span>{t("Disponible avec Payments + Allocation 6C2", "Available with 6C2 Payments + Allocation")}</span></div><Badge tone="neutral">6C2</Badge></Card>
+        <Card className="future-module-card"><span className="future-module-card__icon"><FileText size={20} /></span><div><strong>{t("Documents", "Documents")}</strong><span>{t("Disponible avec les artefacts privés 6C3", "Available with private 6C3 artifacts")}</span></div><Badge tone="neutral">6C3</Badge></Card>
+      </div>
+    </div>
+  );
 }
 
 export function MissingTenancyResource({ leases = false }: { leases?: boolean }) {

@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-27 — patch UX / préparation financière 6B.1 terminé, testé et déployé
+> Dernière mise à jour : 2026-08-27 — Visual Direction v2A implémentée sur les trois écrans pilotes ; validation visuelle en attente
 
 ## 1. Vision
 
@@ -428,8 +428,12 @@ Prévoir clés serveur séparées, domaines et journaux séparés, et aucun doma
 - Touche africaine subtile ; jamais folklorique.
 - Aucun gimmick visuel « IA ».
 - Thèmes clair et sombre obligatoires.
-- Palette : Vert profond `#1F2D27`, Ivoire chaud `#F3EFE6`, Terre cuite `#C86A4A`, Or muté `#C9A46A`, Gris pierre `#8E908B`.
-- UI : Inter. Titres de marque : Cormorant Garamond.
+- Structure : Ink/Navy pour la hiérarchie, Gold/Amber pour l’accent premium et Horizon Blue pour les informations.
+- Sémantique : vert réservé aux états financiers positifs ; rouge réservé aux états négatifs et aux actions destructives.
+- Surfaces : fond clair légèrement bleuté, cartes ivoire/blanc chaud ; fond sombre bleu-noir et surfaces bleu ardoise.
+- UI : Inter ; titres et montants renforcés avec Inter Tight. Le serif reste réservé au wordmark Kjora.
+- Référence active : `docs/design/KJORA-UI-SYSTEM-v2.md` et décision D-091. Le système v1 est conservé comme historique.
+- v2A couvre seulement les tokens globaux, la navigation partagée si nécessaire et les écrans pilotes Dashboard, détail Locataire et détail Location. v2B et 6C1 restent non commencés.
 
 ## 17. Architecture UX validée — Lot 3
 
@@ -564,5 +568,7 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 **Lot 6B — Tenant + Lease backend réel : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Les écrans Locataires et Locations utilisent Supabase réel avec RLS, RBAC, contacts filtrés, occupation dérivée, exclusion des périodes effectives incompatibles — actives ou terminées — et préparation financière sans génération 6C. Les commits `42f9691` et `f4dcc72` portent l’application et le durcissement d’historique ; l’alias Vercel Production sert la nouvelle API. Le Lot 6A conserve séparément sa validation fonctionnelle en attente.
 
 **Lot 6B.1 — PATCH UX / PRÉPARATION FINANCIÈRE : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-086 à D-090 fixent le loyer de référence Unit, le prépaiement calculé, les règles calendaires, la future visibilité explicable du solde et l’autorisation Production, sans démarrer 6C1.
+
+**Visual Direction v2A — DESIGN SYSTEM + 3 ÉCRANS PILOTES : IMPLÉMENTÉE / TESTÉE — VALIDATION VISUELLE BLAISE EN ATTENTE.** D-091 fixe la nouvelle direction et limite sa portée au Dashboard, au détail Locataire, au détail Location, aux tokens globaux et aux adaptations de navigation partagée nécessaires. Les indicateurs financiers indisponibles sont affichés honnêtement ; v2B et 6C1 restent non commencés.
 
 **Lot 6C1 — Dues + Charges + Ledger : NON COMMENCÉ.** Son démarrage exige une autorisation distincte après validation fonctionnelle du Lot 6B.

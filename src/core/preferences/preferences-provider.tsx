@@ -17,12 +17,27 @@ const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
+  const [themeReady, setThemeReady] = useState(false);
   const [language, setLanguage] = useState<Language>("FR");
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const savedTheme = window.localStorage.getItem("kjora-theme");
+      const preferredTheme: Theme = savedTheme === "dark" || savedTheme === "light"
+        ? savedTheme
+        : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      setTheme(preferredTheme);
+      setThemeReady(true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (!themeReady) return;
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("kjora-demo-theme", theme);
-  }, [theme]);
+    window.localStorage.setItem("kjora-theme", theme);
+  }, [theme, themeReady]);
 
   const value = useMemo(
     () => ({

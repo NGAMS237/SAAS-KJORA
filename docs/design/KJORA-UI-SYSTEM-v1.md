@@ -1,6 +1,8 @@
 # Kjora UI System v1
 
 > Langage visuel commun à l’espace interne et au Tenant Portal. Les composants métier restent hors de ce document.
+>
+> **Document historique.** La direction active pour les écrans pilotes est désormais décrite dans [KJORA UI System v2](./KJORA-UI-SYSTEM-v2.md). Le déploiement global reste réservé à une v2B séparée après validation visuelle.
 
 ## Typographies
 

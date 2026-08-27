@@ -1,29 +1,39 @@
 :root {
   --font-body: var(--font-inter), system-ui, "Segoe UI", sans-serif;
   --font-display: var(--font-inter-tight), system-ui, "Segoe UI", sans-serif;
-  --kjora-forest: #1f2d27;
-  --kjora-ivory: #f3efe6;
-  --kjora-terracotta: #c86a4a;
-  --kjora-gold: #c9a46a;
-  --kjora-stone: #8e908b;
-  --background: #eee8dd;
-  --surface: #f8f4ec;
-  --surface-raised: #fffaf2;
-  --surface-muted: #e7dfd2;
-  --text: #17201c;
-  --text-muted: #667069;
-  --border: #d5ccbd;
-  --border-strong: #bfb4a4;
-  --success: #3f7058;
-  --success-soft: #e2eee6;
-  --warning: #9b6925;
-  --warning-soft: #f6ead2;
-  --danger: #9d4a3c;
-  --danger-soft: #f5e2dd;
-  --info: #536f78;
-  --info-soft: #e1ecef;
-  --due: #765a2d;
-  --due-soft: #f0e7d7;
+  --brand-ink: #13253a;
+  --brand-blue: #356886;
+  --brand-gold: #c8892f;
+  --brand-gold-soft: #f4e8d2;
+  --kjora-forest: var(--brand-ink);
+  --kjora-ivory: #f6f2e9;
+  --kjora-terracotta: var(--brand-gold);
+  --kjora-gold: var(--brand-gold);
+  --kjora-stone: #7f8a93;
+  --background: #edf1f3;
+  --surface: #f7f7f3;
+  --surface-raised: #fffdf8;
+  --surface-muted: #e6ecef;
+  --text-primary: #14212d;
+  --text-secondary: #536370;
+  --text-muted: #6f7c86;
+  --text: var(--text-primary);
+  --border: #d6dfe3;
+  --border-strong: #bdc9cf;
+  --success: #39755a;
+  --success-soft: #e2eee7;
+  --warning: #9b641f;
+  --warning-soft: #f6ead5;
+  --danger: #a44242;
+  --danger-soft: #f6e1df;
+  --info: var(--brand-blue);
+  --info-soft: #e1edf3;
+  --due: #8b642f;
+  --due-soft: #f1e8d8;
+  --focus: #d69a40;
+  --financial-positive: var(--success);
+  --financial-negative: var(--danger);
+  --financial-neutral: var(--brand-ink);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -31,11 +41,13 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
-  --shadow-soft: 0 10px 30px rgb(31 45 39 / 0.07);
-  --shadow-menu: 0 18px 50px rgb(15 24 20 / 0.18);
-  --radius-sm: 8px;
-  --radius-card: 16px;
-  --radius-control: 10px;
+  --shadow-soft: 0 12px 34px rgb(23 38 52 / 0.065);
+  --shadow-card: 0 18px 44px rgb(23 38 52 / 0.085);
+  --shadow-menu: 0 24px 64px rgb(12 24 36 / 0.18);
+  --radius-sm: 10px;
+  --radius-surface: 26px;
+  --radius-card: 22px;
+  --radius-control: 15px;
   --radius-pill: 999px;
   --motion-fast: 150ms;
   --motion-standard: 180ms;
@@ -44,26 +56,37 @@
 }
 
 :root[data-theme="dark"] {
-  --background: #111312;
-  --surface: #191b1a;
-  --surface-raised: #222423;
-  --surface-muted: #2a2d2b;
-  --text: #f3efe6;
-  --text-muted: #aeb8b1;
-  --border: #393c3a;
-  --border-strong: #505451;
-  --success: #8bc2a1;
-  --success-soft: #1f3a2d;
-  --warning: #e1b36d;
-  --warning-soft: #44351f;
-  --danger: #e39785;
-  --danger-soft: #482a25;
-  --info: #94bec8;
-  --info-soft: #243b41;
-  --due: #d5b77e;
-  --due-soft: #3d3322;
-  --shadow-soft: 0 12px 34px rgb(0 0 0 / 0.22);
-  --shadow-menu: 0 18px 56px rgb(0 0 0 / 0.42);
+  --brand-ink: #101b29;
+  --brand-blue: #78aac6;
+  --brand-gold: #d7a44e;
+  --brand-gold-soft: #3b3020;
+  --background: #0c141e;
+  --surface: #141f2a;
+  --surface-raised: #1a2733;
+  --surface-muted: #22313e;
+  --text-primary: #f5f3ed;
+  --text-secondary: #b9c4cc;
+  --text-muted: #96a4af;
+  --text: var(--text-primary);
+  --border: #2b3b48;
+  --border-strong: #405260;
+  --success: #87c5a1;
+  --success-soft: #18352a;
+  --warning: #e4b66e;
+  --warning-soft: #3d3020;
+  --danger: #ec9690;
+  --danger-soft: #442526;
+  --info: #8fc0dc;
+  --info-soft: #1d3545;
+  --due: #d8b47a;
+  --due-soft: #382f21;
+  --focus: #e1ae58;
+  --financial-positive: var(--success);
+  --financial-negative: var(--danger);
+  --financial-neutral: #d5e0e7;
+  --shadow-soft: 0 14px 38px rgb(0 0 0 / 0.22);
+  --shadow-card: 0 22px 56px rgb(0 0 0 / 0.28);
+  --shadow-menu: 0 24px 68px rgb(0 0 0 / 0.46);
   color-scheme: dark;
 }
 
@@ -84,6 +107,19 @@ body {
   font-size: 15px;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--focus) 48%, transparent);
+  outline-offset: 3px;
 }
 
 button,
@@ -355,6 +391,16 @@ h2 {
   max-width: 620px;
 }
 
+.page-header h1,
+.dashboard-hero h1,
+.tenant-profile-hero h1,
+.lease-hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
 .page-header__action {
   flex: 0 0 auto;
 }
@@ -377,6 +423,247 @@ h2 {
   min-width: 0;
   padding: var(--space-5);
 }
+
+.dashboard-v2 {
+  max-width: 1240px;
+}
+
+.dashboard-hero {
+  background:
+    radial-gradient(circle at 88% 18%, rgb(200 137 47 / 0.2), transparent 24%),
+    linear-gradient(135deg, #13253a, #182f47 64%, #213b52);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-card);
+  color: #f8f4eb;
+  display: grid;
+  gap: clamp(28px, 6vw, 72px);
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
+  overflow: hidden;
+  padding: clamp(26px, 5vw, 54px);
+  position: relative;
+}
+
+.dashboard-hero::after {
+  border: 1px solid rgb(215 164 78 / 0.2);
+  border-radius: 50%;
+  content: "";
+  height: 230px;
+  pointer-events: none;
+  position: absolute;
+  right: -92px;
+  top: -118px;
+  width: 230px;
+}
+
+.dashboard-hero__content {
+  align-self: center;
+  max-width: 720px;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero__eyebrow {
+  color: #e5b968;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0 0 14px;
+  text-transform: uppercase;
+}
+
+.dashboard-hero h1 {
+  color: #fffaf0;
+  margin: 0;
+}
+
+.dashboard-hero__content > p:not(.dashboard-hero__eyebrow) {
+  color: rgb(246 242 233 / 0.72);
+  font-size: clamp(0.95rem, 2vw, 1.08rem);
+  margin: 18px 0 0;
+  max-width: 600px;
+}
+
+.dashboard-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.button--accent {
+  background: var(--brand-gold);
+  color: #172231;
+}
+
+.button--on-dark {
+  background: rgb(255 255 255 / 0.07);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  color: #fffaf0;
+}
+
+.dashboard-hero__portfolio {
+  align-self: stretch;
+  background: rgb(255 255 255 / 0.065);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 210px;
+  padding: 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero__mark {
+  align-items: center;
+  background: var(--brand-gold);
+  border-radius: 15px;
+  color: #172231;
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  margin-bottom: auto;
+  width: 48px;
+}
+
+.dashboard-hero__portfolio small {
+  color: rgb(246 242 233 / 0.58);
+  font-size: 0.7rem;
+  margin-top: 24px;
+}
+
+.dashboard-hero__portfolio strong {
+  color: #fffaf0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 760;
+  margin-top: 3px;
+}
+
+.dashboard-hero__portfolio p {
+  color: rgb(246 242 233 / 0.7);
+  font-size: 0.76rem;
+  margin: 7px 0 0;
+}
+
+.dashboard-metrics {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.portfolio-metric {
+  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
+  display: grid;
+  min-height: 184px;
+  padding: 20px;
+  position: relative;
+  transition: transform var(--motion-standard) var(--ease-standard), box-shadow var(--motion-standard) var(--ease-standard);
+}
+
+a.portfolio-metric:hover {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-3px);
+}
+
+.portfolio-metric__icon,
+.dashboard-finance-card__icon {
+  align-items: center;
+  background: var(--surface-muted);
+  border-radius: 14px;
+  color: var(--brand-ink);
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  margin-bottom: 22px;
+  width: 42px;
+}
+
+:root[data-theme="dark"] .portfolio-metric__icon,
+:root[data-theme="dark"] .dashboard-finance-card__icon {
+  color: #eef4f7;
+}
+
+.portfolio-metric__icon--blue { background: var(--info-soft); color: var(--info); }
+.portfolio-metric__icon--gold { background: var(--brand-gold-soft); color: var(--brand-gold); }
+.portfolio-metric__icon--neutral { background: var(--surface-muted); color: var(--text-secondary); }
+.portfolio-metric__label { color: var(--text-muted); font-size: 0.74rem; font-weight: 730; }
+.portfolio-metric__value { font-size: clamp(1.75rem, 4vw, 2.25rem); letter-spacing: -0.045em; line-height: 1; margin-top: 8px; }
+.portfolio-metric__note { color: var(--text-muted); font-size: 0.7rem; margin-top: 8px; }
+.portfolio-metric__arrow { bottom: 20px; color: var(--brand-gold); position: absolute; right: 20px; }
+
+.dashboard-lower-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.dashboard-lease-card,
+.dashboard-finance-card {
+  background: var(--surface-raised);
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.dashboard-lease-stats {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.dashboard-lease-stats > div {
+  background: var(--surface-muted);
+  border-radius: 15px;
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+}
+
+.dashboard-lease-stats strong {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-lease-stats span,
+.dashboard-card-note {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.dashboard-inline-link {
+  align-items: center;
+  color: var(--brand-blue);
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 750;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.dashboard-finance-card {
+  align-content: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.dashboard-finance-card__icon {
+  background: var(--brand-gold-soft);
+  color: var(--brand-gold);
+  margin: 0;
+}
+
+.dashboard-finance-card .eyebrow { margin: 0 0 4px; }
+.dashboard-finance-card h2 { font-size: 1.28rem; margin: 0; }
+.dashboard-finance-card p:not(.eyebrow) { color: var(--text-muted); font-size: 0.78rem; margin: 10px 0 0; }
+.dashboard-finance-card .badge { grid-column: 2; justify-self: start; }
 
 .card--muted {
   background: var(--surface-muted);
@@ -893,8 +1180,8 @@ h2 {
 }
 
 .button--danger {
-  background: var(--kjora-terracotta);
-  border-color: var(--kjora-terracotta);
+  background: var(--danger);
+  border-color: var(--danger);
   color: #fff;
 }
 .button--danger:hover { filter: brightness(.94); }
@@ -1947,8 +2234,9 @@ h2 {
   }
 
   .desktop-rail .nav-link--active {
-    background: #3a5549;
-    color: var(--kjora-ivory);
+    background: rgb(215 164 78 / 0.16);
+    box-shadow: inset 3px 0 0 var(--brand-gold);
+    color: #fffaf0;
     font-weight: 750;
   }
 
@@ -1992,7 +2280,7 @@ h2 {
   }
 
   .portal-rail {
-    background: #23352d;
+    background: #17283b;
   }
 }
 
@@ -2000,5 +2288,618 @@ h2 {
   .shell-content {
     padding-left: 56px;
     padding-right: 56px;
+  }
+}
+
+@media (max-width: 820px) {
+  .dashboard-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-hero__portfolio {
+    min-height: 180px;
+  }
+
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-hero {
+    border-radius: 22px;
+    padding: 24px 20px;
+  }
+
+  .dashboard-hero__actions,
+  .dashboard-hero__actions .button {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .dashboard-hero__actions .button {
+    justify-content: space-between;
+  }
+
+  .dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-metric {
+    min-height: 164px;
+  }
+
+  .dashboard-lease-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-finance-card {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-finance-card .badge {
+    grid-column: 1;
+  }
+}
+
+/* Visual Direction v2A — pilot record surfaces */
+.tenant-detail-v2,
+.lease-detail-v2 {
+  max-width: 1240px;
+}
+
+.tenant-profile-hero,
+.lease-hero {
+  background:
+    radial-gradient(circle at 90% 8%, rgb(200 137 47 / 0.18), transparent 24%),
+    linear-gradient(138deg, #13253a, #1b344b 68%, #213d54);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-card);
+  color: #f8f4eb;
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 40px);
+  position: relative;
+}
+
+.tenant-profile-hero {
+  align-items: center;
+  display: grid;
+  gap: clamp(20px, 4vw, 36px);
+  grid-template-columns: auto minmax(0, 1fr) minmax(230px, 0.65fr);
+}
+
+.tenant-profile-hero__avatar {
+  align-items: center;
+  background: linear-gradient(145deg, #d7a44e, #bc7d29);
+  border: 3px solid rgb(255 255 255 / 0.15);
+  border-radius: 24px;
+  color: #142131;
+  display: flex;
+  flex-direction: column;
+  height: 112px;
+  justify-content: center;
+  width: 112px;
+}
+
+.tenant-profile-hero__avatar span {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 820;
+  letter-spacing: -0.04em;
+}
+
+.tenant-profile-hero__avatar small {
+  font-size: 0.58rem;
+  font-weight: 720;
+  margin-top: 5px;
+}
+
+.tenant-profile-hero .eyebrow,
+.lease-hero .eyebrow {
+  color: #e6b868;
+  margin: 0 0 8px;
+}
+
+.tenant-profile-hero h1,
+.lease-hero h1 {
+  color: #fffaf0;
+  margin: 0;
+}
+
+.tenant-profile-hero__identity > p:not(.eyebrow),
+.lease-hero__heading > p:not(.eyebrow) {
+  color: rgb(246 242 233 / 0.7);
+  margin: 11px 0 0;
+}
+
+.tenant-profile-hero__contacts,
+.lease-hero__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 18px;
+}
+
+.tenant-profile-hero__contacts span,
+.lease-hero__links a {
+  align-items: center;
+  color: rgb(246 242 233 / 0.72);
+  display: inline-flex;
+  font-size: 0.72rem;
+  gap: 6px;
+}
+
+.tenant-profile-hero__lease {
+  background: rgb(255 255 255 / 0.065);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 20px;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.tenant-profile-hero__lease > div {
+  display: grid;
+  gap: 3px;
+}
+
+.tenant-profile-hero__lease small,
+.tenant-profile-hero__lease span {
+  color: rgb(246 242 233 / 0.62);
+  font-size: 0.68rem;
+}
+
+.tenant-profile-hero__lease strong {
+  color: #fffaf0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.tenant-profile-hero__lease .badge {
+  justify-self: start;
+}
+
+.tenant-profile-hero__edit,
+.lease-hero__edit {
+  position: absolute;
+  right: 22px;
+  top: 22px;
+}
+
+.record-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+}
+
+.record-tabs a,
+.record-tabs span {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 9px 13px;
+}
+
+.record-tabs a[aria-current="page"] {
+  background: var(--brand-ink);
+  border-color: var(--brand-ink);
+  color: #fffaf0;
+}
+
+.tenant-financial-preview-v2 {
+  background: var(--surface-raised);
+  border-color: color-mix(in srgb, var(--brand-blue) 22%, var(--border));
+  display: grid;
+  gap: 18px;
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.tenant-financial-preview-v2 > p {
+  color: var(--text-muted);
+  margin: -6px 0 0;
+  max-width: 820px;
+}
+
+.financial-state-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.financial-state-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  display: grid;
+  gap: 10px;
+  min-height: 150px;
+  overflow: hidden;
+  padding: 17px;
+  position: relative;
+}
+
+.financial-state-card::before {
+  background: var(--financial-neutral);
+  bottom: 0;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 4px;
+}
+
+.financial-state-card--positive::before { background: var(--financial-positive); }
+.financial-state-card--warning::before { background: var(--warning); }
+.financial-state-card--danger::before { background: var(--financial-negative); }
+.financial-state-card--info::before { background: var(--info); }
+
+.financial-state-card__heading {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 750;
+  gap: 8px;
+}
+
+.financial-state-card__icon {
+  align-items: center;
+  background: var(--surface-muted);
+  border-radius: 10px;
+  color: var(--brand-blue);
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.financial-state-card > strong {
+  font-size: 1.65rem;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.financial-state-card--unavailable > strong {
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  letter-spacing: 0;
+  line-height: 1.38;
+}
+
+.financial-state-card small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.tenant-record-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tenant-record-card,
+.tenant-history-card,
+.lease-contract-card {
+  background: var(--surface-raised);
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.record-detail-list,
+.lease-contract-grid {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.record-detail-list > div,
+.lease-contract-grid > div {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+}
+
+.record-detail-list > div:first-child,
+.lease-contract-grid > div:first-child {
+  border-top: 0;
+}
+
+.record-detail-list dt,
+.lease-contract-grid dt {
+  color: var(--text-muted);
+  font-size: 0.67rem;
+  font-weight: 720;
+}
+
+.record-detail-list dd,
+.lease-contract-grid dd {
+  font-size: 0.82rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tenant-current-lease-card > p {
+  color: var(--text-muted);
+}
+
+.tenant-current-lease-card__facts {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 20px 0;
+}
+
+.tenant-current-lease-card__facts span {
+  background: var(--surface-muted);
+  border-radius: 14px;
+  color: var(--text-muted);
+  display: grid;
+  font-size: 0.68rem;
+  gap: 3px;
+  padding: 14px;
+}
+
+.tenant-current-lease-card__facts strong {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.future-module-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.future-module-card {
+  align-items: center;
+  background: var(--surface);
+  box-shadow: none;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 16px;
+}
+
+.future-module-card__icon {
+  align-items: center;
+  background: var(--surface-muted);
+  border-radius: 12px;
+  color: var(--brand-blue);
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.future-module-card > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.future-module-card strong {
+  font-size: 0.82rem;
+}
+
+.future-module-card span:not(.future-module-card__icon) {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.tenant-notes-card span:not(.future-module-card__icon) {
+  white-space: normal;
+}
+
+.lease-hero {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(230px, 0.65fr) minmax(0, 1.35fr);
+}
+
+.lease-hero__heading {
+  align-self: center;
+}
+
+.lease-hero__title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.lease-hero__title-row .badge {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.16);
+  color: #fffaf0;
+}
+
+.lease-hero__metrics {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1.35fr 1fr 1fr;
+}
+
+.lease-hero__metric {
+  background: rgb(255 255 255 / 0.065);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 170px;
+  padding: 18px;
+}
+
+.lease-hero__metric--primary {
+  background: rgb(215 164 78 / 0.12);
+  border-color: rgb(215 164 78 / 0.28);
+}
+
+.lease-hero__metric small,
+.lease-hero__metric span {
+  color: rgb(246 242 233 / 0.58);
+  font-size: 0.64rem;
+}
+
+.lease-hero__metric strong {
+  color: #fffaf0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin: 9px 0 6px;
+}
+
+.lease-money-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 22px 0;
+}
+
+.lease-money-grid > div {
+  background: var(--surface-muted);
+  border-radius: 16px;
+  display: grid;
+  gap: 6px;
+  min-height: 126px;
+  padding: 16px;
+}
+
+.lease-money-grid span,
+.lease-money-grid small {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+}
+
+.lease-money-grid strong {
+  font-size: clamp(1rem, 2.4vw, 1.35rem);
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.lease-contract-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lease-contract-grid > div {
+  border-top: 1px solid var(--border);
+  padding-right: 20px;
+}
+
+.lease-contract-grid > div:nth-child(2) {
+  border-top: 0;
+}
+
+.lease-contract-card .financial-preparation-note,
+.lease-contract-card .tenancy-sensitive-action {
+  margin-top: 20px;
+}
+
+@media (max-width: 980px) {
+  .tenant-profile-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .tenant-profile-hero__lease {
+    grid-column: 1 / -1;
+  }
+
+  .lease-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .financial-state-grid,
+  .future-module-grid,
+  .lease-money-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tenant-record-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lease-hero__metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lease-hero__metric--primary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .tenant-profile-hero {
+    align-items: start;
+    grid-template-columns: 1fr;
+    padding-top: 70px;
+  }
+
+  .tenant-profile-hero__avatar {
+    border-radius: 20px;
+    height: 88px;
+    width: 88px;
+  }
+
+  .tenant-profile-hero__lease {
+    grid-column: auto;
+  }
+
+  .tenant-profile-hero__edit,
+  .lease-hero__edit {
+    left: 20px;
+    right: auto;
+    top: 20px;
+  }
+
+  .financial-state-grid,
+  .future-module-grid,
+  .lease-money-grid,
+  .lease-contract-grid,
+  .lease-hero__metrics,
+  .tenant-current-lease-card__facts {
+    grid-template-columns: 1fr;
+  }
+
+  .lease-hero {
+    padding-top: 74px;
+  }
+
+  .lease-hero__metric--primary {
+    grid-column: auto;
+  }
+
+  .lease-hero__metric {
+    min-height: 136px;
+  }
+
+  .lease-contract-grid > div:nth-child(2) {
+    border-top: 1px solid var(--border);
+  }
+
+  .future-module-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .future-module-card .badge {
+    grid-column: 2;
+    justify-self: start;
   }
 }

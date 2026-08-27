@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-27 — Patch 6B.1 terminé, testé et déployé ; validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-08-27 — Visual Direction v2A implémentée sur les trois écrans pilotes ; validation visuelle Blaise en attente
 
 ## Lots
 
@@ -15,6 +15,7 @@
 - **Lot 6A — Property + Unit backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6B — Tenant + Lease backend : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6B.1 — Patch UX / préparation financière : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Visual Direction v2A — Design system + 3 écrans pilotes : IMPLÉMENTÉE / TESTÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — persistance Supabase ; aucun 6C1 démarré**
 
@@ -182,6 +183,9 @@
 - Lot 6B.1 — 70 tests Node réussis ; TypeScript, ESLint et build Next.js 16.3.2 réussis avec les 36 routes conservées.
 - Lot 6B.1 — loyer de référence Unit, préremplissage Lease indépendant, séparation dépôt/prépaiement, couverture et reste dérivés, date limite 1–28, avis J-X contrôlé, rappel global 10 jours, détail de prorata et fin via modale sont implémentés.
 - Lot 6B.1 — modes liste/cartes, aides XAF, surfaces clair/sombre rééquilibrées et zone de future situation financière Tenant sont implémentés sans Due, Payment, Allocation, Ledger, Receipt ni faux solde.
+- Visual Direction v2A — tokens clair/sombre, navigation partagée, Dashboard réel, détail Locataire et détail Location adoptent la direction Horizon & héritage de D-091.
+- Visual Direction v2A — le Dashboard ne fabrique aucun revenu ; les états Solde, Crédit, Prochaine échéance, Échéances, Paiements et Documents indiquent explicitement leur disponibilité future avec 6C.
+- Visual Direction v2A — 76 tests Node réussis ; TypeScript, ESLint et build Production Next.js 16.3.2 réussis avec 36 pages générées.
 
 ## Bloqué
 
@@ -200,4 +204,4 @@
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le patch 6B.1 par Blaise. Le prochain vrai lot reste 6C1 — Échéances + Charges + Ledger, à ne pas démarrer sans autorisation distincte.**
+**Faire valider visuellement la v2A par Blaise sur Dashboard clair/sombre, détail Locataire, détail Location et mobile. v2B et 6C1 restent non commencés et exigent chacun une autorisation distincte.**

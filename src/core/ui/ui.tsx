@@ -69,6 +69,33 @@ export function KpiCard({
   );
 }
 
+export function FinancialStateCard({
+  label,
+  value,
+  helper,
+  tone = "neutral",
+  icon: Icon,
+  unavailable = false,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  tone?: "neutral" | "positive" | "warning" | "danger" | "info";
+  icon?: LucideIcon;
+  unavailable?: boolean;
+}) {
+  return (
+    <section className={`financial-state-card financial-state-card--${tone}${unavailable ? " financial-state-card--unavailable" : ""}`}>
+      <div className="financial-state-card__heading">
+        {Icon ? <span className="financial-state-card__icon" aria-hidden="true"><Icon size={18} strokeWidth={1.8} /></span> : null}
+        <span>{label}</span>
+      </div>
+      <strong className={unavailable ? undefined : "financial-value"}>{value}</strong>
+      <small>{helper}</small>
+    </section>
+  );
+}
+
 export function Badge({
   children,
   tone = "neutral",

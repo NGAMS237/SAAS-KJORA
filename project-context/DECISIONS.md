@@ -1,7 +1,7 @@
 # Kjora — Registre des décisions
 
 > Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
-> Dernière mise à jour : 2026-08-26 — décisions du patch UX / préparation financière 6B.1 confirmées par Blaise
+> Dernière mise à jour : 2026-08-27 — direction visuelle v2A confirmée et bornée aux trois écrans pilotes
 
 ## Statuts
 
@@ -103,6 +103,7 @@
 | D-088 | CONFIRMÉ | **Lot 6B.1 — prorata explicable.** Le prorata calendaire du premier loyer applique, au MVP mensuel, le même ratio de jours au loyer hors charges et aux charges récurrentes. L’interface affiche la période, le nombre de jours, le dénominateur et la formule ; une correction manuelle reste motivée. Le moteur définitif et les écritures appartiennent à 6C1. | 2026-08-26 |
 | D-089 | CONFIRMÉ | **Lot 6B.1 — visibilité financière future.** Le dossier Tenant interne et le futur portail rendent immédiatement compréhensibles dette, crédit, périodes couvertes et prochaine échéance depuis l’unique vérité 6C. Avant 6C, les emplacements restent très visibles mais affichent un état indisponible honnête, jamais zéro ni solde fictif. Après 6C, tout montant est qualifié en langage naturel comme dû, crédit disponible ou à jour, avec accès au détail des échéances, paiements et allocations. | 2026-08-26 |
 | D-090 | CONFIRMÉ | **Autorisation Production Lot 6B.1.** Blaise autorise explicitement l’application de `lot_6b_1_unit_reference_rent_ux` sur Supabase Production KJORA, y compris la normalisation du rappel du Lease existant de 1 à 10 jours, puis les tests pgTAP, le commit et le push sur `main` déclenchant Vercel Production. Cette autorisation ne démarre pas 6C1. | 2026-08-26 |
+| D-091 | CONFIRMÉ | **Kjora Visual Direction v2.** Kjora conserve « Horizon & héritage » et adopte une structure Ink/Navy, un accent Kjora Gold/Amber ponctuel, un Horizon Blue secondaire, le vert réservé aux états métier positifs et le rouge aux états négatifs/destructifs. Les surfaces claires sont teintées, le sombre devient neutre/bleu, la typographie Inter Tight/Inter est renforcée, les cartes sont plus généreuses et la hiérarchie financière qualifie toujours dette, crédit ou équilibre. Le sous-lot v2A applique cette direction uniquement au Dashboard, au dossier Tenant, au détail Lease et aux tokens/navigation partagés ; v2B et 6C1 restent non commencés. | 2026-08-27 |
 
 ## Hypothèses / propositions ouvertes
 

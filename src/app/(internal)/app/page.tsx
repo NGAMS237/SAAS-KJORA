@@ -1,66 +1,125 @@
-import { ArrowUpRight, Building2, Clock3, ReceiptText, WalletCards } from "lucide-react";
-import { ActionLink, Badge, Card, DemoNotice, KpiCard, ListRow, PageHeader } from "@/core/ui/ui";
-import { requireUser } from "@/core/auth/require-user";
+import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, House, KeyRound, Landmark, UsersRound, WalletCards } from "lucide-react";
+import { Badge, Card } from "@/core/ui/ui";
+import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { PinSetupPrompt } from "@/core/security/pin-controls";
+import { listActiveProperties } from "@/modules/properties/server";
+import { listLeases, listTenants } from "@/modules/tenancy/server";
+
+function PortfolioMetric({
+  href,
+  icon: Icon,
+  label,
+  value,
+  note,
+  tone = "ink",
+}: {
+  href?: string;
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  note: string;
+  tone?: "ink" | "blue" | "gold" | "neutral";
+}) {
+  const content = (
+    <>
+      <span className={`portfolio-metric__icon portfolio-metric__icon--${tone}`} aria-hidden="true">
+        <Icon size={20} strokeWidth={1.8} />
+      </span>
+      <span className="portfolio-metric__label">{label}</span>
+      <strong className="portfolio-metric__value financial-value">{value}</strong>
+      <span className="portfolio-metric__note">{note}</span>
+      {href ? <ArrowRight className="portfolio-metric__arrow" aria-hidden="true" size={17} /> : null}
+    </>
+  );
+  return href ? <Link className="portfolio-metric" href={href}>{content}</Link> : <div className="portfolio-metric">{content}</div>;
+}
 
 export default async function DashboardPage() {
-  const user = await requireUser();
-  const userLabel = user.email?.split("@")[0] ?? "propriétaire";
+  const context = await loadOrganizationContext();
+  const organization = context.activeOrganization;
+  if (!organization) return null;
+  const userLabel = context.user.email?.split("@")[0] ?? "propriétaire";
+  const canViewProperties = organization.capabilities.includes("property.view");
+  const canViewTenants = organization.capabilities.includes("tenant.view");
+  const canViewLeases = organization.capabilities.includes("lease.view");
+  const canManageProperties = organization.capabilities.includes("property.manage");
+  const [properties, tenants, leases] = await Promise.all([
+    canViewProperties ? listActiveProperties(organization.id) : Promise.resolve([]),
+    canViewTenants ? listTenants(organization.id) : Promise.resolve([]),
+    canViewLeases ? listLeases(organization.id) : Promise.resolve([]),
+  ]);
+  const unitCount = properties.reduce((total, property) => total + property.unitCount, 0);
+  const vacantCount = properties.reduce((total, property) => total + property.vacantCount, 0);
+  const occupiedCount = canViewLeases ? Math.max(0, unitCount - vacantCount) : null;
+  const occupancyRate = occupiedCount !== null && unitCount > 0 ? Math.round((occupiedCount / unitCount) * 100) : null;
+  const activeLeases = leases.filter((lease) => lease.status === "active");
+  const draftLeases = leases.filter((lease) => lease.status === "draft");
+  const endedLeases = leases.filter((lease) => lease.status === "ended");
+  const activeTenantCount = canViewTenants ? tenants.filter((tenant) => tenant.currentLease).length : null;
+  const monthLabel = new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric",
+    timeZone: organization.timezone,
+  }).format(new Date());
+
   return (
-    <div className="page-stack">
-      <PageHeader
-        eyebrow="Mois courant · Août 2026"
-        title={`Bonjour ${userLabel}`}
-        description="Une lecture calme de votre activité locative, dans l’Organization active uniquement."
-        action={<ActionLink href="/app/paiements">Voir les paiements</ActionLink>}
-      />
-      <DemoNotice />
+    <div className="page-stack dashboard-v2">
+      <section className="dashboard-hero">
+        <div className="dashboard-hero__content">
+          <p className="dashboard-hero__eyebrow">Accueil · {monthLabel}</p>
+          <h1>Bonjour {userLabel}</h1>
+          <p>Votre patrimoine, vos locations et les prochaines capacités de Kjora dans une vue claire.</p>
+          <div className="dashboard-hero__actions">
+            <Link className="button button--accent" href={canManageProperties ? "/app/biens/nouveau" : "/app/biens"}>
+              {canManageProperties ? "Ajouter un bien" : "Voir les biens"}
+              <ArrowRight aria-hidden="true" size={17} />
+            </Link>
+            {canViewLeases ? <Link className="button button--on-dark" href="/app/locations">Voir les locations</Link> : null}
+          </div>
+        </div>
+        <div className="dashboard-hero__portfolio" aria-label="Aperçu du patrimoine">
+          <span className="dashboard-hero__mark" aria-hidden="true"><Landmark size={24} /></span>
+          <small>Organization active</small>
+          <strong>{organization.name}</strong>
+          <p>{canViewProperties ? `${properties.length} bien${properties.length === 1 ? "" : "s"} · ${unitCount} unité${unitCount === 1 ? "" : "s"}` : "Patrimoine selon vos autorisations"}</p>
+        </div>
+      </section>
       <PinSetupPrompt />
 
-      <section className="kpi-grid" aria-label="Indicateurs de démonstration">
-        <KpiCard label="Attendu" value="1 240 000 XAF" note="8 échéances fictives" />
-        <KpiCard label="Encaissé" value="920 000 XAF" note="Paiements confirmés fictifs" tone="positive" />
-        <KpiCard label="Restant" value="320 000 XAF" note="À suivre ce mois-ci" />
-        <KpiCard label="En retard" value="2 loyers" note="Données de démonstration" tone="warning" />
+      <section className="dashboard-metrics" aria-label="Aperçu réel de l’Organization active">
+        <PortfolioMetric href={canViewProperties ? "/app/biens" : undefined} icon={Building2} label="Biens" value={canViewProperties ? String(properties.length) : "—"} note={canViewProperties ? "Actifs dans cette Organization" : "Non accessible à ce rôle"} />
+        <PortfolioMetric href={canViewProperties ? "/app/biens" : undefined} icon={House} label="Unités" value={canViewProperties ? String(unitCount) : "—"} note={canViewProperties ? `${vacantCount} vacante${vacantCount === 1 ? "" : "s"}` : "Non accessible à ce rôle"} tone="blue" />
+        <PortfolioMetric icon={KeyRound} label="Occupation" value={occupancyRate === null ? "—" : `${occupancyRate} %`} note={occupiedCount === null ? "Disponible selon vos autorisations" : `${occupiedCount} unité${occupiedCount === 1 ? "" : "s"} occupée${occupiedCount === 1 ? "" : "s"}`} tone="gold" />
+        <PortfolioMetric href={canViewTenants ? "/app/locataires" : undefined} icon={UsersRound} label="Locataires actifs" value={activeTenantCount === null ? "—" : String(activeTenantCount)} note={canViewTenants ? `${tenants.length} dossier${tenants.length === 1 ? "" : "s"} au total` : "Non accessible à ce rôle"} tone="neutral" />
       </section>
 
-      <div className="content-grid">
-        <Card>
+      <div className="dashboard-lower-grid">
+        <Card className="dashboard-lease-card">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Priorités</p>
-              <h2>À surveiller</h2>
+              <p className="eyebrow">Cycle locatif</p>
+              <h2>Locations en cours</h2>
             </div>
-            <Badge tone="warning">2 éléments</Badge>
+            {canViewLeases ? <Badge tone="success">Données réelles</Badge> : <Badge>Accès limité</Badge>}
           </div>
-          <div className="list-stack">
-            <ListRow
-              icon={Clock3}
-              title="Échéance en retard"
-              description="Résidence Nlongkak · Démonstration"
-              trailing={<Badge tone="danger">En retard</Badge>}
-            />
-            <ListRow
-              icon={WalletCards}
-              title="Paiement partiel"
-              description="Reste fictif : 80 000 XAF"
-              trailing={<Badge tone="warning">Partiel</Badge>}
-            />
+          <div className="dashboard-lease-stats">
+            <div><strong>{canViewLeases ? activeLeases.length : "—"}</strong><span>Actives</span></div>
+            <div><strong>{canViewLeases ? draftLeases.length : "—"}</strong><span>Brouillons</span></div>
+            <div><strong>{canViewLeases ? endedLeases.length : "—"}</strong><span>Terminées</span></div>
           </div>
+          {canViewLeases ? <Link className="dashboard-inline-link" href="/app/locations">Ouvrir toutes les locations <ArrowRight aria-hidden="true" size={16} /></Link> : <p className="dashboard-card-note">Cette synthèse suit les permissions de votre rôle.</p>}
         </Card>
 
-        <Card>
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Aujourd’hui</p>
-              <h2>Activité récente</h2>
-            </div>
-            <ArrowUpRight aria-hidden="true" className="section-heading__icon" size={20} />
+        <Card className="dashboard-finance-card">
+          <span className="dashboard-finance-card__icon" aria-hidden="true"><WalletCards size={22} /></span>
+          <div>
+            <p className="eyebrow">Prochaine capacité</p>
+            <h2>Suivi financier bientôt disponible</h2>
+            <p>Les montants attendus, encaissés et restant dus apparaîtront avec la vérité financière 6C. Aucun revenu estimé n’est affiché aujourd’hui.</p>
           </div>
-          <div className="list-stack">
-            <ListRow icon={ReceiptText} title="Reçu généré" description="Il y a 18 minutes · Démonstration" />
-            <ListRow icon={Building2} title="Bien consulté" description="Il y a 1 heure · Démonstration" />
-          </div>
+          <Badge tone="info">Préparé pour 6C</Badge>
         </Card>
       </div>
     </div>
