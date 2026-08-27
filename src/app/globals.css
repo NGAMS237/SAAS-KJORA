@@ -2760,7 +2760,7 @@ a.portfolio-metric:hover {
 .financial-state-grid {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .financial-state-card {
@@ -2903,6 +2903,11 @@ a.portfolio-metric:hover {
   font-size: 1rem;
 }
 
+.tenant-current-lease-card__facts small {
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .future-module-grid {
   display: grid;
   gap: var(--space-3);
@@ -3009,6 +3014,11 @@ a.portfolio-metric:hover {
   letter-spacing: -0.04em;
   line-height: 1.05;
   margin: 9px 0 6px;
+}
+
+.lease-hero__metric:not(.lease-hero__metric--primary) strong {
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+  line-height: 1.15;
 }
 
 .lease-money-grid {

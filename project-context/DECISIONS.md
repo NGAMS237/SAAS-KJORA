@@ -1,7 +1,7 @@
 # Kjora — Registre des décisions
 
 > Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
-> Dernière mise à jour : 2026-08-27 — direction visuelle v2B globalisée avec géométrie organique signature
+> Dernière mise à jour : 2026-08-27 — clarification UX post-6C1 du montant contractuel et de la position financière
 
 ## Statuts
 
@@ -112,6 +112,7 @@
 | D-097 | CONFIRMÉ | **Lot 6C1 — génération, sécurité et portail.** Le générateur est tenant-scoped, idempotent par clé unique et limité à 240 périodes par exécution. Un job PostgreSQL quotidien à 00:15 UTC appelle la fonction privée ; aucun email n’est envoyé avant 6C3. Les lectures financières réutilisent `due.view` (Owner, gestionnaire, encaisseur, comptable) ; gardien et consultation n’obtiennent aucun Ledger. Le portail public ne reçoit aucune donnée avant `TenantPortalAccess` 6E : 6C1 prépare la même projection, sans commencer 6E. | 2026-08-27 |
 | D-098 | CONFIRMÉ | **Autorisation de démarrage Lot 6C1.** Blaise autorise le démarrage du Lot 6C1 sur `main` avec migration Supabase Production soumise à une autorisation explicite distincte une fois l’implémentation et les validations locales terminées. Cette autorisation ne démarre ni 6C2 ni 6C3. | 2026-08-27 |
 | D-099 | CONFIRMÉ | **Autorisation Production Lot 6C1.** Blaise autorise explicitement l’application de `lot_6c1_dues_charges_ledger` sur Supabase Production KJORA `alvheiwlfzuefljcfrtv`, l’activation du job `pg_cron`, l’initialisation des deux baux actifs et la génération des Dues, dépôts et crédits d’ouverture documentés, sans aucun Payment réel. Les correctifs transactionnels de durcissement de l’annulation des échéances futures restent dans ce périmètre 6C1. | 2026-08-27 |
+| D-100 | CONFIRMÉ | **Patch UX post-6C1 sans changement métier.** Le montant périodique d’une Location est toujours présenté comme une valeur contractuelle fixe et ventilée en loyer + charges ; seuls le crédit disponible, les périodes couvertes, le reliquat et la prochaine échéance non couverte traduisent la consommation financière. Les dates limites et avis utilisent des phrases et dates calendaires naturelles, jamais les seuls raccourcis `10 du mois` ou `J-5`. Le Dashboard salue avec un prénom ou nom d’affichage propre issu des métadonnées utilisateur, sinon affiche simplement `Bonjour`, sans dériver de libellé depuis l’email ou un identifiant technique. | 2026-08-27 |
 
 ## Hypothèses / propositions ouvertes
 

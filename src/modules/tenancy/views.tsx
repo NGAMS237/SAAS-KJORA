@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
-import type { LeaseFinancialDetail, TenantFinancialDetail } from "@/modules/finance/model";
+import type { LeaseFinancialDetail, TenantFinancialDetail, TenantFinancialPosition } from "@/modules/finance/model";
 import { LeaseDuesPanel, TenantFinancialSummary } from "@/modules/finance/views";
 import {
   calendarEntryProration,
@@ -55,6 +55,26 @@ function frequencyLabel(value: BillingFrequency, t: ReturnType<typeof useCopy>) 
 function shortDate(value: string) {
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function longDate(value: string, language: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat(language === "FR" ? "fr-FR" : "en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function periodicAmountLabel(frequency: BillingFrequency, t: ReturnType<typeof useCopy>) {
+  return frequency === "monthly" ? t("Montant mensuel total", "Total monthly amount") : t("Total périodique", "Periodic total");
+}
+
+function naturalDueDay(day: number, frequency: BillingFrequency, t: ReturnType<typeof useCopy>) {
+  return frequency === "monthly"
+    ? t(`Le ${day} de chaque mois`, `On the ${day} of every month`)
+    : t(`Le ${day} du mois d’échéance`, `On day ${day} of the due month`);
 }
 
 function prepaymentLabel(fullPeriods: number, remainderXaf: number, frequency: BillingFrequency, t: ReturnType<typeof useCopy>) {
@@ -218,7 +238,7 @@ export function TenantDetailView({ tenant, canManage, financial }: { tenant: Ten
           <div className="section-heading"><div><p className="eyebrow">{t("Location actuelle", "Current lease")}</p><h2>{current ? current.unitLabel : t("Aucune location active", "No active lease")}</h2></div><KeyRound size={21} /></div>
           {current ? <>
             <p>{current.propertyName}</p>
-            <div className="tenant-current-lease-card__facts"><span><strong>{money(current.periodicTotalXaf)}</strong>{t("Total périodique contractuel", "Contractual periodic total")}</span><span><strong>{t(`Le ${current.dueDay}`, `Day ${current.dueDay}`)}</strong>{t("Jour limite", "Due day")}</span></div>
+            <div className="tenant-current-lease-card__facts"><span><strong>{money(current.periodicTotalXaf)}</strong>{periodicAmountLabel(current.billingFrequency, t)}<small>{money(current.baseRentXaf)} {t("loyer", "rent")} + {money(current.recurringChargesXaf)} {t("charges", "charges")}</small></span><span><strong>{naturalDueDay(current.dueDay, current.billingFrequency, t)}</strong>{t("Date limite contractuelle", "Contractual due date")}</span></div>
             <Link className="button button--secondary" href={`/app/locations/${current.id}`}>{t("Voir le détail", "View details")}</Link>
           </> : <p>{t("Aucun bail actif n’est relié à ce dossier.", "No active lease is linked to this record.")}</p>}
         </Card>
@@ -300,8 +320,9 @@ export function LeaseCreateForm({ options, initialTenantId, initialUnitId }: { o
   return <div className="page-stack demo-narrow form-page-v2"><Link className="demo-back" href="/app/locations"><ArrowLeft size={17} />{t("Toutes les locations", "All leases")}</Link><PageHeader eyebrow="SCR-LEASE-02" title={t("Créer un brouillon", "Create a draft")} description={t("Les montants sont préparés sans générer d’échéance, ledger ou paiement.", "Amounts are prepared without generating dues, ledger entries or payments.")} /><LiveDataNotice /><Card><form className="form-stack" onSubmit={submit}><LeaseFields value={draft} options={options} onChange={setDraft} /><button className="button button--primary" disabled={busy} type="submit">{busy ? t("Enregistrement…", "Saving…") : t("Enregistrer le brouillon", "Save draft")}</button>{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}</form></Card></div>;
 }
 
-export function LeaseDetailView({ lease, options, canManage, financial }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null }) {
+export function LeaseDetailView({ lease, options, canManage, financial, tenantFinancial }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null; tenantFinancial: TenantFinancialPosition | null }) {
   const t = useCopy();
+  const { language } = usePreferences();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LeaseDraft>(lease);
@@ -311,6 +332,9 @@ export function LeaseDetailView({ lease, options, canManage, financial }: { leas
   const [endedOn, setEndedOn] = useState(new Date().toISOString().slice(0, 10));
   const [endReason, setEndReason] = useState("");
   const entryProration = lease.entryProrationOverrideXaf ?? calendarEntryProration(lease.periodicTotalXaf, lease.startDate, lease.entryProrationMode);
+  const today = new Date().toISOString().slice(0, 10);
+  const nextScheduledDue = financial?.dues.find((due) => due.status !== "cancelled" && due.kind !== "deposit" && due.kind !== "adjustment" && due.dueDate >= today) ?? null;
+  const amountBreakdown = `${money(lease.baseRentXaf)} ${t("loyer", "rent")} + ${money(lease.recurringChargesXaf)} ${t("charges", "charges")}`;
   async function update(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -352,9 +376,9 @@ export function LeaseDetailView({ lease, options, canManage, financial }: { leas
           </div>
         </div>
         <div className="lease-hero__metrics" aria-label={t("Synthèse contractuelle", "Contract summary")}>
-          <div className="lease-hero__metric lease-hero__metric--primary"><small>{t("Total périodique", "Periodic total")}</small><strong className="financial-value">{money(lease.periodicTotalXaf)}</strong><span>{frequencyLabel(lease.billingFrequency, t)}</span></div>
-          <div className="lease-hero__metric"><small>{t("Date limite", "Due date")}</small><strong>{t(`${lease.dueDay} du mois`, `Day ${lease.dueDay}`)}</strong><span>{t("Paiement attendu", "Payment expected")}</span></div>
-          <div className="lease-hero__metric"><small>{t("Avis préparé", "Notice prepared")}</small><strong>J-{lease.generateDueDaysBefore}</strong><span>{t("Avant la date limite", "Before due date")}</span></div>
+          <div className="lease-hero__metric lease-hero__metric--primary"><small>{periodicAmountLabel(lease.billingFrequency, t)}</small><strong className="financial-value">{money(lease.periodicTotalXaf)}</strong><span>{amountBreakdown}</span></div>
+          <div className="lease-hero__metric"><small>{t("Date limite", "Due date")}</small><strong>{naturalDueDay(lease.dueDay, lease.billingFrequency, t)}</strong><span>{nextScheduledDue ? t(`Prochaine échéance : ${longDate(nextScheduledDue.dueDate, language)}`, `Next due: ${longDate(nextScheduledDue.dueDate, language)}`) : t("Selon le calendrier contractuel", "Based on the contractual schedule")}</span></div>
+          <div className="lease-hero__metric"><small>{t("Avis d’échéance", "Due notice")}</small><strong>{nextScheduledDue ? t(`Prévu le ${longDate(nextScheduledDue.noticeDate, language)}`, `Scheduled for ${longDate(nextScheduledDue.noticeDate, language)}`) : t(`${lease.generateDueDaysBefore} jours avant l’échéance`, `${lease.generateDueDaysBefore} days before the due date`)}</strong><span>{t(`${lease.generateDueDaysBefore} jours avant chaque échéance`, `${lease.generateDueDaysBefore} days before each due date`)}</span></div>
         </div>
         {canManage && lease.status === "draft" ? <button className="button button--on-dark lease-hero__edit" onClick={() => setEditing((value) => !value)} type="button"><Pencil size={17} />{t("Modifier", "Edit")}</button> : null}
       </section>
@@ -371,6 +395,8 @@ export function LeaseDetailView({ lease, options, canManage, financial }: { leas
         <span>{t("Activité · à venir", "Activity · coming later")}</span>
       </nav>
 
+      {tenantFinancial ? <TenantFinancialSummary tenantId={lease.tenantId} financial={tenantFinancial} /> : null}
+
       <Card className="lease-contract-card" id="informations">
         <div className="section-heading">
           <div><p className="eyebrow">{t("Informations", "Information")}</p><h2>{t("Conditions contractuelles", "Contract terms")}</h2></div>
@@ -385,7 +411,8 @@ export function LeaseDetailView({ lease, options, canManage, financial }: { leas
         <dl className="lease-contract-grid">
           <div><dt>{t("Période", "Period")}</dt><dd>{shortDate(lease.startDate)}{lease.endDate ? ` → ${shortDate(lease.endDate)}` : " → —"}</dd></div>
           <div><dt>{t("Périodicité", "Frequency")}</dt><dd>{frequencyLabel(lease.billingFrequency, t)}</dd></div>
-          <div><dt>{t("Jour limite et avis", "Due day and notice")}</dt><dd>{t(`Le ${lease.dueDay} · avis J-${lease.generateDueDaysBefore}`, `Day ${lease.dueDay} · notice J-${lease.generateDueDaysBefore}`)}</dd></div>
+          <div><dt>{t("Date limite", "Due date")}</dt><dd>{naturalDueDay(lease.dueDay, lease.billingFrequency, t)}</dd></div>
+          <div><dt>{t("Avis d’échéance", "Due notice")}</dt><dd>{t(`${lease.generateDueDaysBefore} jours avant chaque échéance`, `${lease.generateDueDaysBefore} days before each due date`)}</dd></div>
           <div><dt>{t("Rappel de retard", "Overdue reminder")}</dt><dd>{t("Tous les 10 jours · automatique KJORA", "Every 10 days · automatic KJORA")}</dd></div>
           <div><dt>{t("Prorata du premier loyer", "First rent proration")}</dt><dd>{money(entryProration)}{lease.entryProrationOverrideXaf !== null ? ` · ${t("corrigé avec motif", "overridden with reason")}` : ""}</dd></div>
           {lease.endedOn ? <div><dt>{t("Sortie effective", "Effective end")}</dt><dd>{shortDate(lease.endedOn)} · {money(lease.exitProrationOverrideXaf ?? calendarExitProration(lease.periodicTotalXaf, lease.endedOn, lease.exitProrationMode))}</dd></div> : null}

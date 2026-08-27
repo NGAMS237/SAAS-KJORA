@@ -187,19 +187,21 @@ Un nombre signé isolé, par exemple `-55 000`, est interdit.
 - Hero Ink/Navy avec Organization active et CTA Gold ponctuel.
 - Cartes de patrimoine issues uniquement des données réelles : Biens, Unités, Occupation, Locataires actifs.
 - Cycle des Locations réel : actives, brouillons, terminées.
-- Bloc **Suivi financier bientôt disponible** sans revenu estimé.
+- Bloc de suivi financier 6C1 réel, soumis à `due.view`, sans revenu estimé ni paiement fabriqué.
+- Salutation issue uniquement d’un prénom ou nom d’affichage propre ; fallback exact `Bonjour`, jamais un slug d’email ou identifiant interne.
 
 ### Dossier locataire
 
 - Hero de dossier avec avatar initiales, identité, contacts autorisés, Location actuelle et statut.
 - Sections Profil, Location actuelle, Historique, Paiements, Documents et Notes.
-- Zone financière prête pour Solde actuel, Crédit disponible et Prochaine échéance, honnêtement indisponible avant 6C.
+- Zone financière réelle séparant **Solde dû / À jour**, **Crédit disponible**, **Périodes couvertes** et **Prochaine échéance non couverte**.
 - Les contacts et pièces restent filtrés par les permissions existantes.
 
 ### Détail Location
 
 - Hero Unit / Property / Tenant / statut.
-- Valeurs dominantes : total périodique, jour limite, J-X.
+- Valeur dominante : **Montant mensuel total** ou **Total périodique**, toujours ventilé en loyer + charges et jamais présenté comme un crédit décroissant.
+- Date limite et avis formulés naturellement avec la prochaine date calculée lorsqu’elle existe ; `J-X` reste dans la règle contractuelle, pas dans le hero.
 - Loyer, charges, dépôt et prépaiement séparés.
 - Informations complètes ; Échéances, Paiements, Documents et Activité restent explicitement futurs.
 - Fin de Location conservée dans sa modale sécurisée existante.
@@ -247,5 +249,6 @@ Les données réelles restent utilisées pour Biens, Units, Locataires et Locati
 - Dette utilise le rouge sémantique ; crédit/couverture le vert ; Gold reste un accent de hiérarchie.
 - `covered` signifie couvert par un crédit d’ouverture documenté et ne doit jamais être traduit visuellement par un faux paiement.
 - Les rôles sans `due.view` ne reçoivent ni composant financier ni valeur masquée.
+- Le même résumé financier réel est visible depuis le dossier Locataire et le détail Location, sans dupliquer ni recalculer la vérité 6C1 dans le client.
 
 **Visual Direction v2B reste déployée et sa validation visuelle par Blaise est en attente. Le Lot 6C1 étend le système avec la vérité financière réelle, sans démarrer les paiements 6C2 ni le portail sécurisé 6E.**

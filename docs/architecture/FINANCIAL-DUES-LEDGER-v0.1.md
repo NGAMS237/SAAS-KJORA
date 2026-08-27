@@ -10,11 +10,15 @@ Le Lot 6C1 construit la vérité attendue : échéances, ventilation loyer/charg
 
 Le solde comptable est `crédits - débits` : positif = crédit locataire, négatif = dette. L’interface présente toujours une qualification textuelle.
 
+Le total périodique affiché sur une Location est une donnée contractuelle fixe, ventilée en loyer + charges ; il ne représente jamais une réserve qui diminue. La consommation dans le temps est expliquée séparément par le crédit disponible, les périodes couvertes, le reliquat et la prochaine échéance non couverte.
+
 ## Calendrier et génération
 
 Les périodicités avancent par 1, 3, 6 ou 12 mois. Le jour limite est borné au dernier jour valide du mois, même si le contrat MVP limite déjà la saisie à 1–28. `notice_date` est calculée en jours calendaires par `due_date - J-X`.
 
 `private.generate_lease_dues` est idempotente grâce à `(organization_id, lease_id, generation_key)`, limitée à 240 périodes et sûre à relancer. Le job `kjora-generate-dues-daily` s’exécute chaque jour à 00:15 UTC via `pg_cron`. Il prépare les données de rappel J+10 mais n’envoie rien.
+
+Dans l’interface, le calendrier est formulé en langage naturel (`Le 10 de chaque mois`, `Prochaine échéance : 10 septembre 2026`, `Avis prévu le 5 septembre 2026`). `J-X` reste une règle interne et contractuelle, pas le libellé principal destiné au propriétaire.
 
 ## Prorata
 

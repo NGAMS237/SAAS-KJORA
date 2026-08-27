@@ -39,7 +39,9 @@ test("dashboard pilot uses live portfolio data and no fake financial totals", ()
   assert.match(dashboard, /listActiveProperties/);
   assert.match(dashboard, /listTenants/);
   assert.match(dashboard, /listLeases/);
-  assert.match(dashboard, /Suivi financier bientôt disponible/);
+  assert.match(dashboard, /Échéances et Ledger disponibles/);
+  assert.match(dashboard, /getUserGreetingName/);
+  assert.doesNotMatch(dashboard, /email\?\.split/);
   assert.doesNotMatch(dashboard, /1 240 000 XAF|920 000 XAF|320 000 XAF|échéances fictives/i);
 });
 
@@ -47,10 +49,16 @@ test("tenant and lease pilots expose live, qualified financial states", () => {
   assert.match(ui, /export function FinancialStateCard/);
   assert.match(financeViews, /Solde dû/);
   assert.match(financeViews, /Crédit disponible/);
+  assert.match(financeViews, /Périodes couvertes/);
   assert.match(financeViews, /Prochaine échéance non couverte/);
-  assert.match(tenancyViews, /Total périodique/);
+  assert.match(tenancyViews, /Montant mensuel total/);
+  assert.match(tenancyViews, /TenantFinancialSummary tenantId=\{lease\.tenantId\}/);
   assert.match(tenancyViews, /Date limite/);
-  assert.match(tenancyViews, /Avis préparé/);
+  assert.match(tenancyViews, /Le \$\{day\} de chaque mois/);
+  assert.match(tenancyViews, /Prochaine échéance :/);
+  assert.match(tenancyViews, /Avis d’échéance/);
+  assert.match(tenancyViews, /jours avant chaque échéance/);
+  assert.doesNotMatch(tenancyViews, />J-\{lease\.generateDueDaysBefore\}</);
   assert.match(tenancyViews, /LeaseDuesPanel/);
   assert.doesNotMatch(financeViews, />-55 000</);
 });

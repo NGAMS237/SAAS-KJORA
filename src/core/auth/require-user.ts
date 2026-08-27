@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type AuthenticatedUser = {
   id: string;
   email: string | null;
+  userMetadata: Record<string, unknown>;
 };
 
 export async function requireUser(): Promise<AuthenticatedUser> {
@@ -17,5 +18,8 @@ export async function requireUser(): Promise<AuthenticatedUser> {
   return {
     id: subject,
     email: typeof claims?.email === "string" ? claims.email : null,
+    userMetadata: claims?.user_metadata && typeof claims.user_metadata === "object"
+      ? claims.user_metadata as Record<string, unknown>
+      : {},
   };
 }

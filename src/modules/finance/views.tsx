@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { CalendarClock, CircleDollarSign, Coins, FileText, WalletCards } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, FinancialStateCard, PageHeader } from "@/core/ui/ui";
-import type { DueStatus, LeaseFinancialDetail, LedgerEntrySummary, TenantFinancialDetail } from "@/modules/finance/model";
+import type { DueStatus, LeaseFinancialDetail, LedgerEntrySummary, TenantFinancialDetail, TenantFinancialPosition } from "@/modules/finance/model";
 
 function useCopy() {
   const { language } = usePreferences();
@@ -43,19 +43,19 @@ function operationLabel(entry: LedgerEntrySummary, t: ReturnType<typeof useCopy>
   return t(fr, en);
 }
 
-export function TenantFinancialSummary({ tenantId, financial }: { tenantId?: string; financial: TenantFinancialDetail }) {
+export function TenantFinancialSummary({ tenantId, financial }: { tenantId?: string; financial: TenantFinancialPosition }) {
   const t = useCopy();
   const debt = financial.amountDueXaf > 0;
-  const credit = !debt && financial.residualOpeningCreditXaf > 0;
-  const mainLabel = debt ? t("Solde dû", "Amount due") : credit ? t("Crédit disponible", "Available credit") : t("À jour", "Up to date");
-  const mainValue = money(debt ? financial.amountDueXaf : credit ? financial.residualOpeningCreditXaf : 0);
+  const mainLabel = debt ? t("Solde dû", "Amount due") : t("À jour", "Up to date");
+  const mainValue = money(debt ? financial.amountDueXaf : 0);
   return <Card className="tenant-financial-preview-v2 financial-truth-card">
     <div className="section-heading"><div><p className="eyebrow">Ledger 6C1</p><h2>{t("Situation financière réelle", "Live financial position")}</h2></div><WalletCards size={22} /></div>
     <p>{t("Solde dérivé des échéances, des charges et du crédit d’ouverture validé — sans paiement fabriqué.", "Derived from dues, charges and validated opening credit — without fabricated payments.")}</p>
     <div className="financial-state-grid">
-      <FinancialStateCard icon={CircleDollarSign} label={mainLabel} value={mainValue} helper={debt ? t("Échéances arrivées à date et restant dues.", "Dues reached and still outstanding.") : credit ? t("Reste après les périodes entièrement couvertes.", "Remainder after fully covered periods.") : t("Aucune dette arrivée à date.", "No debt currently due.")} tone={debt ? "danger" : credit ? "positive" : "positive"} />
+      <FinancialStateCard icon={CircleDollarSign} label={mainLabel} value={mainValue} helper={debt ? t("Échéances arrivées à date et restant dues.", "Dues reached and still outstanding.") : t("Aucune dette arrivée à date.", "No debt currently due.")} tone={debt ? "danger" : "positive"} />
+      <FinancialStateCard icon={WalletCards} label={t("Crédit disponible", "Available credit")} value={money(financial.residualOpeningCreditXaf)} helper={financial.residualOpeningCreditXaf > 0 ? t("Reliquat réel après couverture des échéances générées.", "Actual remainder after generated dues are covered.") : t("Aucun reliquat de crédit d’ouverture.", "No opening credit remainder.")} tone="positive" />
       <FinancialStateCard icon={Coins} label={t("Périodes couvertes", "Covered periods")} value={String(financial.coveredPeriods)} helper={financial.lastCoveredPeriodEnd ? t(`Dernière période prépayée : ${shortDate(financial.lastCoveredPeriodEnd)}`, `Last prepaid period: ${shortDate(financial.lastCoveredPeriodEnd)}`) : t("Aucune période entièrement couverte.", "No fully covered period.")} tone="positive" />
-      <FinancialStateCard icon={CalendarClock} label={t("Prochaine échéance non couverte", "Next uncovered due")} value={shortDate(financial.nextUncoveredDueDate ?? financial.nextDueDate)} helper={financial.nextUncoveredDueDate ? t("Montant restant visible dans le détail.", "Outstanding amount is visible in details.") : t("Aucune échéance à venir générée.", "No generated upcoming due.")} tone="info" />
+      <FinancialStateCard icon={CalendarClock} label={t("Prochaine échéance non couverte", "Next uncovered due")} value={shortDate(financial.nextUncoveredDueDate)} helper={financial.nextUncoveredDueDate ? t("Montant restant visible dans le détail.", "Outstanding amount is visible in details.") : financial.nextDueDate ? t("Toutes les échéances générées sont couvertes.", "All generated dues are covered.") : t("Aucune échéance à venir générée.", "No generated upcoming due.")} tone="info" />
     </div>
     <div className="financial-summary-actions"><span>{t("Dernière opération", "Last operation")} · {shortDate(financial.lastLedgerDate)}</span>{tenantId ? <Link className="button button--secondary" href={`/app/locataires/${tenantId}/etat-de-compte`}><FileText size={16} />{t("Voir l’état de compte", "View statement")}</Link> : null}</div>
   </Card>;
@@ -70,7 +70,7 @@ export function LeaseDuesPanel({ financial }: { financial: LeaseFinancialDetail 
       <div className="financial-table__head" role="row"><span>{t("Période", "Period")}</span><span>{t("Date limite", "Due date")}</span><span>{t("Loyer", "Rent")}</span><span>{t("Charges", "Charges")}</span><span>{t("Total", "Total")}</span><span>{t("Restant", "Remaining")}</span><span>{t("État", "Status")}</span></div>
       {dues.map((due) => <div className="financial-table__row" role="row" key={due.id}>
         <span data-label={t("Période", "Period")}><strong>{shortDate(due.periodStart)} → {shortDate(due.periodEnd)}</strong><small>{due.reference}</small></span>
-        <span data-label={t("Date limite", "Due date")}>{shortDate(due.dueDate)}<small>J-{Math.round((new Date(`${due.dueDate}T00:00:00Z`).getTime() - new Date(`${due.noticeDate}T00:00:00Z`).getTime()) / 86_400_000)}</small></span>
+        <span data-label={t("Date limite", "Due date")}>{shortDate(due.dueDate)}<small>{t(`Avis prévu le ${shortDate(due.noticeDate)}`, `Notice scheduled for ${shortDate(due.noticeDate)}`)}</small></span>
         <span data-label={t("Loyer", "Rent")} className="financial-value">{money(due.rentXaf)}</span>
         <span data-label={t("Charges", "Charges")} className="financial-value">{money(due.recurringChargesXaf)}</span>
         <span data-label={t("Total", "Total")} className="financial-value">{money(due.kind === "adjustment" ? due.adjustmentXaf : due.netExpectedXaf)}</span>

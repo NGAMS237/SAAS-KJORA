@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-27 — Visual Direction v2B globalisée avec formes signature ; validation visuelle en attente
+> Dernière mise à jour : 2026-08-27 — Lot 6C1 livré ; clarification UX du montant contractuel, du crédit et des dates financières
 
 ## 1. Vision
 
@@ -434,7 +434,7 @@ Prévoir clés serveur séparées, domaines et journaux séparés, et aucun doma
 - UI : Inter ; titres et montants renforcés avec Inter Tight. Le serif reste réservé au wordmark Kjora.
 - Référence active : `docs/design/KJORA-UI-SYSTEM-v2.md` et décisions D-091/D-092. Le système v1 est conservé comme historique.
 - v2B généralise les tokens et composants v2 aux écrans principaux. Les grandes surfaces peuvent utiliser un coin asymétrique accentué ; champs, tableaux, petites lignes et contrôles restent réguliers.
-- Les placeholders des fonctions futures indiquent leur lot de disponibilité et n’affichent aucun chiffre fictif. Le Lot 6C1 reste non commencé.
+- Les placeholders des fonctions futures indiquent leur lot de disponibilité et n’affichent aucun chiffre fictif. Les données 6C1 réelles distinguent explicitement le total contractuel fixe du crédit disponible et des périodes couvertes ; 6C2 n’est pas commencé.
 
 ## 17. Architecture UX validée — Lot 3
 

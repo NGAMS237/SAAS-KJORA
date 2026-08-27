@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, Building2, House, KeyRound, Landmark, UsersRound, WalletCards } from "lucide-react";
 import { Badge, Card } from "@/core/ui/ui";
+import { getUserGreetingName } from "@/core/auth/user-display-name";
 import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { PinSetupPrompt } from "@/core/security/pin-controls";
 import { listActiveProperties } from "@/modules/properties/server";
@@ -40,10 +41,11 @@ export default async function DashboardPage() {
   const context = await loadOrganizationContext();
   const organization = context.activeOrganization;
   if (!organization) return null;
-  const userLabel = context.user.email?.split("@")[0] ?? "propriétaire";
+  const greetingName = getUserGreetingName(context.user.userMetadata);
   const canViewProperties = organization.capabilities.includes("property.view");
   const canViewTenants = organization.capabilities.includes("tenant.view");
   const canViewLeases = organization.capabilities.includes("lease.view");
+  const canViewDues = organization.capabilities.includes("due.view");
   const canManageProperties = organization.capabilities.includes("property.manage");
   const [properties, tenants, leases] = await Promise.all([
     canViewProperties ? listActiveProperties(organization.id) : Promise.resolve([]),
@@ -69,8 +71,8 @@ export default async function DashboardPage() {
       <section className="dashboard-hero">
         <div className="dashboard-hero__content">
           <p className="dashboard-hero__eyebrow">Accueil · {monthLabel}</p>
-          <h1>Bonjour {userLabel}</h1>
-          <p>Votre patrimoine, vos locations et les prochaines capacités de Kjora dans une vue claire.</p>
+          <h1>{greetingName ? `Bonjour, ${greetingName}` : "Bonjour"}</h1>
+          <p>Votre patrimoine, vos locations et leur situation financière dans une vue claire.</p>
           <div className="dashboard-hero__actions">
             <Link className="button button--accent" href={canManageProperties ? "/app/biens/nouveau" : "/app/biens"}>
               {canManageProperties ? "Ajouter un bien" : "Voir les biens"}
@@ -115,11 +117,11 @@ export default async function DashboardPage() {
         <Card className="dashboard-finance-card">
           <span className="dashboard-finance-card__icon" aria-hidden="true"><WalletCards size={22} /></span>
           <div>
-            <p className="eyebrow">Prochaine capacité</p>
-            <h2>Suivi financier bientôt disponible</h2>
-            <p>Les montants attendus, encaissés et restant dus apparaîtront avec la vérité financière 6C. Aucun revenu estimé n’est affiché aujourd’hui.</p>
+            <p className="eyebrow">Suivi financier</p>
+            <h2>{canViewDues ? "Échéances et Ledger disponibles" : "Données selon vos autorisations"}</h2>
+            <p>{canViewDues ? "Consultez le solde dû, le crédit disponible, les périodes couvertes et la prochaine échéance non couverte depuis les locations et les dossiers locataires." : "Les informations financières restent protégées selon le rôle actif."}</p>
           </div>
-          <Badge tone="info">Préparé pour 6C</Badge>
+          {canViewDues ? <Badge tone="success">Données réelles</Badge> : <Badge>Accès limité</Badge>}
         </Card>
       </div>
     </div>

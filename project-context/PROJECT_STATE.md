@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-27 — Lot 6C1 terminé, testé et déployé ; validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-08-27 — patch UX post-6C1 terminé et testé ; aucun nouveau lot métier ouvert
 
 ## Lots
 
@@ -18,6 +18,7 @@
 - **Visual Direction v2A — Design system + 3 écrans pilotes : IMPLÉMENTÉE / TESTÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
 - **Visual Direction v2B — Formes signature + déploiement global : TERMINÉE / TESTÉE / DÉPLOYÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
 - **Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Patch UX post-6C1 — Dashboard + détails Location/Locataire : TERMINÉ / TESTÉ — aucun changement métier**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
@@ -210,6 +211,8 @@
 - Migration Production `lot_6c1_dues_charges_ledger` et ses deux correctifs append-only appliqués sur KJORA : 2 versions financières, 11 Dues dont 2 dépôts, 17 lignes Ledger dont 2 crédits d’ouverture, 2 événements `LEASE_LEDGER_OPENED` et un unique job quotidien actif. Aucun Payment réel n’a été créé.
 - Lot 6C1 — 210 assertions pgTAP distantes réussies et annulées : 5B (9), 5C (47), 6A (54), 6B/6B.1 (51), 6C1 (49). Aucune Organization de test n’a persisté.
 - Advisors relancés après 6C1 : les nouveaux avertissements sécurité concernent uniquement les deux RPC `SECURITY DEFINER` intentionnels, tous deux bornés par `lease.manage`; les nouveaux avis performance sont des index encore inutilisés juste après création, conservés pour les clés étrangères et les lectures Ledger. Aucun défaut RLS ni exposition `anon` n’est signalé.
+- Patch UX post-6C1 — le Dashboard n’expose plus de slug email dans la salutation et annonce les données financières réelles selon `due.view`. Location et Locataire distinguent le montant contractuel ventilé du crédit disponible, des périodes couvertes et de la prochaine échéance non couverte ; date limite et avis sont formulés en langage naturel. Aucun calcul Ledger, schéma, RLS, Payment ou notification n’est modifié.
+- Patch UX post-6C1 — 91 tests Node, TypeScript, ESLint et build Production Next.js 16.3.2 réussis avec 36 routes.
 
 ## Proposé ensuite
 

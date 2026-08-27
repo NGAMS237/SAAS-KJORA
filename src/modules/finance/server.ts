@@ -7,6 +7,7 @@ import type {
   LeaseFinancialDetail,
   LedgerEntrySummary,
   TenantFinancialDetail,
+  TenantFinancialPosition,
 } from "@/modules/finance/model";
 
 type DueRow = {
@@ -28,6 +29,13 @@ type LedgerRow = {
 
 const DUE_COLUMNS = "id, lease_id, kind, reference, period_start, period_end, due_date, notice_date, generated_at, rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, adjustment_direction, expected_amount_xaf, net_expected_amount_xaf, covered_by_opening_credit_xaf, remaining_amount_xaf, derived_status, next_reminder_date";
 const LEDGER_COLUMNS = "id, lease_id, entry_type, reference, description_code, occurred_on, period_start, period_end, debit_xaf, credit_xaf, running_balance_xaf";
+const POSITION_COLUMNS = "amount_due_xaf, residual_opening_credit_xaf, covered_periods, last_covered_period_end, next_uncovered_due_date, next_due_date, last_ledger_date";
+
+type PositionRow = {
+  amount_due_xaf: number | string; residual_opening_credit_xaf: number | string; covered_periods: number | string;
+  last_covered_period_end: string | null; next_uncovered_due_date: string | null; next_due_date: string | null;
+  last_ledger_date: string | null;
+};
 
 function due(row: DueRow): DueSummary {
   return {
@@ -53,6 +61,18 @@ function ledger(row: LedgerRow): LedgerEntrySummary {
   };
 }
 
+function position(row: PositionRow | null): TenantFinancialPosition {
+  return {
+    amountDueXaf: Number(row?.amount_due_xaf ?? 0),
+    residualOpeningCreditXaf: Number(row?.residual_opening_credit_xaf ?? 0),
+    coveredPeriods: Number(row?.covered_periods ?? 0),
+    lastCoveredPeriodEnd: row?.last_covered_period_end ?? null,
+    nextUncoveredDueDate: row?.next_uncovered_due_date ?? null,
+    nextDueDate: row?.next_due_date ?? null,
+    lastLedgerDate: row?.last_ledger_date ?? null,
+  };
+}
+
 export async function getLeaseFinancialDetail(organizationId: string, leaseId: string): Promise<LeaseFinancialDetail> {
   const supabase = await createSupabaseServerClient();
   const [duesResult, ledgerResult] = await Promise.all([
@@ -67,29 +87,25 @@ export async function getLeaseFinancialDetail(organizationId: string, leaseId: s
   };
 }
 
+export async function getTenantFinancialPosition(organizationId: string, tenantId: string): Promise<TenantFinancialPosition> {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.from("tenant_financial_positions").select(POSITION_COLUMNS).eq("organization_id", organizationId).eq("tenant_id", tenantId).maybeSingle();
+  if (result.error) throw result.error;
+  return position(result.data as PositionRow | null);
+}
+
 export async function getTenantFinancialDetail(organizationId: string, tenantId: string): Promise<TenantFinancialDetail> {
   const supabase = await createSupabaseServerClient();
   const [positionResult, duesResult, ledgerResult] = await Promise.all([
-    supabase.from("tenant_financial_positions").select("amount_due_xaf, residual_opening_credit_xaf, covered_periods, last_covered_period_end, next_uncovered_due_date, next_due_date, last_ledger_date").eq("organization_id", organizationId).eq("tenant_id", tenantId).maybeSingle(),
+    supabase.from("tenant_financial_positions").select(POSITION_COLUMNS).eq("organization_id", organizationId).eq("tenant_id", tenantId).maybeSingle(),
     supabase.from("dues_with_status").select(DUE_COLUMNS).eq("organization_id", organizationId).eq("tenant_id", tenantId).order("due_date").order("period_start"),
     supabase.from("ledger_statement").select(LEDGER_COLUMNS).eq("organization_id", organizationId).eq("tenant_id", tenantId).order("occurred_on").order("sort_order"),
   ]);
   if (positionResult.error) throw positionResult.error;
   if (duesResult.error) throw duesResult.error;
   if (ledgerResult.error) throw ledgerResult.error;
-  const position = positionResult.data as null | {
-    amount_due_xaf: number | string; residual_opening_credit_xaf: number | string; covered_periods: number | string;
-    last_covered_period_end: string | null; next_uncovered_due_date: string | null; next_due_date: string | null;
-    last_ledger_date: string | null;
-  };
   return {
-    amountDueXaf: Number(position?.amount_due_xaf ?? 0),
-    residualOpeningCreditXaf: Number(position?.residual_opening_credit_xaf ?? 0),
-    coveredPeriods: Number(position?.covered_periods ?? 0),
-    lastCoveredPeriodEnd: position?.last_covered_period_end ?? null,
-    nextUncoveredDueDate: position?.next_uncovered_due_date ?? null,
-    nextDueDate: position?.next_due_date ?? null,
-    lastLedgerDate: position?.last_ledger_date ?? null,
+    ...position(positionResult.data as PositionRow | null),
     dues: ((duesResult.data ?? []) as DueRow[]).map(due),
     ledger: ((ledgerResult.data ?? []) as LedgerRow[]).map(ledger),
   };
