@@ -35,8 +35,7 @@
 
 ### Confirmé hors MVP par le Lot 2
 
-- Surpaiement comme crédit, annulation financière, remboursement et transfert de paiement.
-- Paiement réparti sur plusieurs échéances.
+- Remboursement financier et transfert d’un Payment confirmé entre locataires.
 - Plusieurs locataires titulaires d’un contrat.
 - Fin de bail avancée, renouvellement complexe, bibliothèque juridique et signature.
 - Copropriété juridique et registres de propriété.
@@ -316,7 +315,7 @@ Chaque critère suit `Étant donné / Lorsque / Alors`. Un critère interne tena
 
 ### AC-PAY-008 — Surpaiement
 
-**Étant donné** un montant supérieur au restant, **lorsque** la confirmation est demandée, **alors** l’opération est bloquée avant création de paiement avec un message explicite ; aucun crédit, transfert ou remboursement n’est créé.
+**Étant donné** un montant supérieur au restant exigible, **lorsque** la confirmation est validée, **alors** les dettes sélectionnées sont couvertes sans dépassement et le reliquat devient un crédit Payment traçable dans le Ledger ; aucun remboursement ni transfert silencieux n’est créé.
 
 ### AC-PAY-009 — Double soumission
 
@@ -333,6 +332,10 @@ Chaque critère suit `Étant donné / Lorsque / Alors`. Un critère interne tena
 ### AC-PAY-012 — Correction
 
 **Étant donné** un paiement confirmé erroné, **lorsque** un utilisateur non autorisé tente de le modifier, **alors** la mutation directe est refusée et le paiement source reste inchangé.
+
+### AC-PAY-012B — Reversal autorisé
+
+**Étant donné** un Payment confirmé erroné, **lorsque** un Owner fournit un motif et confirme son annulation, **alors** l’original et ses allocations sont conservés, une écriture compensatoire restaure le solde et une seconde annulation est refusée.
 
 ### AC-PAY-013 — Demande de correction
 

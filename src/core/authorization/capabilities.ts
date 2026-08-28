@@ -25,6 +25,7 @@ export const CAPABILITIES = [
   "due.view",
   "payment.view",
   "payment.record",
+  "payment.correct",
   "payment.correction.request",
   "receipt.view",
   "receipt.share",

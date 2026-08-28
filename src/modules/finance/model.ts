@@ -24,6 +24,11 @@ export type DueSummary = {
   expectedXaf: number;
   netExpectedXaf: number;
   coveredXaf: number;
+  coveredByPaymentCreditXaf: number;
+  paymentAllocatedXaf: number;
+  rentPaidXaf: number;
+  recurringChargesPaidXaf: number;
+  depositPaidXaf: number;
   remainingXaf: number;
   status: DueStatus;
   nextReminderDate: string | null;
@@ -32,7 +37,8 @@ export type DueSummary = {
 export type LedgerEntrySummary = {
   id: string;
   leaseId: string;
-  type: DueLineType | "opening_credit";
+  type: DueLineType | "opening_credit" | "payment" | "payment_reversal";
+  paymentId: string | null;
   reference: string;
   descriptionCode: string;
   occurredOn: string;
@@ -46,6 +52,10 @@ export type LedgerEntrySummary = {
 export type TenantFinancialPosition = {
   amountDueXaf: number;
   residualOpeningCreditXaf: number;
+  residualPaymentCreditXaf: number;
+  availableCreditXaf: number;
+  totalReceivedXaf: number;
+  ledgerBalanceXaf: number;
   coveredPeriods: number;
   lastCoveredPeriodEnd: string | null;
   nextUncoveredDueDate: string | null;

@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-27 — patch UX post-6C1 terminé et testé ; aucun nouveau lot métier ouvert
+> Mise à jour : 2026-08-27 — Lot 6C2 déployé en Production ; validation fonctionnelle en attente
 
 ## Lots
 
@@ -19,6 +19,7 @@
 - **Visual Direction v2B — Formes signature + déploiement global : TERMINÉE / TESTÉE / DÉPLOYÉE — VALIDATION VISUELLE BLAISE EN ATTENTE**
 - **Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Patch UX post-6C1 — Dashboard + détails Location/Locataire : TERMINÉ / TESTÉ — aucun changement métier**
+- **Lot 6C2 — Payments + Allocations + Crédits + Corrections : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
@@ -32,7 +33,7 @@
 - Parcours propriétaire/interne, inventaire d’écrans, périmètre, critères d’acceptation et matrice d’expérience du Lot 2 validés.
 - Auth interne : email avec OTP et lien sécurisé ; PIN 6 chiffres réservé à l’accès quotidien sur appareil autorisé.
 - Onboarding Organization minimal, Unit explicite, dossier locataire minimal et périodicités limitées validés.
-- Paiement total ou partiel jusqu’au restant dû ; surpaiement et cas financiers avancés bloqués.
+- Paiement total, partiel, multi-échéances et supérieur au dû ; le surplus réel devient un crédit Ledger traçable selon D-101 à D-104.
 - Paiement enregistrable par Owner, gestionnaire et encaisseur avec revérification tenant-scoped à la confirmation.
 - Matrice des six rôles internes validée avec refus par défaut et audit visible uniquement par Owner.
 - Invitation interne expirant après 7 jours et protection du dernier Owner validées.
@@ -208,12 +209,16 @@
 - Migration Supabase Production `lot_6b_1_unit_reference_rent_ux` (`20260826211350`) appliquée au seul projet KJORA : colonnes, contraintes, privilèges minimaux et RPC `SECURITY INVOKER` en place ; rappel du Lease Production existant normalisé de 1 à 10 jours et trigger d’immutabilité confirmé actif après migration.
 - Lot 6B.1 — 161 assertions pgTAP distantes réussies : 5B (9), 5C (47), 6A enrichi (54) et 6B/6B.1 (51). Les transactions ont été annulées et aucune Organization, Unit, Tenant ou Lease de test n’a persisté.
 - Advisors relancés après 6B.1 : aucun nouvel avertissement sécurité ou performance lié à la migration ; le nouveau RPC est `SECURITY INVOKER`, refusé à `PUBLIC`/`anon` et accordé à `authenticated` sous RLS existante.
-- Migration Production `lot_6c1_dues_charges_ledger` et ses deux correctifs append-only appliqués sur KJORA : 2 versions financières, 11 Dues dont 2 dépôts, 17 lignes Ledger dont 2 crédits d’ouverture, 2 événements `LEASE_LEDGER_OPENED` et un unique job quotidien actif. Aucun Payment réel n’a été créé.
+- Migration Production `lot_6c1_dues_charges_ledger` et ses deux correctifs append-only appliqués sur KJORA : l’initialisation avait produit 2 versions financières, 11 Dues dont 2 dépôts, 17 lignes Ledger dont 2 crédits d’ouverture et 2 événements `LEASE_LEDGER_OPENED`. Le job quotidien unique a depuis fait évoluer naturellement l’instantané au 27 août à 3 baux actifs, 17 Dues et 29 lignes Ledger ; aucun Payment n’existait avant l’activation distincte de 6C2.
 - Lot 6C1 — 210 assertions pgTAP distantes réussies et annulées : 5B (9), 5C (47), 6A (54), 6B/6B.1 (51), 6C1 (49). Aucune Organization de test n’a persisté.
 - Advisors relancés après 6C1 : les nouveaux avertissements sécurité concernent uniquement les deux RPC `SECURITY DEFINER` intentionnels, tous deux bornés par `lease.manage`; les nouveaux avis performance sont des index encore inutilisés juste après création, conservés pour les clés étrangères et les lectures Ledger. Aucun défaut RLS ni exposition `anon` n’est signalé.
 - Patch UX post-6C1 — le Dashboard n’expose plus de slug email dans la salutation et annonce les données financières réelles selon `due.view`. Location et Locataire distinguent le montant contractuel ventilé du crédit disponible, des périodes couvertes et de la prochaine échéance non couverte ; date limite et avis sont formulés en langage naturel. Aucun calcul Ledger, schéma, RLS, Payment ou notification n’est modifié.
 - Patch UX post-6C1 — 91 tests Node, TypeScript, ESLint et build Production Next.js 16.3.2 réussis avec 36 routes.
+- Lot 6C2 — migration Production `lot_6c2_payments_allocations` appliquée sur KJORA : `payments`, `payment_allocations`, RPC atomiques de confirmation/reversal, vues financières enrichies, référence lisible et capability Owner `payment.correct` actives. Aucun Payment ou Allocation n’a été créé par la migration.
+- Lot 6C2 — Paiements, Nouveau paiement, détail Payment, historiques Tenant/Location, statuts Due et état de compte sont branchés sur les données réelles ; les placeholders Receipt/PDF/notifications 6C3 et portail 6E restent fermés.
+- Lot 6C2 — 100 tests Node, TypeScript, ESLint et build Next.js Production de 38 routes réussis. Les 55 assertions pgTAP 6C2 et toutes les régressions 5B–6C1 passent en Production, soit 265 assertions transactionnelles annulées ; aucune Organization, aucun utilisateur, Payment ou Allocation de test ne persiste.
+- Lot 6C2 — advisors contrôlés : les RPC financières `SECURITY DEFINER` sont intentionnelles, bornées à `authenticated`, à l’Organization et aux capabilities ; les index neufs restent conservés malgré leur état initialement inutilisé. Aucun défaut RLS, clé étrangère ou exposition `anon` introduit par 6C2.
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le Lot 6C1 par Blaise. Prochaine implémentation autorisable ensuite : Lot 6C2 — Paiements + Allocation + Crédits + Corrections. Ne pas commencer 6C2 sans gate distinct.**
+**Faire valider fonctionnellement le Lot 6C2 par Blaise. Ne pas commencer 6C3 sans gate distincte.**

@@ -1,6 +1,6 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-27 : le **Lot 6C1** est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** selon D-093 à D-099. Les 210 assertions pgTAP cumulées passent avec rollback et les validations Node/TypeScript/ESLint/build sont vertes. 6C2 n’est pas commencé.
+> Mise à jour 2026-08-27 : le **Lot 6C2** est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** selon D-101 à D-107. La migration Production est appliquée et 265 assertions pgTAP transactionnelles passent sans données de test persistantes. 6C3 n’est pas commencé.
 
 > Jalon 2026-08-27 : la **Visual Direction v2A** a été implémentée sur les tokens globaux et trois écrans pilotes (Dashboard, détail Locataire, détail Location), selon D-091. À ce jalon, v2B et 6C1 étaient non commencés.
 
@@ -383,7 +383,7 @@ Générer les échéances et charges effectives-datées depuis le Lease, puis é
 
 ### Objectif
 
-Enregistrer les paiements manuels, les allouer explicitement et gérer le crédit locataire sans surpaiement implicite.
+Enregistrer l’argent réellement reçu, l’allouer explicitement à une ou plusieurs Dues et gérer crédit/reversal sans réécrire l’historique.
 
 ### Dépendances
 
@@ -394,10 +394,20 @@ Enregistrer les paiements manuels, les allouer explicitement et gérer le crédi
 
 - Payment et PaymentAllocation ;
 - paiements totaux/partiels et quatre moyens manuels ;
-- crédit locataire explicite ;
+- multi-allocation, surpaiement et crédit locataire dérivé ;
 - résumé/confirmation et anti-double soumission ;
+- transaction atomique, verrou par Lease et idempotence tenant-scoped ;
+- reversal complet Owner avec motif, Ledger compensatoire et historique conservé ;
 - `PAYMENT_RECORDED` puis `PAYMENT_COMPLETED` ;
 - aucun Receipt ou document réel dans 6C2.
+
+### Critères de sortie
+
+- cas partiel, exact, surpaiement, multi-échéances, paiements multiples, crédit existant, idempotence et reversal passants ;
+- RLS Owner/gestionnaire/encaisseur/comptable et refus gardien/consultation/Org B/anon/direct UUID ;
+- aucun Payment ou allocation de test persistant en Production ;
+- Node, TypeScript, ESLint, build, pgTAP et advisors verts ;
+- Vercel Production `Ready`, puis validation fonctionnelle Blaise en attente.
 
 ## 12. Lot 6C3 — Documents + Notifications + Receipts + Statements
 
@@ -565,4 +575,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Faire valider fonctionnellement le **Lot 6C1** par Blaise. La prochaine étape autorisable sera **Lot 6C2 — Paiements + Allocation + Crédits + Corrections**. Ne pas commencer 6C2 sans gate distinct.
+Faire valider fonctionnellement le **Lot 6C2 — Paiements + Allocation + Crédits + Corrections** par Blaise. Ne pas commencer 6C3 avant la gate distincte.

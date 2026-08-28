@@ -13,6 +13,7 @@ const propertiesViews = readFileSync(new URL("../src/modules/properties/views.ts
 const team = readFileSync(new URL("../src/core/team/team-management.tsx", import.meta.url), "utf8");
 const settings = readFileSync(new URL("../src/app/(internal)/app/parametres/page.tsx", import.meta.url), "utf8");
 const payments = readFileSync(new URL("../src/app/(internal)/app/paiements/page.tsx", import.meta.url), "utf8");
+const paymentViews = readFileSync(new URL("../src/modules/payments/views.tsx", import.meta.url), "utf8");
 const activity = readFileSync(new URL("../src/app/(internal)/app/activite/page.tsx", import.meta.url), "utf8");
 const portalHome = readFileSync(new URL("../src/app/(portal)/portal/page.tsx", import.meta.url), "utf8");
 const portalRents = readFileSync(new URL("../src/app/(portal)/portal/loyers/page.tsx", import.meta.url), "utf8");
@@ -91,15 +92,17 @@ test("v2B reaches properties, units, team, settings and auth surfaces", () => {
   assert.match(css, /\.desktop-rail[\s\S]*linear-gradient/);
 });
 
-test("future modules use honest v2 placeholders instead of financial fixtures", () => {
+test("6C2 payments are real while later modules keep honest placeholders", () => {
   assert.match(ui, /export function FutureState/);
-  assert.match(payments, /Disponible avec le Lot 6C2/);
+  assert.match(payments, /getPayments/);
+  assert.match(paymentViews, /Confirmer l’encaissement/);
+  assert.match(paymentViews, /Reçu — bientôt disponible avec 6C3/);
   assert.match(activity, /Disponible avec le Lot 6D/);
   assert.match(portalHome, /Disponible avec le Lot 6E/);
   assert.match(portalRents, /Disponible avec le Lot 6C1 puis le Portail 6E/);
   assert.match(portalReceipts, /Disponible avec le Lot 6C3 puis le Portail 6E/);
   assert.match(portalShell, /Disponible avec le Lot 6E/);
-  for (const source of [payments, activity, portalHome, portalRents, portalReceipts, portalShell]) {
+  for (const source of [payments, paymentViews, activity, portalHome, portalRents, portalReceipts, portalShell]) {
     assert.doesNotMatch(source, /80 000 XAF|160 000 XAF|240 000 XAF|Échéances fictives|Paiement fictif|demoPortalContext|Horizon Habitat|reçu fictif/i);
   }
 });

@@ -123,11 +123,9 @@ Les préférences personnelles comme la langue de l’utilisateur sont globales 
 | Payment Correction Request | Signalement motivé sans mutation du paiement | Payment, demandeur, état de demande | `organization_id` obligatoire | Capacité Payments | Paiement corrigé ou event de remboursement |
 | Receipt | Reçu métier dérivé après Payment Completed | Payment, artefact File Asset, consultation portail | `organization_id` obligatoire | Capacité Receipts | Payment source ou montant éditable concurrent |
 
-### Payment Allocation recommandée
+### Payment Allocation réalisée au Lot 6C2
 
-**RETENU LOT 4 :** conserver une entité d’allocation même si le MVP affecte chaque paiement à une seule échéance. Elle rend explicite la somme allouée, facilite les paiements partiels et évite de placer une référence fragile directement dans Payment. Au MVP : exactement une allocation par paiement, une seule Due cible, montant positif et inférieur ou égal au restant.
-
-Le paiement réparti sur plusieurs échéances reste MVP OUT ; l’entité ne l’active pas dans l’UX ou les règles.
+La recommandation Lot 4 d’une allocation unique est remplacée par D-101. Un Payment peut avoir plusieurs PaymentAllocations vers plusieurs Dues du même Lease. Chaque allocation conserve une ventilation loyer/charges/dépôt/ajustement, reste positive et ne dépasse ni la Due restante ni le Payment disponible.
 
 ### Receipt et artefact
 
@@ -183,7 +181,7 @@ Une relance invalide l’invitation active précédente correspondante. Les jeto
 | Tenant | Lease | 0..n | Un Tenant titulaire par Lease au MVP |
 | Lease | Rent Schedule | 1 | Périodicité validée |
 | Lease | Rent Due | 0..n | Générées selon Schedule |
-| Payment | Payment Allocation | 1 au MVP | Une Due cible, pas de multi-allocation UX |
+| Payment | Payment Allocation | 0..n | Plusieurs Dues du même Lease ; total alloué ≤ Payment |
 | Payment | Receipt | 0..1 reçu actif | Seulement après Completed |
 | Tenant Portal Access | Portal Lease Access | 1..n | Même Organization et Tenant |
 | Domain Event | Outbox Delivery | 0..n | Une livraison logique par consommateur |
@@ -243,3 +241,15 @@ Le Lot 6C1 matérialise la chaîne `Lease → Due → Ledger` sans créer `Payme
 - le solde Ledger est `crédit - débit`, mais l’interface qualifie toujours le résultat en dette, crédit ou à jour.
 
 La lecture interne exige `due.view`. Le portail n’accède pas encore à ces vues : le lien sécurisé `TenantPortalAccess` demeure exclusivement au Lot 6E.
+
+## 16. Réalisation physique Lot 6C2
+
+- `payments` constate les montants réellement reçus avec référence `PAY-AAAA-NNNNNN`, méthode, date financière, acteur, idempotency key et snapshots Ledger avant/après ;
+- `payment_allocations` explique la distribution d’un Payment vers une ou plusieurs Dues et ses composantes ;
+- la confirmation atomique couvre automatiquement les obligations périodiques exigibles les plus anciennes ; dépôt et échéances futures restent manuels ;
+- le surplus non alloué devient crédit Payment dans le Ledger, distinct du crédit d’ouverture 6C1 ;
+- `confirmed` et `reversed` sont les seuls états exposés ; un reversal Owner ajoute une compensation sans supprimer l’original ;
+- `dues_with_status` et `tenant_financial_positions` intègrent les allocations confirmées et ignorent celles d’un Payment reversed ;
+- RLS repose sur `payment.view`, la création sur `payment.record`, et le reversal effectif sur `payment.correct` réservée à Owner.
+
+La description complète se trouve dans `docs/architecture/PAYMENTS-ALLOCATIONS-v0.1.md`. Aucun Receipt ni accès portail n’est ajouté par 6C2.

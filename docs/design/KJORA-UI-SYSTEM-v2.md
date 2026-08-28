@@ -252,3 +252,14 @@ Les données réelles restent utilisées pour Biens, Units, Locataires et Locati
 - Le même résumé financier réel est visible depuis le dossier Locataire et le détail Location, sans dupliquer ni recalculer la vérité 6C1 dans le client.
 
 **Visual Direction v2B reste déployée et sa validation visuelle par Blaise est en attente. Le Lot 6C1 étend le système avec la vérité financière réelle, sans démarrer les paiements 6C2 ni le portail sécurisé 6E.**
+
+## 18. Extension Paiements Lot 6C2
+
+- La liste Paiements utilise une table régulière sur desktop et des lignes/cartes lisibles sur mobile ; les surfaces signature restent réservées au hero et aux synthèses.
+- Le workflow sensible suit quatre étapes visibles : Location, Paiement, Allocation, Confirmation.
+- Le résumé final réconcilie toujours montant reçu, montant alloué et crédit créé avant d’activer **Confirmer l’encaissement**.
+- Espèces, Mobile Money et virement utilisent des icônes et libellés textuels ; la couleur seule ne porte jamais le sens.
+- Une allocation affiche période, référence Due, restant, loyer, charges et dépôt éventuel sans jargon comptable requis.
+- Le détail Payment qualifie clairement `Confirmé` ou `Annulé`, montre l’impact Ledger et conserve un reversal rouge/destructif avec motif obligatoire.
+- Tenant et Location affichent les derniers Payments réels. Reçu, quittance, PDF, emails et notifications conservent un placeholder explicite 6C3.
+- Les rôles sans `payment.view` ne reçoivent ni tableau, ni montant masqué, ni lien Payment.

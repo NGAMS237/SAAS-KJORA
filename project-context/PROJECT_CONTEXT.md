@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-27 — Lot 6C1 livré ; clarification UX du montant contractuel, du crédit et des dates financières
+> Dernière mise à jour : 2026-08-27 — Lot 6C2 déployé en Production ; validation fonctionnelle en attente
 
 ## 1. Vision
 
@@ -434,7 +434,7 @@ Prévoir clés serveur séparées, domaines et journaux séparés, et aucun doma
 - UI : Inter ; titres et montants renforcés avec Inter Tight. Le serif reste réservé au wordmark Kjora.
 - Référence active : `docs/design/KJORA-UI-SYSTEM-v2.md` et décisions D-091/D-092. Le système v1 est conservé comme historique.
 - v2B généralise les tokens et composants v2 aux écrans principaux. Les grandes surfaces peuvent utiliser un coin asymétrique accentué ; champs, tableaux, petites lignes et contrôles restent réguliers.
-- Les placeholders des fonctions futures indiquent leur lot de disponibilité et n’affichent aucun chiffre fictif. Les données 6C1 réelles distinguent explicitement le total contractuel fixe du crédit disponible et des périodes couvertes ; 6C2 n’est pas commencé.
+- Les placeholders des fonctions futures indiquent leur lot de disponibilité et n’affichent aucun chiffre fictif. Les données financières réelles distinguent explicitement le total contractuel fixe, le crédit disponible, les périodes couvertes, les Payments confirmés et leurs allocations ; les reçus et notifications restent fermés jusqu’à 6C3.
 
 ## 17. Architecture UX validée — Lot 3
 
@@ -574,4 +574,6 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 
 **Visual Direction v2B — FORMES SIGNATURE + DÉPLOIEMENT GLOBAL : TERMINÉE / TESTÉE / DÉPLOYÉE — VALIDATION VISUELLE BLAISE EN ATTENTE.** D-092 généralise la direction v2 aux écrans principaux, formalise la géométrie organique asymétrique sur les seules surfaces majeures et remplace les anciennes données de démonstration financières par des placeholders explicites. Aucun schéma, RLS, Auth logique ou contrat métier n’est modifié.
 
-**Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-093 à D-099 fixent les Dues ventilées, le Ledger append-only, la convention de solde, le crédit d’ouverture sans faux Payment, le calendrier multi-périodicité, les proratas, les termes effectifs-datés, l’idempotence et la sécurité `due.view`. Production contient 2 versions financières, 11 Dues et 17 lignes Ledger pour les 2 baux actifs, ainsi qu’un job quotidien unique ; 210 assertions pgTAP cumulées passent avec rollback. Le portail réel reste soumis à `TenantPortalAccess` au Lot 6E. Le Lot 6C2 n’est pas commencé.
+**Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-093 à D-099 fixent les Dues ventilées, le Ledger append-only, la convention de solde, le crédit d’ouverture sans faux Payment, le calendrier multi-périodicité, les proratas, les termes effectifs-datés, l’idempotence et la sécurité `due.view`. Le job quotidien unique reste actif et a fait évoluer naturellement Production à 3 baux actifs, 17 Dues et 29 lignes Ledger au contrôle du 27 août 2026 ; aucun Payment n’existait avant 6C2. Le portail réel reste soumis à `TenantPortalAccess` au Lot 6E.
+
+**Lot 6C2 — Payments + Allocations + Crédits + Corrections : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-101 à D-107 introduisent l’argent réellement reçu, la multi-allocation, les paiements partiels/exacts/supérieurs, le crédit Payment, l’idempotence, la sérialisation par Lease et le reversal Owner compensatoire. La migration Production est appliquée ; 265 assertions pgTAP cumulées passent avec rollback et aucune ligne Payment ou Allocation de test ne persiste. La page Paiements, le workflow en quatre étapes, le détail Payment et les historiques Tenant/Location utilisent les données réelles. Aucun Receipt, PDF, notification ou capacité portail n’est créé. Référence technique : `docs/architecture/PAYMENTS-ALLOCATIONS-v0.1.md`.

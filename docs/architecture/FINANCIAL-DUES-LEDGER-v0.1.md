@@ -38,6 +38,16 @@ Le portail réel n’est pas exposé en 6C1 faute de `TenantPortalAccess`, prév
 
 ## Validation Production
 
-La migration et ses durcissements append-only sont appliqués au projet KJORA. Les deux baux actifs ont produit 2 versions financières, 11 Dues dont 2 dépôts, 17 lignes Ledger dont 2 crédits d’ouverture, et un seul job quotidien actif. Aucun Payment n’existe dans ce flux.
+La migration et ses durcissements append-only sont appliqués au projet KJORA. Le job quotidien unique a fait évoluer naturellement Production à 3 baux actifs, 17 Dues et 29 lignes Ledger au contrôle du 27 août 2026. Ces volumes sont un instantané opérationnel, pas un invariant ; aucun Payment n’existait avant l’activation distincte de 6C2.
 
 Les suites pgTAP 5B à 6C1 totalisent 210 assertions réussies avec rollback. Les RPC publics de génération et de programmation de termes sont intentionnellement `SECURITY DEFINER`, refusés à `anon` et contrôlés par `lease.manage`. Les avis d’index inutilisés sont attendus immédiatement après création ; les index de relations et de lecture chronologique restent nécessaires.
+
+## Extension Lot 6C2 — paiements réels
+
+Le Lot 6C2 ajoute `payments` et `payment_allocations` sans modifier les Dues historiques. Un Payment confirmé ajoute une ligne Ledger crédit ; ses allocations réduisent explicitement le restant des Dues. Le montant non alloué reste un crédit Payment et la projection 6C1 l’applique ensuite aux obligations périodiques, sans l’assimiler au crédit d’ouverture.
+
+L’allocation automatique cible uniquement les Dues périodiques exigibles, dans l’ordre chronologique. Le dépôt et les Dues futures demandent une sélection explicite. Dans chaque Due, la ventilation stable est loyer puis charges ; le dépôt reste une obligation séparée.
+
+Un Payment `reversed` cesse de contribuer aux allocations et au crédit disponible. Son écriture Ledger initiale reste intacte et une ligne `payment_reversal` de sens inverse restaure la position financière. Les running balances restent recalculables par date financière, y compris pour un Payment antidaté.
+
+Voir `PAYMENTS-ALLOCATIONS-v0.1.md` pour les RPC, l’idempotence, les verrous de concurrence et le RBAC. Aucun reçu, quittance, PDF ou message n’est produit par 6C2.

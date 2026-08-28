@@ -65,7 +65,7 @@ Le dashboard `C` proposé pour l’encaisseur/gardien signifie un accueil de tâ
 | Consulter audit | V | — | — | — | — | — |
 | Inviter / relancer / révoquer accès portail | M | M | — | — | — | — |
 
-Les cellules `—` sur la modification d’une échéance ou d’un paiement confirmé empêchent une correction silencieuse. Le MVP enregistre seulement une demande motivée ; toute correction effective future reste hors périmètre.
+Les cellules `—` sur la modification d’une échéance ou d’un paiement confirmé empêchent une correction silencieuse. Depuis D-103/D-105, seul Owner peut effectuer un reversal compensatoire motivé ; gestionnaire, encaisseur et comptable conservent uniquement la demande de correction.
 
 ## 5. Organization Owner / propriétaire
 
@@ -93,14 +93,14 @@ Les cellules `—` sur la modification d’une échéance ou d’un paiement con
 - Créer/configurer une Organization ; modifier profil, branding et paramètres sensibles.
 - Inviter et révoquer des membres avec un rôle fixe.
 - Gérer biens, unités, locataires et contrats.
-- Enregistrer des paiements manuels total/partiel.
+- Enregistrer des paiements manuels total/partiel/multi-échéances et effectuer un reversal compensatoire motivé.
 - Consulter et partager les reçus.
 - Inviter, relancer et révoquer un `Tenant Portal Access`.
 - Consulter l’audit métier et l’état portail synthétique.
 
 ### Actions interdites
 
-- Corriger silencieusement un paiement confirmé.
+- Modifier ou supprimer silencieusement un paiement confirmé ; toute correction effective passe par reversal.
 - Hériter d’un droit Owner d’une autre Organization.
 - Traiter `Organization Owner` comme preuve juridique de propriété des biens.
 

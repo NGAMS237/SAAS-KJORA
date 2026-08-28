@@ -15,13 +15,18 @@ const lot6aMigration = readFileSync(
   new URL("../supabase/migrations/20260826190000_lot_6a_properties_units.sql", import.meta.url),
   "utf8",
 );
+const lot6c2Migration = readFileSync(
+  new URL("../supabase/migrations/20260827230000_lot_6c2_payments_allocations.sql", import.meta.url),
+  "utf8",
+);
 const teamUi = readFileSync(
   new URL("../src/core/team/team-management.tsx", import.meta.url),
   "utf8",
 );
 
 function grants(role: string, capability: string) {
-  return migration.includes(`('${role}', '${capability}')`) || lot6aMigration.includes(`('${role}', '${capability}')`);
+  return migration.includes(`('${role}', '${capability}')`) || lot6aMigration.includes(`('${role}', '${capability}')`)
+    || lot6c2Migration.includes(`('${role}', '${capability}')`);
 }
 
 test("le RBAC contient exactement les six rôles internes confirmés", () => {
@@ -46,6 +51,13 @@ test("Owner, gestionnaire et encaisseur peuvent enregistrer un paiement", () => 
   for (const role of INTERNAL_ROLES) {
     assert.equal(grants(role, "payment.record"), ["organization_owner", "manager", "collector"].includes(role));
   }
+});
+
+test("Owner seul effectue le reversal financier 6C2", () => {
+  for (const role of INTERNAL_ROLES) {
+    assert.equal(grants(role, "payment.correct"), role === "organization_owner");
+  }
+  assert.match(lot6c2Migration, /payment_history_is_append_only/i);
 });
 
 test("Lot 6A applique les capacités Unit du registre central", () => {
