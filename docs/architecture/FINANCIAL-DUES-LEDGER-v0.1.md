@@ -51,3 +51,7 @@ L’allocation automatique cible uniquement les Dues périodiques exigibles, dan
 Un Payment `reversed` cesse de contribuer aux allocations et au crédit disponible. Son écriture Ledger initiale reste intacte et une ligne `payment_reversal` de sens inverse restaure la position financière. Les running balances restent recalculables par date financière, y compris pour un Payment antidaté.
 
 Voir `PAYMENTS-ALLOCATIONS-v0.1.md` pour les RPC, l’idempotence, les verrous de concurrence et le RBAC. Aucun reçu, quittance, PDF ou message n’est produit par 6C2.
+
+## Extension Lot 6C3 — lecture documentaire
+
+6C3 ne modifie aucun calcul Due/Ledger. Un avis snapshotte la ventilation loyer/charges, le montant attendu, le crédit déjà affecté et le reste depuis `dues_with_status`. L’état de compte PDF reprend exclusivement `ledger_entries` et recalcule son solde courant selon la convention `crédits - débits`. Les alertes de dernière période prépayée et crédit insuffisant lisent les projections 6C1/6C2 ; elles ne stockent aucun champ balance parallèle.

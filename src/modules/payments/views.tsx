@@ -5,7 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, CalendarDays, CheckCircle2, CircleDollarSign, CreditCard,
-  FileClock, Landmark, Plus, ReceiptText, RotateCcw, Search, Smartphone,
+  FileClock, Landmark, Plus, RotateCcw, Search, Smartphone,
   UserRound, WalletCards,
 } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
@@ -20,6 +20,8 @@ import {
   type PaymentMethod,
   type PaymentSummary,
 } from "@/modules/payments/model";
+import type { FinancialDocumentSummary } from "@/modules/documents/model";
+import { FinancialDocumentsPanel } from "@/modules/documents/views";
 
 function useCopy() {
   const { language } = usePreferences();
@@ -197,7 +199,7 @@ function balanceLabel(value: number, t: ReturnType<typeof useCopy>) {
   return t("À jour · 0 XAF", "Current · 0 XAF");
 }
 
-export function PaymentDetailView({ payment, canCorrect, currentUserId, success }: { payment: PaymentDetail; canCorrect: boolean; currentUserId: string; success: boolean }) {
+export function PaymentDetailView({ payment, canCorrect, currentUserId, success, documents, canShare, emailDeliveryEnabled }: { payment: PaymentDetail; canCorrect: boolean; currentUserId: string; success: boolean; documents: FinancialDocumentSummary[]; canShare: boolean; emailDeliveryEnabled: boolean }) {
   const t = useCopy(); const router = useRouter(); const [reversing, setReversing] = useState(false); const [reason, setReason] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null);
   async function reverse() { setBusy(true); setMessage(null); const result = await mutate({ action: "reverse", paymentId: payment.id, reason }); setBusy(false); if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t)); setReversing(false); router.refresh(); }
   return <div className="page-stack payment-detail-v2"><Link className="demo-back" href="/app/paiements"><ArrowLeft size={17} />{t("Tous les paiements", "All payments")}</Link>{success ? <p className="payment-success-banner" role="status"><CheckCircle2 size={18} />{t("Paiement enregistré et soldes recalculés.", "Payment recorded and balances recalculated.")}</p> : null}<section className="payment-hero"><div><p className="eyebrow">{payment.reference}</p><h1>{money(payment.amountXaf)}</h1><p>{payment.tenantName} · {payment.propertyName} · {payment.unitLabel}</p></div><div className="payment-hero__method">{paymentMethodIcon(payment.method, 22)}<span>{methodLabel(payment.method, t)}</span><strong>{shortDate(payment.paymentDate)}</strong></div>{paymentStatus(payment, t)}</section>
@@ -206,7 +208,8 @@ export function PaymentDetailView({ payment, canCorrect, currentUserId, success 
     </div>
     <Card className="payment-impact-card"><div className="section-heading"><div><p className="eyebrow">Ledger</p><h2>{t("Impact au moment de l’encaissement", "Impact at confirmation")}</h2></div><CalendarDays size={21} /></div><div className="payment-impact-values"><span><small>{t("Avant", "Before")}</small><strong>{balanceLabel(payment.balanceBeforeXaf, t)}</strong></span><span><small>{t("Après réception", "After receipt")}</small><strong>{balanceLabel(payment.balanceAfterXaf, t)}</strong></span></div><Link className="button button--secondary" href={`/app/locataires/${payment.tenantId}/etat-de-compte`}>{t("Voir l’état de compte", "View statement")}</Link></Card>
     {payment.status === "reversed" ? <Card className="payment-reversal-card"><div className="section-heading"><div><p className="eyebrow">PAYMENT_REVERSED</p><h2>{t("Paiement annulé par compensation", "Payment reversed by compensation")}</h2></div><RotateCcw size={21} /></div><p>{payment.reversalReason}</p><small>{t("L’original et ses allocations sont conservés ; une ligne Ledger inverse restaure les soldes.", "The original and its allocations are preserved; an inverse Ledger line restores balances.")}</small></Card> : null}
-    <div className="payment-detail-actions"><button className="button button--secondary" disabled type="button"><ReceiptText size={17} />{t("Reçu — bientôt disponible avec 6C3", "Receipt — coming with 6C3")}</button>{canCorrect && payment.status === "confirmed" ? <button className="button button--danger" onClick={() => setReversing(true)} type="button"><RotateCcw size={17} />{t("Annuler ce paiement", "Reverse this payment")}</button> : null}</div>
+    <FinancialDocumentsPanel canShare={canShare} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} />
+    <div className="payment-detail-actions">{canCorrect && payment.status === "confirmed" ? <button className="button button--danger" onClick={() => setReversing(true)} type="button"><RotateCcw size={17} />{t("Annuler ce paiement", "Reverse this payment")}</button> : null}</div>
     {reversing ? <div className="confirmation-modal" role="presentation"><button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={() => setReversing(false)} type="button" /><section aria-modal="true" className="confirmation-modal__panel" role="dialog"><div className="confirmation-modal__header"><div><p className="eyebrow">{t("Correction financière", "Financial correction")}</p><h2>{t("Annuler par compensation", "Reverse by compensation")}</h2></div></div><p>{t("Le paiement original ne sera jamais supprimé. Ses allocations cesseront d’agir et une écriture inverse sera ajoutée au Ledger.", "The original payment will never be deleted. Its allocations will stop applying and an inverse entry will be appended to the Ledger.")}</p><label className="field"><span>{t("Motif obligatoire", "Required reason")}</span><textarea minLength={3} maxLength={500} rows={4} value={reason} onChange={(event) => setReason(event.target.value)} /></label>{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}<div className="demo-form-actions"><button className="button button--secondary" disabled={busy} onClick={() => setReversing(false)} type="button">{t("Conserver le paiement", "Keep payment")}</button><button className="button button--danger" disabled={busy || reason.trim().length < 3} onClick={reverse} type="button">{busy ? t("Annulation…", "Reversing…") : t("Confirmer l’annulation", "Confirm reversal")}</button></div></section></div> : null}
   </div>;
 }

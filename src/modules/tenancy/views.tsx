@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Building2, ChevronRight, CircleAlert,
-  FileText, History, Home, KeyRound, LayoutGrid, List,
+  History, Home, KeyRound, LayoutGrid, List,
   Mail, Pencil, Phone, Plus, Search, ShieldCheck, StickyNote, UserRound,
   UserRoundPlus, X,
 } from "lucide-react";
@@ -15,6 +15,8 @@ import type { LeaseFinancialDetail, TenantFinancialDetail, TenantFinancialPositi
 import { LeaseDuesPanel, TenantFinancialSummary } from "@/modules/finance/views";
 import { PaymentHistoryPanel } from "@/modules/payments/views";
 import type { PaymentSummary } from "@/modules/payments/model";
+import type { FinancialDocumentSummary } from "@/modules/documents/model";
+import { FinancialDocumentsPanel } from "@/modules/documents/views";
 import {
   calendarEntryProration,
   calendarEntryProrationDetail,
@@ -162,7 +164,7 @@ export function TenantCreateForm() {
   return <div className="page-stack demo-narrow form-page-v2"><Link className="demo-back" href="/app/locataires"><ArrowLeft size={17} />{t("Tous les locataires", "All tenants")}</Link><PageHeader eyebrow="SCR-TEN-02" title={t("Ajouter un locataire", "Add tenant")} description={t("Créez le dossier métier uniquement. Aucun compte portail n’est créé.", "Create the business record only. No portal account is created.")} /><LiveDataNotice /><Card><form className="form-stack" onSubmit={submit}><TenantFields /><button className="button button--primary" disabled={busy} type="submit">{busy ? t("Création…", "Creating…") : t("Créer le dossier", "Create record")}</button>{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}</form></Card></div>;
 }
 
-export function TenantDetailView({ tenant, canManage, financial, payments, canRecordPayment }: { tenant: TenantDetail; canManage: boolean; financial: TenantFinancialDetail | null; payments: PaymentSummary[] | null; canRecordPayment: boolean }) {
+export function TenantDetailView({ tenant, canManage, financial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled }: { tenant: TenantDetail; canManage: boolean; financial: TenantFinancialDetail | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean }) {
   const t = useCopy();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -220,7 +222,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
         <a href="#location-actuelle">{t("Location actuelle", "Current lease")}</a>
         <a href="#historique">{t("Historique", "History")}</a>
         {payments ? <a href="#paiements">{t("Paiements", "Payments")}</a> : null}
-        <span>{t("Documents · 6C3", "Documents · 6C3")}</span>
+        {documents ? <a href="#documents">{t("Documents", "Documents")}</a> : null}
         <a href="#notes">{t("Notes", "Notes")}</a>
       </nav>
 
@@ -252,9 +254,9 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
       </Card>
 
       {payments ? <PaymentHistoryPanel payments={payments} canRecord={canRecordPayment} leaseId={current?.id} /> : null}
+      {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
 
       <div className="future-module-grid">
-        <Card className="future-module-card"><span className="future-module-card__icon"><FileText size={20} /></span><div><strong>{t("Documents", "Documents")}</strong><span>{t("Disponible avec les artefacts privés 6C3", "Available with private 6C3 artifacts")}</span></div><Badge tone="neutral">6C3</Badge></Card>
         <Card id="notes" className="future-module-card tenant-notes-card"><span className="future-module-card__icon"><StickyNote size={20} /></span><div><strong>{t("Notes internes", "Internal notes")}</strong><span>{tenant.internalNotes ?? t("Aucune note interne enregistrée.", "No internal note recorded.")}</span></div><Badge tone="neutral">{t("Interne", "Internal")}</Badge></Card>
       </div>
     </div>
@@ -323,7 +325,7 @@ export function LeaseCreateForm({ options, initialTenantId, initialUnitId }: { o
   return <div className="page-stack demo-narrow form-page-v2"><Link className="demo-back" href="/app/locations"><ArrowLeft size={17} />{t("Toutes les locations", "All leases")}</Link><PageHeader eyebrow="SCR-LEASE-02" title={t("Créer un brouillon", "Create a draft")} description={t("Les montants sont préparés sans générer d’échéance, ledger ou paiement.", "Amounts are prepared without generating dues, ledger entries or payments.")} /><LiveDataNotice /><Card><form className="form-stack" onSubmit={submit}><LeaseFields value={draft} options={options} onChange={setDraft} /><button className="button button--primary" disabled={busy} type="submit">{busy ? t("Enregistrement…", "Saving…") : t("Enregistrer le brouillon", "Save draft")}</button>{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}</form></Card></div>;
 }
 
-export function LeaseDetailView({ lease, options, canManage, financial, tenantFinancial, payments, canRecordPayment }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null; tenantFinancial: TenantFinancialPosition | null; payments: PaymentSummary[] | null; canRecordPayment: boolean }) {
+export function LeaseDetailView({ lease, options, canManage, financial, tenantFinancial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null; tenantFinancial: TenantFinancialPosition | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean }) {
   const t = useCopy();
   const { language } = usePreferences();
   const router = useRouter();
@@ -394,7 +396,7 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
         <a aria-current="page" href="#informations">{t("Informations", "Information")}</a>
         {financial ? <a href="#echeances">{t("Échéances", "Dues")}</a> : null}
         {payments ? <a href="#paiements">{t("Paiements", "Payments")}</a> : null}
-        <span>{t("Documents · 6C3", "Documents · 6C3")}</span>
+        {documents ? <a href="#documents">{t("Documents", "Documents")}</a> : null}
         <span>{t("Activité · à venir", "Activity · coming later")}</span>
       </nav>
 
@@ -430,12 +432,10 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
 
       {financial ? <LeaseDuesPanel financial={financial} /> : null}
       {payments ? <PaymentHistoryPanel payments={payments} canRecord={canRecordPayment} leaseId={lease.id} /> : null}
+      {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
 
       {ending ? <div className="confirmation-modal" role="presentation"><button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={() => setEnding(false)} type="button" /><section aria-labelledby="end-lease-title" aria-modal="true" className="confirmation-modal__panel" role="dialog"><div className="confirmation-modal__header"><div><p className="eyebrow">{t("Action sensible", "Sensitive action")}</p><h2 id="end-lease-title">{t("Terminer la location", "End lease")}</h2></div><button aria-label={t("Fermer", "Close")} className="icon-button" onClick={() => setEnding(false)} type="button"><X size={18} /></button></div><div className="confirmation-modal__warning"><CircleAlert size={21} /><p>{t("La fin de la location libérera l’unité à partir de la date effective. L’historique du bail restera protégé.", "Ending the lease will free the Unit from the effective date. Lease history remains protected.")}</p></div><label className="field"><span>{t("Date de sortie effective", "Effective end date")}</span><input min={lease.startDate} type="date" value={endedOn} onChange={(event) => setEndedOn(event.target.value)} required /></label><label className="field"><span>{t("Motif (facultatif)", "Reason (optional)")}</span><textarea maxLength={500} placeholder={t("Ex. départ convenu avec le locataire", "E.g. departure agreed with the tenant")} rows={3} value={endReason} onChange={(event) => setEndReason(event.target.value)} /></label><div className="confirmation-modal__summary"><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.tenantName}</span><span>{t("Conséquence : unité libérée, bail figé en historique.", "Consequence: Unit freed, lease locked in history.")}</span></div><div className="demo-form-actions"><button className="button button--secondary" disabled={busy} onClick={() => setEnding(false)} type="button">{t("Annuler", "Cancel")}</button><button className="button button--danger" disabled={busy || !endedOn} onClick={endLease} type="button">{busy ? t("Clôture…", "Ending…") : t("Confirmer la fin", "Confirm end")}</button></div></section></div> : null}
 
-      <div className="future-module-grid lease-future-grid">
-        <Card className="future-module-card"><span className="future-module-card__icon"><FileText size={20} /></span><div><strong>{t("Documents", "Documents")}</strong><span>{t("Disponible avec les artefacts privés 6C3", "Available with private 6C3 artifacts")}</span></div><Badge tone="neutral">6C3</Badge></Card>
-      </div>
     </div>
   );
 }

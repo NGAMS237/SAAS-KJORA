@@ -65,6 +65,110 @@
   color-scheme: light;
 }
 
+/* Lot 6C3 — contextual private documents and financial notifications */
+.documents-card,
+.statement-export-card,
+.notifications-card {
+  display: grid;
+  gap: 20px;
+}
+
+.documents-card {
+  border-radius: var(--shape-signature-left);
+}
+
+.document-list,
+.notification-list {
+  display: grid;
+  gap: 10px;
+}
+
+.document-row,
+.notification-row {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 14px 16px;
+}
+
+.document-row--invalidated {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
+}
+
+.document-row__icon,
+.notification-row__icon {
+  align-items: center;
+  background: var(--brand-gold-soft);
+  border-radius: 50%;
+  color: var(--brand-ink);
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.document-row--invalidated .document-row__icon {
+  background: var(--danger);
+  color: white;
+}
+
+.document-row__body,
+.notification-row > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.document-row__body span,
+.document-row__body small,
+.notification-row span {
+  color: var(--text-muted);
+}
+
+.document-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.statement-export-card {
+  border-radius: var(--shape-soft-right);
+}
+
+.statement-export-controls {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.notification-row.is-read {
+  opacity: .72;
+}
+
+@media (max-width: 720px) {
+  .document-row,
+  .notification-row,
+  .statement-export-controls {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .document-row__actions {
+    justify-content: stretch;
+  }
+
+  .document-row__actions .button {
+    flex: 1;
+  }
+}
+
 /* Lot 6C2 — Payments, allocations and compensating corrections */
 .payment-kpi-grid,
 .payment-context-grid {

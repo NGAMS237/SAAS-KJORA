@@ -65,8 +65,12 @@ Le portail locataire reste fermé jusqu’au modèle `TenantPortalAccess` du Lot
 
 La page Paiements liste les encaissements réels avec filtres période, locataire, moyen et statut. Le workflow Nouveau paiement suit quatre étapes : Location, saisie, allocation, confirmation. Le détail Payment montre référence, moyen, acteur, allocations, crédit créé, snapshots Ledger et reversal éventuel.
 
-Les détails Tenant et Location affichent les paiements réels et liens contextuels. Échéances et état de compte reprennent allocations, paiements et reversals depuis les projections. Reçu, quittance, PDF, email et notifications restent des placeholders honnêtes du Lot 6C3.
+Les détails Tenant et Location affichent les paiements réels et liens contextuels. Échéances et état de compte reprennent allocations, paiements et reversals depuis les projections.
 
-## 10. Déploiement
+## 10. Consommation documentaire 6C3
+
+Après installation 6C3, `PAYMENT_COMPLETED` est consommé de façon asynchrone : il prépare un reçu par Payment confirmé, puis une quittance par Due périodique devenue intégralement soldée. Le reçu snapshotte le montant, le moyen, la ventilation loyer/charges/dépôt, le crédit créé et les allocations. Une quittance relie tous les Payments contributeurs. `PAYMENT_REVERSED` invalide les documents concernés sans supprimer Payment, Allocation, Ledger, snapshot ou fichier. Aucun échec PDF/Resend ne peut rollbacker un Payment.
+
+## 11. Déploiement
 
 Migration appliquée en Production : `20260827230000_lot_6c2_payments_allocations.sql` (`lot_6c2_payments_allocations`). Elle ne contient aucun backfill de Payment et n’a créé aucun paiement fictif. Les 55 assertions 6C2 et les régressions 5B–6C1 totalisent 265 assertions Production réussies dans des transactions annulées ; aucune donnée de test ne persiste. Les advisors ne relèvent aucun défaut RLS, clé étrangère ou exposition anonyme introduit par le lot.

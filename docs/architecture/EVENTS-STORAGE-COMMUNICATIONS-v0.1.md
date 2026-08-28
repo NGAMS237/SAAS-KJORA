@@ -270,3 +270,18 @@ Le préfixe Organization facilite les politiques et l’exploitation. L’autori
 - Aucun code, SQL, bucket ou fournisseur n’a été créé.
 
 Cette architecture est **VALIDÉE** pour le Lot 4. Aucun worker, bucket, fournisseur ou environnement n’a été créé et le Lot 5A reste non commencé.
+
+## 16. Matérialisation Lot 6C3
+
+D-108 à D-114 matérialisent cette architecture sans modifier ses invariants :
+
+- `private.domain_events` reste la source des faits `PAYMENT_COMPLETED` et `PAYMENT_REVERSED` ; un watermark d’installation et `financial_document_event_processing` forment le consommateur idempotent sans backfill ;
+- `financial_documents` et `financial_document_payments` portent les snapshots et relations immuables ;
+- `message_deliveries` est l’outbox email et `notifications` le canal interne distinct ;
+- `DOCUMENT_GENERATED`, `DOCUMENT_INVALIDATED` et `MESSAGE_DELIVERY_FAILED` étendent le catalogue technique sans texte localisé ;
+- le bucket privé `financial-documents` applique des policies Storage Organization/document/capability ;
+- le worker concret est un Route Handler Node.js appelé par Vercel Cron, authentifié par `CRON_SECRET`, utilisant un secret Supabase serveur et Resend ;
+- trois essais avec éligibilité après 5, 30 et 120 minutes sont retenus pour 6C3 ; le cron Vercel Hobby quotidien reprend les éléments éligibles au passage suivant ;
+- le flag global et les quatre réglages Organization restent `false` au déploiement initial, donc aucune communication réelle n’est déclenchée par la migration.
+
+La politique légale de rétention demeure à préciser ; l’implémentation 6C3 ne supprime aucun original financier.

@@ -92,12 +92,12 @@ test("v2B reaches properties, units, team, settings and auth surfaces", () => {
   assert.match(css, /\.desktop-rail[\s\S]*linear-gradient/);
 });
 
-test("6C2 payments are real while later modules keep honest placeholders", () => {
+test("6C2 payments and contextual 6C3 documents are real while the portal stays honest", () => {
   assert.match(ui, /export function FutureState/);
   assert.match(payments, /getPayments/);
   assert.match(paymentViews, /Confirmer l’encaissement/);
-  assert.match(paymentViews, /Reçu — bientôt disponible avec 6C3/);
-  assert.match(activity, /Disponible avec le Lot 6D/);
+  assert.match(paymentViews, /FinancialDocumentsPanel/);
+  assert.match(activity, /NotificationsView/);
   assert.match(portalHome, /Disponible avec le Lot 6E/);
   assert.match(portalRents, /Disponible avec le Lot 6C1 puis le Portail 6E/);
   assert.match(portalReceipts, /Disponible avec le Lot 6C3 puis le Portail 6E/);

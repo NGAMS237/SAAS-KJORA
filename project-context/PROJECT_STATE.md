@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-27 — Lot 6C2 déployé en Production ; validation fonctionnelle en attente
+> Mise à jour : 2026-08-28 — Lot 6C3 testé et déployé ; validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -20,6 +20,7 @@
 - **Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Patch UX post-6C1 — Dashboard + détails Location/Locataire : TERMINÉ / TESTÉ — aucun changement métier**
 - **Lot 6C2 — Payments + Allocations + Crédits + Corrections : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6C3 — Documents + Notifications + Quittances + États de compte : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
@@ -218,7 +219,13 @@
 - Lot 6C2 — Paiements, Nouveau paiement, détail Payment, historiques Tenant/Location, statuts Due et état de compte sont branchés sur les données réelles ; les placeholders Receipt/PDF/notifications 6C3 et portail 6E restent fermés.
 - Lot 6C2 — 100 tests Node, TypeScript, ESLint et build Next.js Production de 38 routes réussis. Les 55 assertions pgTAP 6C2 et toutes les régressions 5B–6C1 passent en Production, soit 265 assertions transactionnelles annulées ; aucune Organization, aucun utilisateur, Payment ou Allocation de test ne persiste.
 - Lot 6C2 — advisors contrôlés : les RPC financières `SECURITY DEFINER` sont intentionnelles, bornées à `authenticated`, à l’Organization et aux capabilities ; les index neufs restent conservés malgré leur état initialement inutilisé. Aucun défaut RLS, clé étrangère ou exposition `anon` introduit par 6C2.
+- Lot 6C3 — migrations Production `lot_6c3_documents_notifications` (`20260828141940`) et `lot_6c3_advisor_indexes` appliquées sur KJORA : snapshots immuables, liens Payment/Due, outbox, notifications, réglages opt-in, bucket privé, cron unique étendu et huit index de clés étrangères.
+- Lot 6C3 — PDF A4 FR/EN générés par `pdf-lib`, téléchargements par liens signés 120 secondes, documents contextuels Payment/Tenant/Location/état de compte et centre de notifications interne implémentés.
+- Lot 6C3 — worker Resend séparé, trois essais avec seuils 5/30/120 minutes et Vercel cron quotidien 01:00 UTC compatible Hobby préparés ; `KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED=false` demeure le défaut sûr et aucun email réel n’a été envoyé.
+- Lot 6C3 — TypeScript, ESLint, 111 tests Node et build Next.js 16.3.2 de 39 pages réussis. Les PDF FR/EN sont générés puis relus comme PDF valides ; aucune variable serveur sensible n’apparaît dans le bundle client.
+- Lot 6C3 — 61 assertions pgTAP transactionnelles réussies pour documents, partiel, multi-Payments, J-X/J+10, invalidation, notifications, rôles, Org A/B, anon et chemins Storage. Rollback confirmé : 0 Organization/User de test, 0 document, livraison, notification ou objet Storage persistant.
+- Lot 6C3 — au déploiement, 5 Payments préexistants et leurs événements ont été exclus par watermark ; aucun backfill, aucun PDF permanent et aucun email n’ont été produits. Advisors : aucune clé étrangère 6C3 sans index ; quatre RPC `SECURITY DEFINER` intentionnelles et bornées restent documentées.
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le Lot 6C2 par Blaise. Ne pas commencer 6C3 sans gate distincte.**
+**Attendre la validation fonctionnelle Blaise et la décision roadmap. Ne commencer aucun autre lot, notamment ni 6D ni 6E.**

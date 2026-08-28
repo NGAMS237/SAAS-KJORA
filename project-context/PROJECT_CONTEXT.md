@@ -3,7 +3,7 @@
 > Statut : source de vérité de travail  
 > Nom commercial : **Kjora** (provisoire)  
 > Marché initial : Cameroun  
-> Dernière mise à jour : 2026-08-27 — Lot 6C2 déployé en Production ; validation fonctionnelle en attente
+> Dernière mise à jour : 2026-08-28 — Lot 6C3 déployé en Production ; validation fonctionnelle Blaise en attente
 
 ## 1. Vision
 
@@ -577,3 +577,5 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 **Lot 6C1 — Dues + Charges + Ledger : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-093 à D-099 fixent les Dues ventilées, le Ledger append-only, la convention de solde, le crédit d’ouverture sans faux Payment, le calendrier multi-périodicité, les proratas, les termes effectifs-datés, l’idempotence et la sécurité `due.view`. Le job quotidien unique reste actif et a fait évoluer naturellement Production à 3 baux actifs, 17 Dues et 29 lignes Ledger au contrôle du 27 août 2026 ; aucun Payment n’existait avant 6C2. Le portail réel reste soumis à `TenantPortalAccess` au Lot 6E.
 
 **Lot 6C2 — Payments + Allocations + Crédits + Corrections : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-101 à D-107 introduisent l’argent réellement reçu, la multi-allocation, les paiements partiels/exacts/supérieurs, le crédit Payment, l’idempotence, la sérialisation par Lease et le reversal Owner compensatoire. La migration Production est appliquée ; 265 assertions pgTAP cumulées passent avec rollback et aucune ligne Payment ou Allocation de test ne persiste. La page Paiements, le workflow en quatre étapes, le détail Payment et les historiques Tenant/Location utilisent les données réelles. Aucun Receipt, PDF, notification ou capacité portail n’est créé. Référence technique : `docs/architecture/PAYMENTS-ALLOCATIONS-v0.1.md`.
+
+**Lot 6C3 — Documents + Notifications + Quittances + États de compte : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-108 à D-117 définissent les snapshots immuables, la séparation reçu/quittance, les références atomiques, Storage privé, les alertes prépaiement/crédit, les notifications ciblées, l’outbox et le worker email désactivé. Les migrations Production principale et d’index advisors sont appliquées ; 61 assertions pgTAP passent avec rollback, aucune donnée de test ne persiste et les 5 Payments antérieurs ne sont pas backfillés. Référence technique : `docs/architecture/DOCUMENTS-NOTIFICATIONS-v0.1.md`.

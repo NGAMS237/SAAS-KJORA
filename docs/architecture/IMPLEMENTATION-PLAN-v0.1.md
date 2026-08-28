@@ -1,6 +1,6 @@
 # Kjora — Plan d’implémentation v0.1
 
-> Mise à jour 2026-08-27 : le **Lot 6C2** est **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE** selon D-101 à D-107. La migration Production est appliquée et 265 assertions pgTAP transactionnelles passent sans données de test persistantes. 6C3 n’est pas commencé.
+> Mise à jour 2026-08-28 : le **Lot 6C3** est testé et déployé selon D-108 à D-117. Aucun backfill des 5 Payments antérieurs et aucun email réel n’ont été exécutés ; validation fonctionnelle Blaise en attente.
 
 > Jalon 2026-08-27 : la **Visual Direction v2A** a été implémentée sur les tokens globaux et trois écrans pilotes (Dashboard, détail Locataire, détail Location), selon D-091. À ce jalon, v2B et 6C1 étaient non commencés.
 
@@ -422,11 +422,18 @@ Produire les artefacts privés et communications à partir des vérités financi
 
 ### Contenu
 
-- Receipt après paiement complété seulement ;
-- documents et relevés privés ;
-- notifications et partage contrôlé ;
-- email non bloquant, retry et idempotence ;
-- aucune URL publique permanente.
+- `payment_receipt` après `PAYMENT_COMPLETED`, distinct de la `rent_receipt` par période intégralement soldée ;
+- avis d’échéance J-X et états de compte issus respectivement de Due et Ledger ;
+- snapshots immuables, bucket privé et liens signés 120 secondes ;
+- invalidation compensatoire sans suppression après reversal ;
+- notifications internes capability-scoped ;
+- alertes idempotentes de dernière période prépayée et crédit affecté insuffisant à J-X ;
+- outbox email, worker Resend serveur-only, trois essais 5/30/120 minutes ;
+- démarrage Production sans backfill et avec tous les emails automatiques désactivés.
+
+### Gate Production
+
+Gate franchi le 28 août 2026 : migrations principale et hardening advisors appliquées, 61 pgTAP transactionnels réussis et réglages email restés à `false`. Aucun document historique ni message n’a été backfillé.
 
 ## 13. Lot 6D — Dashboard, Activity et Audit
 

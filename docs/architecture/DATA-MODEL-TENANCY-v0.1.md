@@ -253,3 +253,19 @@ La lecture interne exige `due.view`. Le portail n’accède pas encore à ces vu
 - RLS repose sur `payment.view`, la création sur `payment.record`, et le reversal effectif sur `payment.correct` réservée à Owner.
 
 La description complète se trouve dans `docs/architecture/PAYMENTS-ALLOCATIONS-v0.1.md`. Aucun Receipt ni accès portail n’est ajouté par 6C2.
+
+## 17. Réalisation physique Lot 6C3
+
+- `financial_documents` relie Organization, Tenant et, selon le type, Lease, Due ou Payment ; le snapshot, la langue et la version du template sont immuables ;
+- `financial_document_reference_sequence` attribue atomiquement les références `AVI/REC/QUI/ETAT-AAAA-NNNNNN`, tandis que la clé source conserve l’idempotence ;
+- `financial_document_payments` conserve les Payments contributeurs d’un reçu ou d’une quittance ;
+- `message_deliveries` journalise la file email, les essais, l’identifiant fournisseur et les erreurs contrôlées sans toucher à la vérité financière ;
+- `notifications` adresse un événement interne à un User et revérifie `due.view`, `payment.view` ou `receipt.view` lors de la lecture ;
+- les alertes `last_prepaid_period` et `low_credit` exposent des montants positifs explicites depuis les projections 6C1/6C2, sans stocker de nouveau solde ;
+- `organization_communication_settings` porte des interrupteurs opt-in tous initialisés à `false` ;
+- le bucket privé `financial-documents` utilise `Organization/document/v1.pdf` et des policies fondées sur la métadonnée tenant-scoped ;
+- le processeur d’événements ne considère que les faits postérieurs à l’installation 6C3, ce qui interdit le backfill implicite ;
+- le cron quotidien unique appelle Dues puis documents/notifications ; un worker Vercel séparé ne contacte Resend que si le secret cron et le flag global d’envoi sont tous deux actifs.
+- `lot_6c3_advisor_indexes` couvre toutes les clés étrangères 6C3 signalées par les advisors, sans modifier les relations ni les données.
+
+La description complète se trouve dans `docs/architecture/DOCUMENTS-NOTIFICATIONS-v0.1.md`. `TenantPortalAccess` et toute exposition locataire authentifiée restent différés au Lot 6E.

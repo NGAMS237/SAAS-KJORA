@@ -6,6 +6,8 @@ import { CalendarClock, CircleDollarSign, Coins, FileText, WalletCards } from "l
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, FinancialStateCard, PageHeader } from "@/core/ui/ui";
 import type { DueStatus, LeaseFinancialDetail, LedgerEntrySummary, TenantFinancialDetail, TenantFinancialPosition } from "@/modules/finance/model";
+import type { FinancialDocumentSummary } from "@/modules/documents/model";
+import { StatementPdfAction } from "@/modules/documents/views";
 
 function useCopy() {
   const { language } = usePreferences();
@@ -82,13 +84,14 @@ export function LeaseDuesPanel({ financial }: { financial: LeaseFinancialDetail 
   </Card>;
 }
 
-export function LedgerStatementView({ tenantName, financial }: { tenantName: string; financial: TenantFinancialDetail }) {
+export function LedgerStatementView({ tenantId, tenantName, financial, statementDocuments }: { tenantId: string; tenantName: string; financial: TenantFinancialDetail; statementDocuments: FinancialDocumentSummary[] }) {
   const t = useCopy();
   const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [type, setType] = useState("all");
   const entries = useMemo(() => financial.ledger.filter((entry) => (!from || entry.occurredOn >= from) && (!to || entry.occurredOn <= to) && (type === "all" || entry.type === type)), [financial.ledger, from, to, type]);
   return <div className="page-stack statement-page">
     <PageHeader eyebrow="SCR-DUE-02" title={t("État de compte", "Account statement")} description={tenantName} />
     <TenantFinancialSummary financial={financial} />
+    <StatementPdfAction initialDocuments={statementDocuments} tenantId={tenantId} />
     <Card className="statement-card">
       <div className="statement-filters"><label className="field"><span>{t("Du", "From")}</span><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label><label className="field"><span>{t("Au", "To")}</span><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label><label className="field"><span>{t("Opération", "Operation")}</span><select value={type} onChange={(event) => setType(event.target.value)}><option value="all">{t("Toutes", "All")}</option><option value="rent">{t("Loyer", "Rent")}</option><option value="recurring_charge">{t("Charges", "Charges")}</option><option value="initial_prorata">{t("Prorata", "Prorata")}</option><option value="deposit">{t("Dépôt", "Deposit")}</option><option value="opening_credit">{t("Crédit initial", "Opening credit")}</option><option value="payment">{t("Paiements", "Payments")}</option><option value="payment_reversal">{t("Annulations de paiement", "Payment reversals")}</option><option value="adjustment">{t("Ajustements", "Adjustments")}</option></select></label></div>
       <div className="ledger-table" role="table"><div className="ledger-table__head" role="row"><span>{t("Date", "Date")}</span><span>{t("Opération", "Operation")}</span><span>{t("Référence", "Reference")}</span><span>{t("Débit", "Debit")}</span><span>{t("Crédit", "Credit")}</span><span>{t("Solde", "Balance")}</span></div>{entries.map((entry) => <div className="ledger-table__row" role="row" key={entry.id}><span data-label={t("Date", "Date")}>{shortDate(entry.occurredOn)}</span><span data-label={t("Opération", "Operation")}><strong>{operationLabel(entry, t)}</strong>{entry.periodStart ? <small>{shortDate(entry.periodStart)} → {shortDate(entry.periodEnd)}</small> : null}</span><span data-label={t("Référence", "Reference")}>{entry.paymentId ? <Link href={`/app/paiements/${entry.paymentId}`}>{entry.reference}</Link> : entry.reference}</span><span data-label={t("Débit", "Debit")} className="financial-value">{entry.debitXaf ? money(entry.debitXaf) : "—"}</span><span data-label={t("Crédit", "Credit")} className="financial-value">{entry.creditXaf ? money(entry.creditXaf) : "—"}</span><span data-label={t("Solde", "Balance")} className="financial-value">{entry.runningBalanceXaf > 0 ? t(`Crédit ${money(entry.runningBalanceXaf)}`, `Credit ${money(entry.runningBalanceXaf)}`) : entry.runningBalanceXaf < 0 ? t(`Dû ${money(Math.abs(entry.runningBalanceXaf))}`, `Due ${money(Math.abs(entry.runningBalanceXaf))}`) : t("À jour · 0 XAF", "Current · 0 XAF")}</span></div>)}</div>
