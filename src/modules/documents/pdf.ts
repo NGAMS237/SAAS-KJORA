@@ -100,18 +100,26 @@ function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, docume
     row(page, regular, bold, y, fr ? "Moyen de paiement" : "Payment method", text(s.method)); y -= 34;
     if (s.external_reference) { row(page, regular, bold, y, fr ? "Référence externe" : "External reference", text(s.external_reference)); y -= 34; }
     row(page, regular, bold, y, fr ? "Montant reçu" : "Amount received", money(s.amount_xaf)); y -= 34;
-    row(page, regular, bold, y, fr ? "Montant alloué" : "Allocated amount", money(s.allocated_xaf)); y -= 34;
-    row(page, regular, bold, y, fr ? "Crédit créé" : "Credit created", money(s.credit_created_xaf));
-    if (Number(s.rent_allocated_xaf ?? 0) > 0) { y -= 34; row(page, regular, bold, y, fr ? "Dont loyer" : "Rent allocation", money(s.rent_allocated_xaf)); }
-    if (Number(s.recurring_charges_allocated_xaf ?? 0) > 0) { y -= 34; row(page, regular, bold, y, fr ? "Dont charges" : "Charges allocation", money(s.recurring_charges_allocated_xaf)); }
-    if (Number(s.deposit_allocated_xaf ?? 0) > 0) { y -= 34; row(page, regular, bold, y, fr ? "Dont dépôt de garantie" : "Security deposit allocation", money(s.deposit_allocated_xaf)); }
-    y -= 34;
-    const balance = Number(s.balance_after_xaf ?? 0);
-    row(page, regular, bold, y,
-      balance > 0 ? (fr ? "Crédit disponible après paiement" : "Available credit after payment")
-        : balance < 0 ? (fr ? "Solde dû après paiement" : "Balance due after payment")
-          : (fr ? "Situation après paiement" : "Position after payment"),
-      balance === 0 ? (fr ? "À jour · 0 XAF" : "Up to date · 0 XAF") : money(Math.abs(balance)));
+    if (Number(s.linked_due_total_xaf ?? 0) > 0) {
+      row(page, regular, bold, y, fr ? "Total des échéances concernées" : "Linked dues total", money(s.linked_due_total_xaf)); y -= 34;
+      row(page, regular, bold, y, fr ? "Crédit appliqué (distinct du paiement)" : "Credit applied (separate from payment)", money(s.credit_applied_xaf)); y -= 34;
+      row(page, regular, bold, y, fr ? "Paiements reçus affectés" : "Received Payments allocated", money(s.allocated_xaf)); y -= 34;
+      row(page, regular, bold, y, fr ? "Reste dû sur ces échéances" : "Remaining on these dues", money(s.linked_due_remaining_xaf)); y -= 34;
+    } else {
+      row(page, regular, bold, y, fr ? "Montant alloué" : "Allocated amount", money(s.allocated_xaf)); y -= 34;
+    }
+    if (Number(s.credit_created_xaf ?? 0) > 0) {
+      row(page, regular, bold, y, fr ? "Crédit créé par ce paiement" : "Credit created by this payment", money(s.credit_created_xaf));
+    }
+    if (Number(s.linked_due_total_xaf ?? 0) === 0) {
+      y -= 34;
+      const balance = Number(s.balance_after_xaf ?? 0);
+      row(page, regular, bold, y,
+        balance > 0 ? (fr ? "Crédit disponible après paiement" : "Available credit after payment")
+          : balance < 0 ? (fr ? "Solde dû après paiement" : "Balance due after payment")
+            : (fr ? "Situation après paiement" : "Position after payment"),
+        balance === 0 ? (fr ? "À jour · 0 XAF" : "Up to date · 0 XAF") : money(Math.abs(balance)));
+    }
   } else {
     row(page, regular, bold, y, fr ? "Période" : "Period", `${date(s.period_start, document.language)} - ${date(s.period_end, document.language)}`); y -= 34;
     row(page, regular, bold, y, fr ? "Date limite" : "Due date", date(s.due_date, document.language)); y -= 34;

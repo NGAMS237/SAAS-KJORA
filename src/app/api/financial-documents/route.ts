@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
   catch { return NextResponse.json({ error: "invalid_json" }, { status: 400 }); }
   const { applyAuthState, supabase } = createSupabaseRouteHandlerClient(request);
 
+  if (input.action === "prepare_payment_receipt") {
+    if (!authorization.capabilities.includes("receipt.view")) return applyAuthState(NextResponse.json({ error: "forbidden" }, { status: 403 }));
+    const paymentId = parseDocumentId(input.paymentId);
+    if (!paymentId) return applyAuthState(NextResponse.json({ error: "invalid_payment" }, { status: 400 }));
+    const result = await supabase.rpc("prepare_payment_receipt", { target_payment_id: paymentId });
+    if (result.error) {
+      const unavailable = result.error.message.includes("payment_receipt_unavailable");
+      return applyAuthState(NextResponse.json({ error: unavailable ? "payment_receipt_unavailable" : "receipt_preparation_failed" }, { status: unavailable ? 409 : 400 }));
+    }
+    return applyAuthState(NextResponse.json({ documentId: result.data }));
+  }
+
   if (input.action === "prepare_statement") {
     if (!authorization.capabilities.includes("due.view")) return applyAuthState(NextResponse.json({ error: "forbidden" }, { status: 403 }));
     const parsed = parseStatementRequest(input);

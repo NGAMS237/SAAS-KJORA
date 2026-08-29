@@ -582,4 +582,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Faire valider fonctionnellement le **Lot 6C2 — Paiements + Allocation + Crédits + Corrections** par Blaise. Ne pas commencer 6C3 avant la gate distincte.
+Consolider les validations fonctionnelles encore explicitement en attente pour les Lots 6A, 6B/6B.1, 6C1, 6C2 et 6C3. Le Lot 6C3 est déjà testé et déployé ; ne commencer aucun nouveau lot, notamment ni 6D ni 6E, avant une autorisation distincte de Blaise.

@@ -17,5 +17,5 @@ export default async function PaymentPage({ params, searchParams }: {
       ? getFinancialDocuments(authorization.organizationId, { paymentId }) : Promise.resolve([]),
   ]);
   if (!payment) return <MissingTenancyResource leases />;
-  return <PaymentDetailView payment={payment} canCorrect={authorization.capabilities.includes("payment.correct")} currentUserId={authorization.userId} success={query.success === "1"} documents={documents} canShare={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} />;
+  return <PaymentDetailView payment={payment} canCorrect={authorization.capabilities.includes("payment.correct")} currentUserId={authorization.userId} success={query.success === "1"} documents={documents} canPrepareReceipt={authorization.capabilities.includes("receipt.view")} canShare={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} />;
 }

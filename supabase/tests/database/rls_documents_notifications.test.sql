@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(61);
+select plan(68);
 
 insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at) values
   ('19000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner-a-6c3@kjora.test', now(), now(), now()),
@@ -56,6 +56,7 @@ select has_table('public', 'notifications', 'notifications internes existent');
 select has_table('public', 'organization_communication_settings', 'réglages email sûrs existent');
 select ok((select not public from storage.buckets where id = 'financial-documents'), 'bucket financier privé');
 select has_function('public', 'prepare_account_statement', array['uuid', 'date', 'date'], 'RPC état de compte existe');
+select has_function('public', 'prepare_payment_receipt', array['uuid'], 'RPC reçu Payment immédiat existe');
 select has_function('private', 'run_financial_daily', array['date'], 'job financier unique existe');
 
 set local role authenticated;
@@ -66,15 +67,15 @@ select * from public.confirm_payment(
 );
 reset role;
 
-select is((select count(*) from public.financial_documents), 0::bigint, 'Payment reste indépendant avant traitement outbox');
+select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a'), 0::bigint, 'Payment reste indépendant avant traitement outbox');
 select lives_ok($$ select private.process_financial_document_events(100) $$, 'processeur événementiel fonctionne');
-select is((select count(*) from public.financial_documents where document_type = 'payment_receipt'), 1::bigint, 'un reçu Payment préparé');
-select is((select count(*) from public.financial_documents where document_type = 'rent_receipt'), 1::bigint, 'une quittance préparée pour période soldée');
-select is((select count(*) from public.financial_document_payments), 2::bigint, 'les deux documents référencent le Payment réel');
+select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a' and document_type = 'payment_receipt'), 1::bigint, 'un reçu Payment préparé');
+select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a' and document_type = 'rent_receipt'), 1::bigint, 'une quittance préparée pour période soldée');
+select is((select count(*) from public.financial_document_payments where organization_id = '29000000-0000-4000-8000-00000000000a'), 2::bigint, 'les deux documents référencent le Payment réel');
 select ok((select count(*) from public.notifications where notification_type in ('payment_receipt_ready', 'rent_receipt_ready')) >= 2, 'notifications internes créées');
 select is((select count(*) from public.message_deliveries), 0::bigint, 'aucun email sans activation');
 select is(private.process_financial_document_events(100), 0, 'rejeu événementiel idempotent');
-select is((select count(*) from public.financial_documents), 2::bigint, 'rejeu ne duplique aucun document');
+select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a'), 2::bigint, 'rejeu ne duplique aucun document');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '19000000-0000-4000-8000-000000000001', true);
@@ -83,9 +84,22 @@ select * from public.confirm_payment(
   '6c3-payment-000000000002',
   jsonb_build_array(jsonb_build_object('due_id', '79000000-0000-4000-8000-000000000001', 'amount_xaf', 10000))
 );
+select ok(public.prepare_payment_receipt((select id from public.payments where idempotency_key = '6c3-payment-000000000002')) is not null,
+  'Owner prépare immédiatement le reçu du Payment partiel');
 reset role;
 select lives_ok($$ select private.process_financial_document_events(100) $$, 'Payment partiel traité');
-select is((select count(*) from public.financial_documents where document_type = 'payment_receipt'), 2::bigint, 'le Payment partiel produit son reçu');
+select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a' and document_type = 'payment_receipt'), 2::bigint, 'le Payment partiel produit son reçu');
+select is((select count(*) from public.financial_documents d where d.document_type = 'payment_receipt'
+  and d.payment_id = (select id from public.payments where idempotency_key = '6c3-payment-000000000002')), 1::bigint,
+  'double traitement conserve un reçu unique par Payment');
+select is((select (snapshot->>'amount_xaf')::bigint from public.financial_documents
+  where payment_id = (select id from public.payments where idempotency_key = '6c3-payment-000000000002')
+    and document_type = 'payment_receipt'), 10000::bigint, 'le reçu certifie exactement le Payment partiel reçu');
+select is((select (snapshot->>'linked_due_total_xaf')::bigint - (snapshot->>'credit_applied_xaf')::bigint
+    - (snapshot->>'allocated_xaf')::bigint - (snapshot->>'linked_due_remaining_xaf')::bigint
+  from public.financial_documents
+  where payment_id = (select id from public.payments where idempotency_key = '6c3-payment-000000000002')
+    and document_type = 'payment_receipt'), 0::bigint, 'la ventilation snapshot se réconcilie exactement');
 select is((select count(*) from public.financial_documents where document_type = 'rent_receipt' and due_id = '79000000-0000-4000-8000-000000000001'), 0::bigint, 'aucune quittance pour une période partielle');
 
 set local role authenticated;
@@ -97,11 +111,14 @@ select * from public.confirm_payment(
 );
 reset role;
 select lives_ok($$ select private.process_financial_document_events(100) $$, 'complément de règlement traité');
-select is((select count(*) from public.financial_documents where document_type = 'payment_receipt'), 3::bigint, 'chaque Payment réel conserve son reçu');
+select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a' and document_type = 'payment_receipt'), 3::bigint, 'chaque Payment réel conserve son reçu');
 select is((select count(*) from public.financial_documents where document_type = 'rent_receipt' and due_id = '79000000-0000-4000-8000-000000000001'), 1::bigint, 'quittance créée seulement après solde complet');
 select is((select count(*) from public.financial_document_payments dp join public.financial_documents d on d.id = dp.document_id where d.document_type = 'rent_receipt' and d.due_id = '79000000-0000-4000-8000-000000000001'), 2::bigint, 'quittance multi-Payments référence les deux encaissements');
 create temporary table pg_temp.document_ids (id uuid) on commit drop;
-insert into pg_temp.document_ids select id from public.financial_documents order by created_at, id limit 1;
+insert into pg_temp.document_ids
+select id from public.financial_documents
+where organization_id = '29000000-0000-4000-8000-00000000000a'
+order by created_at, id limit 1;
 grant select on pg_temp.document_ids to authenticated;
 insert into storage.objects (bucket_id, name, metadata)
 select 'financial-documents', '29000000-0000-4000-8000-00000000000a/' || id::text || '/v1.pdf',
@@ -143,11 +160,15 @@ select throws_ok($$ insert into storage.objects (bucket_id, name) values ('finan
 select set_config('request.jwt.claim.sub', '19000000-0000-4000-8000-000000000005', true);
 select is((select count(*) from public.financial_documents), 0::bigint, 'Consultation ne voit aucun document financier');
 select set_config('request.jwt.claim.sub', '19000000-0000-4000-8000-000000000006', true);
+select throws_ok($$ select public.prepare_payment_receipt((select id from public.payments where idempotency_key = '6c3-payment-000000000002')) $$,
+  '42501', 'forbidden', 'Owner B ne prépare pas le reçu Payment de Org A par UUID direct');
 select is((select count(*) from public.financial_documents where organization_id = '29000000-0000-4000-8000-00000000000a'), 0::bigint, 'Owner B ne traverse pas Org A');
 select is((select count(*) from public.financial_documents where id = (select id from pg_temp.document_ids limit 1)), 0::bigint, 'UUID direct Org A invisible à Owner B');
 select is((select count(*) from storage.objects where bucket_id = 'financial-documents'), 0::bigint, 'Owner B ne traverse pas le chemin Storage Org A');
 reset role;
 set local role anon;
+select throws_ok($$ select public.prepare_payment_receipt('89000000-0000-4000-8000-000000000001') $$,
+  '42501', 'permission denied for function prepare_payment_receipt', 'anon ne peut pas appeler le RPC reçu');
 select throws_ok($$ select count(*) from public.financial_documents $$, '42501', null, 'portail anon sans accès avant 6E');
 select is((select count(*) from storage.objects where bucket_id = 'financial-documents'), 0::bigint, 'anon ne voit aucun objet financier');
 reset role;
@@ -163,7 +184,11 @@ select is((select count(*) from public.financial_documents d join public.financi
 select is((select count(*) from private.domain_events where event_type = 'DOCUMENT_INVALIDATED'), 2::bigint, 'invalidation auditée par document');
 select is((select count(*) from public.payments where organization_id = '29000000-0000-4000-8000-00000000000a'), 3::bigint, '6C3 ne fabrique aucun Payment au-delà des trois appels de test');
 select is((select count(*) from public.message_deliveries), 0::bigint, 'aucun envoi réel pendant toute la suite');
-select is((select count(*) from private.financial_document_event_processing), 4::bigint, 'un traitement par événement Payment post-migration');
+select is((select count(*)
+  from private.financial_document_event_processing processing
+  join private.domain_events event on event.id = processing.event_id
+  where event.organization_id = '29000000-0000-4000-8000-00000000000a'), 4::bigint,
+  'un traitement par événement Payment post-migration');
 select ok((select count(*) from private.domain_events
   where organization_id = '29000000-0000-4000-8000-00000000000a'
     and event_type = 'PAYMENT_COMPLETED') = 3, 'les trois faits PAYMENT_COMPLETED test sont les seules sources Org A');

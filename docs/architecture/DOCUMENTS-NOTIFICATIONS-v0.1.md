@@ -12,7 +12,9 @@
 
 La référence suit `AVI|REC|QUI|ETAT-AAAA-NNNNNN`. Le numéro vient d’une séquence PostgreSQL et le trigger `financial_documents_set_reference` l’attribue dans la transaction d’insertion : il est atomique et sûr en concurrence. Des trous de séquence sont acceptables après rollback ; une même source réutilise le même document et donc le même numéro grâce à la contrainte `(organization_id, source_key)`.
 
-Le reçu de paiement référence exactement un Payment confirmé et snapshotte sa ventilation d’allocation (loyer, charges, dépôt et crédit créé). Une allocation dépôt est donc identifiée comme dépôt de garantie dans le reçu, jamais comme loyer. La quittance référence une Due périodique intégralement soldée et tous ses Payments contributeurs via `financial_document_payments`. Un paiement partiel ne crée jamais de quittance. Le dépôt ne devient jamais un loyer.
+Le reçu de paiement référence exactement un Payment confirmé, même partiel, et snapshotte le montant réellement reçu, sa ventilation d’allocation (loyer, charges, dépôt et crédit créé) ainsi que, pour les Dues liées, le total, le crédit appliqué distinct, les Payments alloués et le restant. Une allocation dépôt est donc identifiée comme dépôt de garantie dans le reçu, jamais comme loyer. La quittance référence une Due périodique intégralement soldée et tous ses Payments contributeurs via `financial_document_payments`. Un paiement partiel ne crée jamais de quittance. Le dépôt ne devient jamais un loyer.
+
+Le patch UX post-6C3 ajoute `prepare_payment_receipt(uuid)`, point d’entrée authentifié immédiat et idempotent. Il contrôle `auth.uid()`, l’Organization du Payment et `receipt.view`, puis délègue à `private.prepare_payment_documents` ; la contrainte de source 6C3 réutilise le même reçu au double clic. `PUBLIC` et `anon` n’ont aucun droit d’exécution. Cette préparation ne change ni Payment, Allocation, Ledger, réglage email, watermark ni accès portail.
 
 ## 3. Invalidation
 
@@ -53,10 +55,14 @@ L’activation email future exige séparément : secrets Vercel présents, flag 
 - Gardien, Consultation, anon, non-membre et autre Organization : aucun accès financier ;
 - portail : aucun accès avant le contrat `TenantPortalAccess` du Lot 6E.
 
+Les relations `tenant_id`, `lease_id`, `due_id` et `payment_id` préparent une future projection autorisée 6E sans attribut public supplémentaire. Aucun document, objet Storage ou URL signé durable n’est exposé au portail par ce patch.
+
 ## 9. Validation et déploiement
 
-La suite Node vérifie validation, séparation des artefacts, idempotence, Storage privé, déploiement sûr et absence de trigger bloquant. Les 61 assertions pgTAP Production couvrent génération, partiel, plusieurs Payments, J-X/J+10, compte Ledger, invalidation, rôles, Org A/B, UUID direct, anon, chemins Storage, absence d’email et absence de Payment fabriqué. Toute donnée de test a été annulée par `ROLLBACK`.
+La suite Node vérifie validation, séparation des artefacts, idempotence, Storage privé, déploiement sûr et absence de trigger bloquant. Les 68 assertions pgTAP Production couvrent génération, préparation immédiate et idempotente du reçu partiel, plusieurs Payments, J-X/J+10, compte Ledger, invalidation, rôles, Org A/B, UUID direct, anon, chemins Storage, absence d’email et absence de Payment fabriqué. Toute donnée de test a été annulée par `ROLLBACK`.
 
 `lot_6c3_documents_notifications` (`20260828141940`) et le hardening `lot_6c3_advisor_indexes` sont appliqués. Les huit avis de clés étrangères non indexées ont été corrigés. Les index neufs sont naturellement signalés comme inutilisés tant que les tables restent vides. Les RPC publiques `SECURITY DEFINER` sont intentionnelles, retirées à `PUBLIC`/`anon` et contrôlent identité, Organization et capability.
+
+Le patch `post_6c3_receipt_ux` (`20260829195924`) est appliqué sur KJORA Production. Il n’exécute aucun backfill, ne modifie aucun réglage email et n’ouvre aucun accès portail/public.
 
 Au contrôle post-déploiement : 0 document, 0 livraison, 0 notification et 0 objet Storage ; les 5 Payments préexistants sont antérieurs au watermark et ne sont pas backfillés. Les interrupteurs Organization restent absents/`false` et aucun email réel n’a été envoyé.

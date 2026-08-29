@@ -263,3 +263,12 @@ Les données réelles restent utilisées pour Biens, Units, Locataires et Locati
 - Le détail Payment qualifie clairement `Confirmé` ou `Annulé`, montre l’impact Ledger et conserve un reversal rouge/destructif avec motif obligatoire.
 - Tenant et Location affichent les derniers Payments réels. Reçu, quittance, PDF, emails et notifications conservent un placeholder explicite 6C3.
 - Les rôles sans `payment.view` ne reçoivent ni tableau, ni montant masqué, ni lien Payment.
+
+## 19. Patch UX post-6C3 — ventilation et reçus
+
+- Chaque Due peut développer une carte mobile lisible : **Total de l’échéance**, **Crédit appliqué**, **Paiements reçus**, **Reste dû**.
+- La formule visible reprend exclusivement les composantes de la projection serveur ; aucune estimation client ne complète une donnée absente.
+- « Paiements reçus » désigne l’argent confirmé et alloué. Le crédit appliqué garde un libellé séparé et n’est jamais présenté comme encaissé le jour du Payment.
+- Le détail Payment expose un CTA contextuel unique : **Générer le reçu** ou **Télécharger le reçu**. Tenant et Location proposent **Voir le paiement** et **Reçu**.
+- Un reçu invalidé reste historique et visuellement qualifié. Une quittance reste réservée à une période intégralement soldée.
+- Sur mobile, les quatre valeurs sont empilées sous 520 px ; les actions restent tactiles et aucun tableau horizontal n’est introduit.

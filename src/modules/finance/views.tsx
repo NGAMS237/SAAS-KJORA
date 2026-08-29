@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { CalendarClock, CircleDollarSign, Coins, FileText, WalletCards } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, FinancialStateCard, PageHeader } from "@/core/ui/ui";
-import type { DueStatus, LeaseFinancialDetail, LedgerEntrySummary, TenantFinancialDetail, TenantFinancialPosition } from "@/modules/finance/model";
+import { dueBreakdown, type DueStatus, type LeaseFinancialDetail, type LedgerEntrySummary, type TenantFinancialDetail, type TenantFinancialPosition } from "@/modules/finance/model";
 import type { FinancialDocumentSummary } from "@/modules/documents/model";
 import { StatementPdfAction } from "@/modules/documents/views";
 
@@ -64,22 +64,36 @@ export function TenantFinancialSummary({ tenantId, financial }: { tenantId?: str
   </Card>;
 }
 
-export function LeaseDuesPanel({ financial }: { financial: LeaseFinancialDetail }) {
+export function LeaseDuesPanel({ financial, tenantScope = false }: { financial: LeaseFinancialDetail; tenantScope?: boolean }) {
   const t = useCopy();
   const dues = financial.dues.filter((due) => due.kind !== "adjustment" || due.adjustmentXaf > 0);
   return <Card className="dues-card" id="echeances">
-    <div className="section-heading"><div><p className="eyebrow">SCR-DUE-02</p><h2>{t("Échéances", "Dues")}</h2></div><CalendarClock size={22} /></div>
+    <div className="section-heading"><div><p className="eyebrow">SCR-DUE-02</p><h2>{tenantScope ? t("Ventilation des échéances", "Due breakdown") : t("Échéances", "Dues")}</h2></div><CalendarClock size={22} /></div>
     {dues.length ? <div className="financial-table" role="table">
       <div className="financial-table__head" role="row"><span>{t("Période", "Period")}</span><span>{t("Date limite", "Due date")}</span><span>{t("Loyer", "Rent")}</span><span>{t("Charges", "Charges")}</span><span>{t("Total", "Total")}</span><span>{t("Restant", "Remaining")}</span><span>{t("État", "Status")}</span></div>
-      {dues.map((due) => <div className="financial-table__row" role="row" key={due.id}>
+      {dues.map((due) => { const breakdown = dueBreakdown(due); return <div className="financial-table__row" role="row" key={due.id}>
         <span data-label={t("Période", "Period")}><strong>{shortDate(due.periodStart)} → {shortDate(due.periodEnd)}</strong><small>{due.reference}</small></span>
         <span data-label={t("Date limite", "Due date")}>{shortDate(due.dueDate)}<small>{t(`Avis prévu le ${shortDate(due.noticeDate)}`, `Notice scheduled for ${shortDate(due.noticeDate)}`)}</small></span>
         <span data-label={t("Loyer", "Rent")} className="financial-value">{money(due.rentXaf)}</span>
         <span data-label={t("Charges", "Charges")} className="financial-value">{money(due.recurringChargesXaf)}</span>
-        <span data-label={t("Total", "Total")} className="financial-value">{money(due.kind === "adjustment" ? due.adjustmentXaf : due.netExpectedXaf)}</span>
-        <span data-label={t("Restant", "Remaining")} className="financial-value">{money(due.remainingXaf)}{due.paymentAllocatedXaf > 0 ? <small>{t(`${money(due.paymentAllocatedXaf)} réglés`, `${money(due.paymentAllocatedXaf)} paid`)}</small> : null}</span>
+        <span data-label={t("Total", "Total")} className="financial-value">{money(breakdown.totalXaf)}</span>
+        <span data-label={t("Reste dû", "Remaining due")} className="financial-value">{money(breakdown.remainingXaf)}</span>
         <span data-label={t("État", "Status")}>{status(due.status, t)}</span>
-      </div>)}
+        <details className="due-breakdown">
+          <summary>{t("Comment ce montant est calculé ?", "How is this amount calculated?")}</summary>
+          <div className="due-breakdown__values">
+            <span><small>{t("Total de l’échéance", "Due total")}</small><strong>{money(breakdown.totalXaf)}</strong></span>
+            <span><small>{t("Crédit appliqué", "Credit applied")}</small><strong>{money(breakdown.creditAppliedXaf)}</strong></span>
+            <span><small>{t("Paiements reçus", "Payments received")}</small><strong>{money(breakdown.paymentsReceivedXaf)}</strong></span>
+            <span><small>{t("Reste dû", "Remaining due")}</small><strong>{money(breakdown.remainingXaf)}</strong></span>
+          </div>
+          <p>{t(
+            `Total ${money(breakdown.totalXaf)} − Crédit appliqué ${money(breakdown.creditAppliedXaf)} − Paiements reçus ${money(breakdown.paymentsReceivedXaf)} = ${money(breakdown.remainingXaf)} restant`,
+            `Total ${money(breakdown.totalXaf)} − Credit applied ${money(breakdown.creditAppliedXaf)} − Payments received ${money(breakdown.paymentsReceivedXaf)} = ${money(breakdown.remainingXaf)} remaining`,
+          )}</p>
+          {!breakdown.reconciles ? <p className="form-feedback form-feedback--error">{t("La projection financière doit être actualisée.", "The financial projection must be refreshed.")}</p> : null}
+        </details>
+      </div>; })}
     </div> : <EmptyState icon={CalendarClock} title={t("Aucune échéance générée", "No generated dues")} description={t("Le moteur créera la première échéance à la date J-X prévue par le bail.", "The engine will create the first due on the lease J-X date.")} />}
   </Card>;
 }

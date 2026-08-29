@@ -227,6 +227,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
       </nav>
 
       {financial ? <TenantFinancialSummary tenantId={tenant.id} financial={financial} /> : null}
+      {financial ? <LeaseDuesPanel financial={financial} tenantScope /> : null}
 
       <div className="tenant-record-grid">
         <Card id="profil" className="tenant-record-card">
@@ -253,7 +254,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
         {tenant.leases.length ? <div className="demo-list">{tenant.leases.map((lease) => <Link className="demo-list-row" href={`/app/locations/${lease.id}`} key={lease.id}><span className="demo-list-row__icon"><Home size={19} /></span><div><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.startDate}{lease.endDate ? ` → ${lease.endDate}` : ""}</span></div>{statusBadge(lease.status, t)}<ChevronRight size={18} /></Link>)}</div> : <EmptyState title={t("Aucune location", "No leases")} description={t("Le dossier est prêt à être relié à une Unit.", "The record is ready to be linked to a Unit.")} />}
       </Card>
 
-      {payments ? <PaymentHistoryPanel payments={payments} canRecord={canRecordPayment} leaseId={current?.id} /> : null}
+      {payments ? <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={current?.id} /> : null}
       {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
 
       <div className="future-module-grid">
@@ -431,7 +432,7 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
       </Card>
 
       {financial ? <LeaseDuesPanel financial={financial} /> : null}
-      {payments ? <PaymentHistoryPanel payments={payments} canRecord={canRecordPayment} leaseId={lease.id} /> : null}
+      {payments ? <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={lease.id} /> : null}
       {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
 
       {ending ? <div className="confirmation-modal" role="presentation"><button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={() => setEnding(false)} type="button" /><section aria-labelledby="end-lease-title" aria-modal="true" className="confirmation-modal__panel" role="dialog"><div className="confirmation-modal__header"><div><p className="eyebrow">{t("Action sensible", "Sensitive action")}</p><h2 id="end-lease-title">{t("Terminer la location", "End lease")}</h2></div><button aria-label={t("Fermer", "Close")} className="icon-button" onClick={() => setEnding(false)} type="button"><X size={18} /></button></div><div className="confirmation-modal__warning"><CircleAlert size={21} /><p>{t("La fin de la location libérera l’unité à partir de la date effective. L’historique du bail restera protégé.", "Ending the lease will free the Unit from the effective date. Lease history remains protected.")}</p></div><label className="field"><span>{t("Date de sortie effective", "Effective end date")}</span><input min={lease.startDate} type="date" value={endedOn} onChange={(event) => setEndedOn(event.target.value)} required /></label><label className="field"><span>{t("Motif (facultatif)", "Reason (optional)")}</span><textarea maxLength={500} placeholder={t("Ex. départ convenu avec le locataire", "E.g. departure agreed with the tenant")} rows={3} value={endReason} onChange={(event) => setEndReason(event.target.value)} /></label><div className="confirmation-modal__summary"><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.tenantName}</span><span>{t("Conséquence : unité libérée, bail figé en historique.", "Consequence: Unit freed, lease locked in history.")}</span></div><div className="demo-form-actions"><button className="button button--secondary" disabled={busy} onClick={() => setEnding(false)} type="button">{t("Annuler", "Cancel")}</button><button className="button button--danger" disabled={busy || !endedOn} onClick={endLease} type="button">{busy ? t("Clôture…", "Ending…") : t("Confirmer la fin", "Confirm end")}</button></div></section></div> : null}

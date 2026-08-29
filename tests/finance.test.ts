@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildDueSchedule, deriveLedgerPosition, dueDateForPeriod, financialBalanceLabel } from "../src/modules/finance/model.ts";
+import { buildDueSchedule, deriveLedgerPosition, dueBreakdown, dueDateForPeriod, financialBalanceLabel } from "../src/modules/finance/model.ts";
 
 const base = {
   leaseStart: "2026-09-01",
@@ -80,4 +80,20 @@ test("balance labels never expose an ambiguous signed amount", () => {
   assert.deepEqual(financialBalanceLabel(-55_000), { state: "due", amountXaf: 55_000 });
   assert.deepEqual(financialBalanceLabel(20_000), { state: "credit", amountXaf: 20_000 });
   assert.deepEqual(financialBalanceLabel(0), { state: "current", amountXaf: 0 });
+});
+
+test("a Due breakdown uses the exact server projection for credit plus a partial Payment", () => {
+  assert.deepEqual(dueBreakdown({
+    netExpectedXaf: 52_000,
+    coveredXaf: 30_000,
+    coveredByPaymentCreditXaf: 7_994,
+    paymentAllocatedXaf: 10_000,
+    remainingXaf: 4_006,
+  }), {
+    totalXaf: 52_000,
+    creditAppliedXaf: 37_994,
+    paymentsReceivedXaf: 10_000,
+    remainingXaf: 4_006,
+    reconciles: true,
+  });
 });

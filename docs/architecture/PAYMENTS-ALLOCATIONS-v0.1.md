@@ -67,9 +67,13 @@ La page Paiements liste les encaissements réels avec filtres période, locatair
 
 Les détails Tenant et Location affichent les paiements réels et liens contextuels. Échéances et état de compte reprennent allocations, paiements et reversals depuis les projections.
 
+Le patch UX post-6C3 rend la ventilation d’une Due explicite sans calcul approximatif côté client : **Total de l’échéance − Crédit appliqué − Paiements reçus = Reste dû**. Le crédit appliqué additionne les deux composantes projetées 6C1 (`opening_credit` et crédit de Payment), tandis que « Paiements reçus » désigne uniquement les allocations de Payments confirmés. **Paiement reçu ≠ crédit appliqué.**
+
 ## 10. Consommation documentaire 6C3
 
 Après installation 6C3, `PAYMENT_COMPLETED` est consommé de façon asynchrone : il prépare un reçu par Payment confirmé, puis une quittance par Due périodique devenue intégralement soldée. Le reçu snapshotte le montant, le moyen, la ventilation loyer/charges/dépôt, le crédit créé et les allocations. Une quittance relie tous les Payments contributeurs. `PAYMENT_REVERSED` invalide les documents concernés sans supprimer Payment, Allocation, Ledger, snapshot ou fichier. Aucun échec PDF/Resend ne peut rollbacker un Payment.
+
+Tout Payment confirmé, y compris partiel ou affecté au dépôt, peut recevoir son reçu propre. Ce reçu certifie seulement l’argent réellement reçu. La quittance reste exclusivement liée à une période de loyer intégralement soldée ; un dépôt ne produit jamais de quittance.
 
 ## 11. Déploiement
 

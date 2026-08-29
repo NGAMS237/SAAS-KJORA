@@ -3611,6 +3611,86 @@ a.portfolio-metric:hover {
   font-size: 0.63rem;
 }
 
+.due-breakdown {
+  background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
+  border-radius: var(--radius-md);
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+}
+
+.due-breakdown summary {
+  color: var(--brand-blue);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.due-breakdown__values {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.due-breakdown__values > span {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+}
+
+.due-breakdown__values strong {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.due-breakdown > p {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  margin: 12px 0 0;
+}
+
+.payment-receipt-action {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 32%, var(--border));
+  border-radius: var(--shape-soft-right);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 20px 24px;
+}
+
+.payment-receipt-action > div {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.payment-receipt-action span {
+  display: grid;
+  gap: 3px;
+}
+
+.payment-receipt-action small {
+  color: var(--text-muted);
+}
+
+.demo-list-row.payment-history-row > .payment-history-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.payment-history-row__actions .button {
+  min-height: 38px;
+  padding: 8px 11px;
+}
+
 .statement-filters {
   align-items: end;
   display: grid;
@@ -3671,9 +3751,36 @@ a.portfolio-metric:hover {
     font-weight: 720;
     text-transform: uppercase;
   }
+
+  .due-breakdown__values {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 520px) {
+  .due-breakdown__values {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-receipt-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payment-receipt-action .button,
+  .payment-history-row__actions .button {
+    width: 100%;
+  }
+
+  .payment-history-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .payment-history-row > .badge,
+  .payment-history-row__actions {
+    grid-column: 1 / -1;
+  }
+
   .tenant-profile-hero {
     align-items: start;
     grid-template-columns: 1fr;

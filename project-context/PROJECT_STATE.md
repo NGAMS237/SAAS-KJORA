@@ -8,7 +8,7 @@
 - **Lot 2 — Parcours et périmètre MVP : VALIDÉ**
 - **Lot 3 — UX & architecture d’interface v0.1 : VALIDÉ**
 - **Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ**
-- **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE**
+- **Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ / TESTÉ / LIVRÉ**
 - **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ**
 - **Sous-lot PIN interne 6 chiffres : TERMINÉ / TESTÉ / VALIDÉ**
 - **Lot 5C — Membership/RBAC + isolation : TERMINÉ / TESTÉ / VALIDÉ**
@@ -225,6 +225,9 @@
 - Lot 6C3 — TypeScript, ESLint, 111 tests Node et build Next.js 16.3.2 de 39 pages réussis. Les PDF FR/EN sont générés puis relus comme PDF valides ; aucune variable serveur sensible n’apparaît dans le bundle client.
 - Lot 6C3 — 61 assertions pgTAP transactionnelles réussies pour documents, partiel, multi-Payments, J-X/J+10, invalidation, notifications, rôles, Org A/B, anon et chemins Storage. Rollback confirmé : 0 Organization/User de test, 0 document, livraison, notification ou objet Storage persistant.
 - Lot 6C3 — au déploiement, 5 Payments préexistants et leurs événements ont été exclus par watermark ; aucun backfill, aucun PDF permanent et aucun email n’ont été produits. Advisors : aucune clé étrangère 6C3 sans index ; quatre RPC `SECURITY DEFINER` intentionnelles et bornées restent documentées.
+- Patch UX post-6C3 — migration Production `post_6c3_receipt_ux` (`20260829195924`) appliquée : reçu immédiat et idempotent pour tout Payment confirmé, y compris partiel, avec contrôle `auth.uid()` + Organization + `receipt.view`, et refus `PUBLIC`/`anon`.
+- Patch UX post-6C3 — ventilation UI exclusivement issue des projections serveur : Total échéance, Crédit appliqué, Paiements reçus et Reste dû. Aucun calcul Payment/Allocation/Ledger, backfill, email ou accès portail/public n’a été ajouté.
+- Patch UX post-6C3 — 68 assertions pgTAP 6C3 et toutes les régressions distantes 5B–6C2 réussies dans des transactions annulées ; TypeScript, ESLint, 116 tests Node et build Next.js 16.3.2 de 39 pages réussis.
 
 ## Proposé ensuite
 

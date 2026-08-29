@@ -66,6 +66,33 @@ export type TenantFinancialPosition = {
 export type LeaseFinancialDetail = { dues: DueSummary[]; ledger: LedgerEntrySummary[] };
 export type TenantFinancialDetail = TenantFinancialPosition & LeaseFinancialDetail;
 
+export type DueBreakdown = {
+  totalXaf: number;
+  creditAppliedXaf: number;
+  paymentsReceivedXaf: number;
+  remainingXaf: number;
+  reconciles: boolean;
+};
+
+/**
+ * Exposes the four server-projected components of a Due without estimating or
+ * redistributing any amount in the browser.
+ */
+export function dueBreakdown(due: Pick<DueSummary,
+  "netExpectedXaf" | "coveredXaf" | "coveredByPaymentCreditXaf" | "paymentAllocatedXaf" | "remainingXaf"
+>): DueBreakdown {
+  const totalXaf = due.netExpectedXaf;
+  const creditAppliedXaf = due.coveredXaf + due.coveredByPaymentCreditXaf;
+  const paymentsReceivedXaf = due.paymentAllocatedXaf;
+  return {
+    totalXaf,
+    creditAppliedXaf,
+    paymentsReceivedXaf,
+    remainingXaf: due.remainingXaf,
+    reconciles: totalXaf - creditAppliedXaf - paymentsReceivedXaf === due.remainingXaf,
+  };
+}
+
 export type FinancialTerms = {
   leaseStart: string;
   effectiveEnd: string | null;
