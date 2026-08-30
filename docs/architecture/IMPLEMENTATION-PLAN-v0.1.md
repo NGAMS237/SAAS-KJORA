@@ -437,7 +437,7 @@ Gate franchi le 28 août 2026 : migrations principale et hardening advisors appl
 
 ## 13. Lot 6D — Dashboard, Activity et Audit
 
-> Statut au 30 août 2026 : **TERMINÉ / TESTÉ / MIGRATION PRODUCTION APPLIQUÉE — DÉPLOIEMENT VERCEL ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Migration `20260830125630_lot_6d_dashboard_activity_audit.sql` appliquée au seul projet KJORA et 35 assertions pgTAP réussies avec rollback. Aucun email, backfill ni accès portail/public activé.
+> Statut au 30 août 2026 : **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Migration `20260830125630_lot_6d_dashboard_activity_audit.sql` appliquée au seul projet KJORA et 35 assertions pgTAP réussies avec rollback. Aucun email, backfill ni accès portail/public activé.
 
 ### Objectif
 
@@ -593,4 +593,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Finaliser le déploiement Vercel Production puis faire valider fonctionnellement 6D par Blaise. Consolider séparément les validations fonctionnelles encore en attente pour 6A, 6B/6B.1 et 6C1–6C3. Ne pas commencer 6E.
+Faire valider fonctionnellement 6D par Blaise sur Vercel Production. Consolider séparément les validations fonctionnelles encore en attente pour 6A, 6B/6B.1 et 6C1–6C3. Ne pas commencer 6E.

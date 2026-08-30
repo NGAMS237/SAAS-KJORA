@@ -1,6 +1,6 @@
 # Kjora — Dashboard, Activity, Notifications et Audit v0.1
 
-> Lot 6D — implémenté, migré et testé sur KJORA Production le 30 août 2026. Déploiement Vercel et validation fonctionnelle Blaise en attente.
+> Lot 6D — implémenté, migré, testé et déployé sur KJORA Production le 30 août 2026. Validation fonctionnelle Blaise en attente.
 
 ## Vérités affichées
 
