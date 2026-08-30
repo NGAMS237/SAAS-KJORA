@@ -15,6 +15,7 @@ const settings = readFileSync(new URL("../src/app/(internal)/app/parametres/page
 const payments = readFileSync(new URL("../src/app/(internal)/app/paiements/page.tsx", import.meta.url), "utf8");
 const paymentViews = readFileSync(new URL("../src/modules/payments/views.tsx", import.meta.url), "utf8");
 const activity = readFileSync(new URL("../src/app/(internal)/app/activite/page.tsx", import.meta.url), "utf8");
+const operationsViews = readFileSync(new URL("../src/modules/operations/views.tsx", import.meta.url), "utf8");
 const portalHome = readFileSync(new URL("../src/app/(portal)/portal/page.tsx", import.meta.url), "utf8");
 const portalRents = readFileSync(new URL("../src/app/(portal)/portal/loyers/page.tsx", import.meta.url), "utf8");
 const portalReceipts = readFileSync(new URL("../src/app/(portal)/portal/recus/page.tsx", import.meta.url), "utf8");
@@ -36,11 +37,10 @@ test("v2 preserves accessible focus, touch targets and reduced motion", () => {
   assert.match(css, /transition-duration: 0\.01ms !important/);
 });
 
-test("dashboard pilot uses live portfolio data and no fake financial totals", () => {
-  assert.match(dashboard, /listActiveProperties/);
-  assert.match(dashboard, /listTenants/);
-  assert.match(dashboard, /listLeases/);
-  assert.match(dashboard, /Échéances et Ledger disponibles/);
+test("dashboard operational uses secure live projections and no fake financial totals", () => {
+  assert.match(dashboard, /getOperationalDashboard/);
+  assert.match(dashboard, /getOrganizationActivity/);
+  assert.match(dashboard, /DashboardOperationalView/);
   assert.match(dashboard, /getUserGreetingName/);
   assert.doesNotMatch(dashboard, /email\?\.split/);
   assert.doesNotMatch(dashboard, /1 240 000 XAF|920 000 XAF|320 000 XAF|échéances fictives/i);
@@ -97,7 +97,8 @@ test("6C2 payments and contextual 6C3 documents are real while the portal stays 
   assert.match(payments, /getPayments/);
   assert.match(paymentViews, /Confirmer l’encaissement/);
   assert.match(paymentViews, /FinancialDocumentsPanel/);
-  assert.match(activity, /NotificationsView/);
+  assert.match(activity, /OperationsPageView/);
+  assert.match(operationsViews, /NotificationsView/);
   assert.match(portalHome, /Disponible avec le Lot 6E/);
   assert.match(portalRents, /Disponible avec le Lot 6C1 puis le Portail 6E/);
   assert.match(portalReceipts, /Disponible avec le Lot 6C3 puis le Portail 6E/);

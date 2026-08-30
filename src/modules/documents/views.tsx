@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BellRing, Download, FileCheck2, FileClock, FileText, Mail, Send, TriangleAlert } from "lucide-react";
+import { Bell, BellRing, CheckCheck, Download, ExternalLink, FileCheck2, FileClock, FileText, Mail, Send, TriangleAlert, X } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
-import { Badge, Card, EmptyState } from "@/core/ui/ui";
+import { Card, EmptyState } from "@/core/ui/ui";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
+import { notificationHref } from "@/modules/operations/model";
 
 function useCopy() {
   const { language } = usePreferences();
@@ -126,13 +127,34 @@ function notificationCopy(notification: NotificationSummary, t: ReturnType<typeo
   return { title: titles[notification.type], detail };
 }
 
-export function NotificationsView({ notifications }: { notifications: NotificationSummary[] }) {
+export function NotificationsView({ notifications, embedded = false }: { notifications: NotificationSummary[]; embedded?: boolean }) {
   const t = useCopy(); const router = useRouter(); const [busyId, setBusyId] = useState<string | null>(null);
-  async function markRead(id: string) {
-    setBusyId(id); await mutate({ action: "mark_notification_read", notificationId: id }); setBusyId(null); router.refresh();
+  async function setReadState(id: string, isRead: boolean) {
+    setBusyId(id); await mutate({ action: isRead ? "mark_notification_read" : "mark_notification_unread", notificationId: id }); setBusyId(null); router.refresh();
   }
-  return <div className="page-stack"><div className="section-heading"><div><p className="eyebrow">6C3</p><h1>{t("Notifications", "Notifications")}</h1><p>{t("Événements financiers réels de l’Organization active.", "Real financial events for the active Organization.")}</p></div><BellRing size={24} /></div>
-    <Card className="notifications-card">{notifications.length ? <div className="notification-list">{notifications.map((notification) => { const copy = notificationCopy(notification, t); return <div className={`notification-row${notification.readAt ? " is-read" : ""}`} key={notification.id}><span className="notification-row__icon">{notification.type === "delivery_failed" ? <Mail size={18} /> : <BellRing size={18} />}</span><div><strong>{copy.title}</strong><span>{copy.detail} · {shortDate(notification.createdAt)}</span></div>{notification.readAt ? <Badge tone="neutral">{t("Lu", "Read")}</Badge> : <button className="button button--secondary" disabled={busyId === notification.id} onClick={() => markRead(notification.id)} type="button">{t("Marquer comme lu", "Mark read")}</button>}</div>; })}</div>
+  async function markAllRead() {
+    setBusyId("all"); await mutate({ action: "mark_all_notifications_read" }); setBusyId(null); router.refresh();
+  }
+  const unreadCount = notifications.filter((notification) => !notification.readAt).length;
+  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">6D</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’Organization active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unreadCount ? <button className="button button--secondary" disabled={busyId === "all"} onClick={markAllRead} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
+    <Card className="notifications-card">{notifications.length ? <div className="notification-list">{notifications.map((notification) => { const copy = notificationCopy(notification, t); const href = notificationHref(notification); return <div className={`notification-row${notification.readAt ? " is-read" : ""}`} key={notification.id}><span className="notification-row__icon">{notification.type === "delivery_failed" ? <Mail size={18} /> : <BellRing size={18} />}</span><div><strong>{copy.title}</strong><span>{copy.detail} · {shortDate(notification.createdAt)}</span></div><div className="notification-row__actions"><Link className="button button--secondary" href={href} prefetch={false} target={notification.documentId ? "_blank" : undefined}>{t("Ouvrir", "Open")}<ExternalLink size={14} /></Link><button className="button button--secondary" disabled={busyId === notification.id} onClick={() => setReadState(notification.id, !notification.readAt)} type="button">{notification.readAt ? t("Marquer non lue", "Mark unread") : t("Marquer comme lue", "Mark read")}</button></div></div>; })}</div>
       : <EmptyState icon={BellRing} title={t("Aucune notification", "No notifications")} description={t("Les futurs événements financiers autorisés apparaîtront ici.", "Future authorized financial events will appear here.")} />}</Card>
+  </div>;
+}
+
+export function NotificationBell({ notifications, placement }: { notifications: NotificationSummary[]; placement: "desktop" | "mobile" }) {
+  const t = useCopy();
+  const [open, setOpen] = useState(false);
+  const unread = notifications.filter((notification) => !notification.readAt);
+  const dialogId = `notification-popover-${placement}`;
+  return <div className={`notification-bell notification-bell--${placement}`}>
+    <button aria-controls={dialogId} aria-expanded={open} className="icon-button notification-bell__trigger" onClick={() => setOpen((value) => !value)} type="button" aria-label={t(`${unread.length} notification(s) non lue(s)`, `${unread.length} unread notification(s)`)}>
+      <Bell aria-hidden="true" size={19} />{unread.length ? <span>{Math.min(unread.length, 99)}</span> : null}
+    </button>
+    {open ? <div className="notification-popover" id={dialogId} role="dialog" aria-label={t("Notifications récentes", "Recent notifications")}>
+      <div className="notification-popover__header"><div><strong>{t("Notifications", "Notifications")}</strong><small>{unread.length ? t(`${unread.length} non lue(s)`, `${unread.length} unread`) : t("Tout est lu", "All read")}</small></div><button className="icon-button" onClick={() => setOpen(false)} type="button" aria-label={t("Fermer", "Close")}><X size={17} /></button></div>
+      <div className="notification-popover__list">{notifications.slice(0, 5).map((notification) => { const copy = notificationCopy(notification, t); return <Link className={notification.readAt ? "is-read" : ""} href={notificationHref(notification)} key={notification.id} onClick={() => setOpen(false)} prefetch={false} target={notification.documentId ? "_blank" : undefined}><span className="notification-popover__dot" /><span><strong>{copy.title}</strong><small>{copy.detail}</small></span></Link>; })}{notifications.length === 0 ? <p>{t("Aucune notification.", "No notifications.")}</p> : null}</div>
+      <Link className="notification-popover__footer" href="/app/activite#notifications" onClick={() => setOpen(false)}>{t("Ouvrir le centre de notifications", "Open notification centre")}</Link>
+    </div> : null}
   </div>;
 }

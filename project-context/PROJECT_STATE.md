@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-28 — Lot 6C3 testé et déployé ; validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-08-30 — Lot 6D migré et testé sur KJORA Production ; déploiement Vercel en cours
 
 ## Lots
 
@@ -21,6 +21,8 @@
 - **Patch UX post-6C1 — Dashboard + détails Location/Locataire : TERMINÉ / TESTÉ — aucun changement métier**
 - **Lot 6C2 — Payments + Allocations + Crédits + Corrections : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6C3 — Documents + Notifications + Quittances + États de compte : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Patch UX post-6C3 — ventilation + reçu partiel : TERMINÉ / TESTÉ / DÉPLOYÉ — aucun changement Ledger/Payment/Allocation**
+- **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / MIGRATION PRODUCTION APPLIQUÉE — DÉPLOIEMENT VERCEL ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
@@ -228,7 +230,10 @@
 - Patch UX post-6C3 — migration Production `post_6c3_receipt_ux` (`20260829195924`) appliquée : reçu immédiat et idempotent pour tout Payment confirmé, y compris partiel, avec contrôle `auth.uid()` + Organization + `receipt.view`, et refus `PUBLIC`/`anon`.
 - Patch UX post-6C3 — ventilation UI exclusivement issue des projections serveur : Total échéance, Crédit appliqué, Paiements reçus et Reste dû. Aucun calcul Payment/Allocation/Ledger, backfill, email ou accès portail/public n’a été ajouté.
 - Patch UX post-6C3 — 68 assertions pgTAP 6C3 et toutes les régressions distantes 5B–6C2 réussies dans des transactions annulées ; TypeScript, ESLint, 116 tests Node et build Next.js 16.3.2 de 39 pages réussis.
+- Lot 6D — dashboard mensuel réel, Activity capability-scoped, cloche et centre Notifications, lecture globale du seul destinataire, Audit Owner filtrable et santé cron/outbox implémentés localement sans nouvelle vérité financière.
+- Lot 6D — TypeScript, ESLint sans avertissement, 123 tests Node et build Next.js 16.3.2 de 39 routes réussis. Les 35 assertions pgTAP 6D passent sur Production dans une transaction annulée.
+- Lot 6D — `20260830125630_lot_6d_dashboard_activity_audit.sql` est appliquée au seul projet KJORA `alvheiwlfzuefljcfrtv`. Les compteurs avant/après confirment : aucun backfill, aucun email, aucune livraison et aucun accès portail/public activé. Advisors examinés ; aucun correctif 6D supplémentaire requis.
 
 ## Proposé ensuite
 
-**Attendre la validation fonctionnelle Blaise et la décision roadmap. Ne commencer aucun autre lot, notamment ni 6D ni 6E.**
+**Finaliser le commit, le déploiement Vercel Production et la validation fonctionnelle Blaise du Lot 6D. Ne pas commencer 6E.**

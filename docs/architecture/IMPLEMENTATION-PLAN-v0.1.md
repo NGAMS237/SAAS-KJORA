@@ -437,6 +437,8 @@ Gate franchi le 28 août 2026 : migrations principale et hardening advisors appl
 
 ## 13. Lot 6D — Dashboard, Activity et Audit
 
+> Statut au 30 août 2026 : **TERMINÉ / TESTÉ / MIGRATION PRODUCTION APPLIQUÉE — DÉPLOIEMENT VERCEL ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Migration `20260830125630_lot_6d_dashboard_activity_audit.sql` appliquée au seul projet KJORA et 35 assertions pgTAP réussies avec rollback. Aucun email, backfill ni accès portail/public activé.
+
 ### Objectif
 
 Donner la visibilité propriétaire et fiabiliser le traitement asynchrone du monolithe.
@@ -483,6 +485,15 @@ Donner la visibilité propriétaire et fiabiliser le traitement asynchrone du mo
 - langues des notifications ;
 - révocation après notification ;
 - charge/pagination sur chronologies synthétiques.
+
+### Gate Production préparé
+
+- six RPC authentifiées : dashboard, activité, état lu/non lu, lecture globale des notifications, Audit Owner filtrable et santé opérationnelle ;
+- extension du journal administratif existant aux futurs reversals Payment et invalidations Document via le Domain Event existant ;
+- aucun nouveau read model financier, aucune table parallèle, aucun index nouveau, aucun job nouveau ;
+- `PUBLIC` et `anon` révoqués, `authenticated` soumis à `auth.uid()`, Organization et capabilities ;
+- aucune modification de Due, Payment, Allocation, Ledger, Document, Storage, email ou portail ;
+- aucun backfill.
 
 ## 14. Lot 6E — Tenant Portal minimal
 
@@ -582,4 +593,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Consolider les validations fonctionnelles encore explicitement en attente pour les Lots 6A, 6B/6B.1, 6C1, 6C2 et 6C3. Le Lot 6C3 est déjà testé et déployé ; ne commencer aucun nouveau lot, notamment ni 6D ni 6E, avant une autorisation distincte de Blaise.
+Finaliser le déploiement Vercel Production puis faire valider fonctionnellement 6D par Blaise. Consolider séparément les validations fonctionnelles encore en attente pour 6A, 6B/6B.1 et 6C1–6C3. Ne pas commencer 6E.

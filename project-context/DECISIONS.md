@@ -1,7 +1,7 @@
 # Kjora — Registre des décisions
 
 > Toute modification d’une décision confirmée doit créer une nouvelle entrée. Ne jamais supprimer silencieusement l’ancienne.
-> Dernière mise à jour : 2026-08-28 — déploiement Production du Lot 6C3
+> Dernière mise à jour : 2026-08-30 — déploiement technique du Lot 6D
 
 ## Statuts
 
@@ -130,6 +130,10 @@
 | D-115 | CONFIRMÉ | **Références et alertes 6C3.** Les références documentaires `AVI/REC/QUI/ETAT-AAAA-NNNNNN` utilisent une séquence PostgreSQL atomique ; l’idempotence de source conserve le numéro au rejeu. À J-X, KJORA crée sans doublon les alertes internes de dernière période prépayée et de crédit affecté insuffisant. Ces faits enrichissent l’avis unique au lieu de multiplier les emails. Tant que le profil Organization ne stocke que son nom, les documents utilisent ce nom et le fallback texte KJORA ; aucun logo ou contact n’est inventé. | 2026-08-28 |
 | D-116 | CONFIRMÉ | **Autorisation Production Lot 6C3.** Blaise autorise explicitement l’application de `lot_6c3_documents_notifications` sur Supabase Production KJORA `alvheiwlfzuefljcfrtv`, la création des structures documentaires, de la séquence, du bucket privé et des policies, l’extension du cron unique, les pgTAP, advisors, commit et push `main`. Le watermark exclut tout Payment antérieur à l’installation — 5 au contrôle effectif — et tous les emails restent désactivés. | 2026-08-28 |
 | D-117 | CONFIRMÉ | **Hardening advisors 6C3.** Les huit clés étrangères 6C3 signalées sans index reçoivent un index couvrant dans `lot_6c3_advisor_indexes`, sans donnée ni changement fonctionnel. Les quatre avertissements `SECURITY DEFINER` 6C3 sont intentionnels : fonctions transactionnelles authentifiées, `search_path` vide, contrôles `auth.uid()` + capability, retraits `PUBLIC`/`anon`. | 2026-08-28 |
+| D-118 | CONFIRMÉ | **Autorisation de démarrage Lot 6D.** Blaise autorise l’implémentation locale du dashboard opérationnel, des Notifications, de l’Activity, de l’Audit Owner et du monitoring outbox/cron en réutilisant strictement les vérités 6C1–6C3. L’application de `lot_6d_dashboard_activity_audit` à Supabase Production, les pgTAP distants, le commit et le push exigent une autorisation explicite après présentation du gate. Les emails financiers restent désactivés et le Lot 6E n’est pas commencé. | 2026-08-30 |
+| D-119 | PROPOSITION | **Convention KPI Lot 6D.** `Attendu` provient des Dues de la période, `Encaissé` des Payments `confirmed` reçus pendant la période, `Crédit appliqué` des crédits d’ouverture/Payment effectivement affectés, et `Reste dû` de `dues_with_status`. Ces valeurs sont présentées séparément et ne sont jamais réconciliées par une soustraction client arbitraire. Validation fonctionnelle Blaise requise. | 2026-08-30 |
+| D-120 | PROPOSITION | **Trois traces distinctes Lot 6D.** Activity projette les Domain Events selon les capabilities ; Notification est un message adressé, lisible et actionnable par son seul destinataire ; Audit est un journal sensible immuable réservé à Owner. Les reversals Payment et invalidations Document futurs alimentent l’audit sans backfill des événements existants. Validation fonctionnelle Blaise requise. | 2026-08-30 |
+| D-121 | CONFIRMÉ | **Autorisation Production Lot 6D.** Blaise autorise explicitement l’application de `20260830125630_lot_6d_dashboard_activity_audit.sql` au seul projet Supabase KJORA `alvheiwlfzuefljcfrtv`, les pgTAP transactionnels, les advisors, le commit, le push sur `main` et la vérification Vercel Production. Aucun email, backfill ni accès portail/public ne doit être activé ; cette autorisation ne vaut pas validation fonctionnelle de D-119/D-120 et n’ouvre pas le Lot 6E. | 2026-08-30 |
 
 ## Hypothèses / propositions ouvertes
 

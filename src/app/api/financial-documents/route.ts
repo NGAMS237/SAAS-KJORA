@@ -45,12 +45,24 @@ export async function POST(request: NextRequest) {
     return applyAuthState(NextResponse.json({ deliveryId: result.data }, { status: 202 }));
   }
 
-  if (input.action === "mark_notification_read") {
+  if (input.action === "mark_notification_read" || input.action === "mark_notification_unread") {
     const notificationId = parseDocumentId(input.notificationId);
     if (!notificationId) return applyAuthState(NextResponse.json({ error: "invalid_notification" }, { status: 400 }));
-    const result = await supabase.rpc("mark_notification_read", { target_notification_id: notificationId });
+    const result = await supabase.rpc("set_notification_read_state", {
+      target_notification_id: notificationId,
+      target_is_read: input.action === "mark_notification_read",
+    });
     if (result.error) return applyAuthState(NextResponse.json({ error: result.error.message }, { status: 403 }));
     return applyAuthState(NextResponse.json({ notificationId: result.data }));
+  }
+
+  if (input.action === "mark_all_notifications_read") {
+    if (!authorization.capabilities.includes("activity.view")) return applyAuthState(NextResponse.json({ error: "forbidden" }, { status: 403 }));
+    const result = await supabase.rpc("mark_all_notifications_read", {
+      target_organization_id: authorization.organizationId,
+    });
+    if (result.error) return applyAuthState(NextResponse.json({ error: result.error.message }, { status: 403 }));
+    return applyAuthState(NextResponse.json({ updated: Number(result.data ?? 0) }));
   }
 
   return applyAuthState(NextResponse.json({ error: "unsupported_action" }, { status: 400 }));

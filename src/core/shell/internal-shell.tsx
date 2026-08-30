@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Bell, Check, ChevronDown, Menu, PanelLeftClose, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Menu, PanelLeftClose, Plus, X } from "lucide-react";
 import type { OrganizationOption } from "@/core/organization/select-active-organization";
 import {
   internalPrimaryNavigation,
@@ -15,6 +15,8 @@ import { PreferencesControls } from "@/core/preferences/preferences-controls";
 import { DemoNotice } from "@/core/ui/ui";
 import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls";
 import { hasCapability } from "@/core/authorization/capabilities";
+import type { NotificationSummary } from "@/modules/documents/model";
+import { NotificationBell } from "@/modules/documents/views";
 
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -105,12 +107,14 @@ export function InternalShell({
   activeOrganization,
   userEmail,
   userId,
+  notifications,
 }: {
   children: ReactNode;
   organizations: OrganizationOption[];
   activeOrganization: OrganizationOption;
   userEmail: string | null;
   userId: string;
+  notifications: NotificationSummary[];
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -157,9 +161,7 @@ export function InternalShell({
         </Link>
         <OrganizationSwitcher organizations={organizations} activeOrganization={activeOrganization} />
         <div className="mobile-header__actions">
-          <button className="icon-button" disabled type="button" aria-label="Notifications à venir dans un prochain lot">
-            <Bell aria-hidden="true" size={19} />
-          </button>
+          <NotificationBell notifications={notifications} placement="mobile" />
           <button
             aria-expanded={menuOpen}
             className="icon-button"
@@ -203,6 +205,7 @@ export function InternalShell({
         </div>
       ) : null}
 
+      <div className="shell-utility-bar"><NotificationBell notifications={notifications} placement="desktop" /></div>
       <main className="shell-content">{children}</main>
 
       <nav className="mobile-bottom-nav" aria-label="Navigation interne principale">

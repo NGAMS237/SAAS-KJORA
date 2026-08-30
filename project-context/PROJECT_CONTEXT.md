@@ -556,7 +556,7 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 
 **Lot 4 — Architecture technique & sécurité v0.1 : VALIDÉ.**
 
-**Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ ET TESTÉ — À VALIDER PAR BLAISE.**
+**Lot 5A — Bootstrap application, navigation et design tokens : TERMINÉ / TESTÉ / LIVRÉ.**
 
 **Lot 5B — Auth + Organization : TERMINÉ / TESTÉ / VALIDÉ.**
 
@@ -579,3 +579,5 @@ Différenciation Kjora : simplicité, mobile-first, délégation locale, visibil
 **Lot 6C2 — Payments + Allocations + Crédits + Corrections : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-101 à D-107 introduisent l’argent réellement reçu, la multi-allocation, les paiements partiels/exacts/supérieurs, le crédit Payment, l’idempotence, la sérialisation par Lease et le reversal Owner compensatoire. La migration Production est appliquée ; 265 assertions pgTAP cumulées passent avec rollback et aucune ligne Payment ou Allocation de test ne persiste. La page Paiements, le workflow en quatre étapes, le détail Payment et les historiques Tenant/Location utilisent les données réelles. Aucun Receipt, PDF, notification ou capacité portail n’est créé. Référence technique : `docs/architecture/PAYMENTS-ALLOCATIONS-v0.1.md`.
 
 **Lot 6C3 — Documents + Notifications + Quittances + États de compte : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** D-108 à D-117 définissent les snapshots immuables, la séparation reçu/quittance, les références atomiques, Storage privé, les alertes prépaiement/crédit, les notifications ciblées, l’outbox et le worker email désactivé. Les migrations Production principale et d’index advisors sont appliquées ; 61 assertions pgTAP passent avec rollback, aucune donnée de test ne persiste et les 5 Payments antérieurs ne sont pas backfillés. Référence technique : `docs/architecture/DOCUMENTS-NOTIFICATIONS-v0.1.md`.
+
+**Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / MIGRATION PRODUCTION APPLIQUÉE — DÉPLOIEMENT VERCEL ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE.** Le dashboard lit une projection tenant-scoped du mois actif ; attendu, Payments confirmés encaissés, crédit appliqué et reste dû restent des vérités distinctes. Activity projette les Domain Events selon les capabilities, Notification reste adressée à un User précis, et l’Audit immuable reste Owner-only. La migration `20260830125630_lot_6d_dashboard_activity_audit.sql` est enregistrée sur KJORA Production ; 35 assertions pgTAP passent avec rollback, sans backfill, livraison email ni accès portail/public. Les six RPC 6D refusent `PUBLIC`/`anon`, vérifient `auth.uid()`, l’Organization et les capabilities. La santé opérationnelle expose uniquement des compteurs et états contrôlés du cron, de l’outbox documentaire et des livraisons. Les emails restent désactivés et 6E n’est pas commencé. Référence : `docs/architecture/DASHBOARD-ACTIVITY-AUDIT-v0.1.md`.
