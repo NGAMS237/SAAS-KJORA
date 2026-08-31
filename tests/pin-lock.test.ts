@@ -69,7 +69,8 @@ test("le cinquième échec bloque le PIN et ne laisse aucun essai", () => {
   assert.equal(state.lockedOut, true);
 });
 
-test("l'état déverrouillé expire après cinq minutes d'inactivité", () => {
+test("l'état déverrouillé expire après une heure d'inactivité", () => {
+  assert.equal(PIN_INACTIVITY_MS, 60 * 60 * 1000);
   const now = 1_000_000;
   assert.equal(isUnlockFresh(now - PIN_INACTIVITY_MS + 1, now), true);
   assert.equal(isUnlockFresh(now - PIN_INACTIVITY_MS, now), false);

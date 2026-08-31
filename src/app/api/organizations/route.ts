@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/core/organization/select-active-organization";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSupportedOrganizationTimezone } from "@/core/organization/settings";
 
 function cookieOptions() {
   return { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   if (
     typeof body.name !== "string" ||
     typeof body.language !== "string" ||
-    typeof body.timezone !== "string"
+    !isSupportedOrganizationTimezone(body.timezone)
   ) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
   const { data, error } = await supabase.rpc("create_organization", {

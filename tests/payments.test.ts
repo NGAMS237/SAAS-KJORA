@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   parsePaymentInput,
+  proposeInitialPaymentAllocations,
   proposePaymentAllocations,
   reconcilePaymentAllocation,
   type PaymentDueOption,
@@ -63,6 +64,16 @@ test("l’allocation automatique ignore dépôt et échéances futures", () => {
   ], 100_000, "2026-08-10");
   assert.deepEqual(result.allocations, [{ dueId: "current", amountXaf: 42_000 }]);
   assert.equal(result.creditCreatedXaf, 58_000);
+});
+
+test("l’encaissement initial ventile dépôt, échéances et crédit", () => {
+  const open = [due("deposit", 60_000, "2026-08-01", "deposit"), due("rent-1", 70_000, "2026-08-05"), due("rent-2", 70_000, "2026-08-05")];
+  const combined = proposeInitialPaymentAllocations(open, 200_000, "2026-08-10");
+  assert.deepEqual(combined.allocations.map(({ dueId, amountXaf }) => [dueId, amountXaf]), [["deposit", 60_000], ["rent-1", 70_000], ["rent-2", 70_000]]);
+  assert.equal(combined.creditCreatedXaf, 0);
+  assert.deepEqual(proposeInitialPaymentAllocations(open, 30_000, "2026-08-10").allocations, [{ dueId: "deposit", amountXaf: 30_000 }]);
+  assert.equal(proposeInitialPaymentAllocations([], 200_000, "2026-08-10").creditCreatedXaf, 200_000);
+  assert.equal(proposeInitialPaymentAllocations([due("rent", 80_000, "2026-08-05")], 200_000, "2026-08-10").creditCreatedXaf, 120_000);
 });
 
 test("les quatre moyens MVP et les montants XAF entiers sont validés", () => {

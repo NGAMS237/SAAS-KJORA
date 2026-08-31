@@ -71,14 +71,14 @@ export function LeaseDuesPanel({ financial, tenantScope = false }: { financial: 
     <div className="section-heading"><div><p className="eyebrow">SCR-DUE-02</p><h2>{tenantScope ? t("Ventilation des échéances", "Due breakdown") : t("Échéances", "Dues")}</h2></div><CalendarClock size={22} /></div>
     {dues.length ? <div className="financial-table" role="table">
       <div className="financial-table__head" role="row"><span>{t("Période", "Period")}</span><span>{t("Date limite", "Due date")}</span><span>{t("Loyer", "Rent")}</span><span>{t("Charges", "Charges")}</span><span>{t("Total", "Total")}</span><span>{t("Restant", "Remaining")}</span><span>{t("État", "Status")}</span></div>
-      {dues.map((due) => { const breakdown = dueBreakdown(due); return <div className="financial-table__row" role="row" key={due.id}>
-        <span data-label={t("Période", "Period")}><strong>{shortDate(due.periodStart)} → {shortDate(due.periodEnd)}</strong><small>{due.reference}</small></span>
+      {dues.map((due) => { const breakdown = dueBreakdown(due); const deposit = due.kind === "deposit"; return <div className={`financial-table__row${deposit ? " financial-table__row--deposit" : ""}`} role="row" key={due.id}>
+        <span data-label={deposit ? t("Nature", "Type") : t("Période", "Period")}><strong>{deposit ? t("Dépôt de garantie", "Security deposit") : `${shortDate(due.periodStart)} → ${shortDate(due.periodEnd)}`}</strong><small>{due.reference}</small></span>
         <span data-label={t("Date limite", "Due date")}>{shortDate(due.dueDate)}<small>{t(`Avis prévu le ${shortDate(due.noticeDate)}`, `Notice scheduled for ${shortDate(due.noticeDate)}`)}</small></span>
-        <span data-label={t("Loyer", "Rent")} className="financial-value">{money(due.rentXaf)}</span>
-        <span data-label={t("Charges", "Charges")} className="financial-value">{money(due.recurringChargesXaf)}</span>
+        <span data-label={t("Loyer", "Rent")} className="financial-value">{deposit ? "—" : money(due.rentXaf)}</span>
+        <span data-label={t("Charges", "Charges")} className="financial-value">{deposit ? "—" : money(due.recurringChargesXaf)}</span>
         <span data-label={t("Total", "Total")} className="financial-value">{money(breakdown.totalXaf)}</span>
         <span data-label={t("Reste dû", "Remaining due")} className="financial-value">{money(breakdown.remainingXaf)}</span>
-        <span data-label={t("État", "Status")}>{status(due.status, t)}</span>
+        <span data-label={t("État", "Status")}>{deposit && ["upcoming", "due", "overdue"].includes(due.status) ? <Badge tone={due.status === "overdue" ? "danger" : "due"}>{t("À encaisser", "To collect")}</Badge> : status(due.status, t)}</span>
         <details className="due-breakdown">
           <summary>{t("Comment ce montant est calculé ?", "How is this amount calculated?")}</summary>
           <div className="due-breakdown__values">

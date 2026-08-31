@@ -9,15 +9,19 @@ const PAGE = { width: 595.28, height: 841.89, margin: 48 };
 
 function text(value: unknown) {
   return String(value ?? "—")
+    .replace(/[\u00A0\u202F]/g, " ")
     .replaceAll("œ", "oe").replaceAll("Œ", "OE")
     .replace(/[\u2018\u2019]/g, "'").replace(/[\u2013\u2014]/g, "-")
     .replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\u00FF]/g, "?");
 }
 
-function money(value: unknown) {
+export function formatPdfMoney(value: unknown) {
   const amount = Number(value ?? 0);
-  return `${Number.isFinite(amount) ? amount.toLocaleString("fr-FR") : "0"} XAF`;
+  const formatted = Number.isFinite(amount) ? amount.toLocaleString("fr-FR") : "0";
+  return `${formatted.replace(/[\u00A0\u202F]/g, " ")} XAF`;
 }
+
+const money = formatPdfMoney;
 
 function date(value: unknown, language: "fr" | "en") {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value)) return "—";

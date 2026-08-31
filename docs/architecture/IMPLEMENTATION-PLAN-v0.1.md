@@ -497,6 +497,8 @@ Donner la visibilité propriétaire et fiabiliser le traitement asynchrone du mo
 
 ## 14. Lot 6E — Tenant Portal minimal
 
+> Gate post-6D : le patch UX/settings/dépôt/PDF est testé localement et sa migration contrôlée est appliquée en Production avec pgTAP transactionnel concluant. Il réutilise les transactions Payment/Allocation/Ledger 6C2, ne démarre pas 6E et n’active ni email, backfill, portail/public ni fournisseur de paiement.
+
 ### Objectif
 
 Ouvrir une lecture locataire sûre des mêmes Lease, Dues, Payments et Receipts.

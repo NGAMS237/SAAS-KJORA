@@ -1,6 +1,7 @@
 export const PIN_LENGTH = 6;
 export const PIN_MAX_ATTEMPTS = 5;
-export const PIN_INACTIVITY_MS = 5 * 60 * 1000;
+export const PIN_INACTIVITY_MINUTES = 60;
+export const PIN_INACTIVITY_MS = PIN_INACTIVITY_MINUTES * 60 * 1000;
 export const PIN_PBKDF2_ITERATIONS = 600_000;
 
 export type PinVerifierRecord = {

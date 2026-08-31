@@ -83,7 +83,7 @@
 - Lot 5B validé fonctionnellement par Blaise : email Resend reçu, Magic Link Supabase avec PKCE opérationnel et session SSR persistante créée.
 - Onboarding Organization réel validé ; l’Organization créée est affichée dans `/app`, puis retrouvée après déconnexion et reconnexion.
 - Les données Dashboard et Paiements restent volontairement fictives jusqu’aux lots métier correspondants ; Biens, Unités, Locataires et Locations utilisent désormais le backend réel.
-- Sous-lot PIN interne livré : configuration, modification et suppression facultatives dans Paramètres, verrouillage manuel et automatique après 5 minutes, puis écran mobile-first `/verrouillage`.
+- Sous-lot PIN interne livré : configuration, modification et suppression facultatives dans Paramètres, verrouillage manuel et automatique après 1 heure d’inactivité réelle par défaut, puis écran mobile-first `/verrouillage`.
 - Le PIN interne reste un `quick lock` local sur session Supabase existante : PBKDF2-SHA-256 à 600 000 itérations, sel aléatoire, verifier et compteur d’échecs dans IndexedDB, aucun PIN brut conservé ou transmis.
 - Après cinq erreurs ou choix de l’email, le PIN local est supprimé et la session Supabase est terminée afin d’imposer une authentification forte. La déconnexion interne supprime également le PIN et l’état de déverrouillage locaux.
 - Le Tenant Portal reste séparé et ne charge aucune logique PIN.
@@ -164,7 +164,7 @@
 - Advisor sécurité exécuté : seul avertissement restant = fonction `create_organization` `SECURITY DEFINER` volontairement exposée aux seuls utilisateurs authentifiés, avec vérification `auth.uid()`, identité email vérifiée, validations, `search_path` vide et retraits `PUBLIC`/`anon`.
 - Accès REST avec la seule clé publiable, sans session : HTTP 401 et aucune ligne exposée.
 - Validation fonctionnelle réelle par Blaise : réception email Resend, échange Magic Link PKCE, création de session SSR, onboarding Organization, affichage de l’Organization réelle, déconnexion, reconnexion et récupération de l’Organization — succès.
-- Sous-lot PIN — 17 tests Node réussis : format/confirmation, dérivation PBKDF2, absence du PIN brut dans le verifier, comparaison sûre, cinquième échec, timeout 5 minutes, retour interne borné et absence de couplage portail/localStorage.
+- Sous-lot PIN — tests Node réussis : format/confirmation, dérivation PBKDF2, absence du PIN brut dans le verifier, comparaison sûre, cinquième échec, timeout 1 heure, retour interne borné et absence de couplage portail/localStorage.
 - Sous-lot PIN — TypeScript, ESLint et build Next.js production réussis ; `/verrouillage` est une route dynamique protégée, `/app` refuse l’anonyme et les routes `/portal` restent sans logique PIN.
 - Sous-lot PIN — validation fonctionnelle explicite de Blaise sur staging enregistrée le 2026-08-26 ; le gate autorisant le démarrage de 5C est satisfait.
 - Prévisualisation UX — tests purs couvrant création maison + Unit « Maison entière », immeuble multi-unités, vacance, locataire téléphone seul, email seul, refus sans contact, brouillon/activation, occupation après activation, refus de chevauchement et absence d’accès portail.
@@ -237,3 +237,10 @@
 ## Proposé ensuite
 
 **Faire valider fonctionnellement le Lot 6D par Blaise sur Vercel Production. Ne pas commencer 6E.**
+
+### Patch post-6D — gate technique Production
+
+- PIN 1 heure, timezone IANA, devise Organization XAF-only verrouillée après donnée financière, dépôt optionnel, ventilation de l’encaissement initial via Payment 6C2, badges contextuels et correction des séparateurs PDF sont préparés localement.
+- Migration `20260830190349_post_6d_settings_deposit_ux.sql` appliquée au seul projet Production KJORA `alvheiwlfzuefljcfrtv` et enregistrée à distance sous `20260831004839_post_6d_settings_deposit_ux` ; aucun backfill, email financier, portail/public ni fournisseur de paiement activé.
+- Validation du patch : TypeScript réussi, ESLint réussi, 128 tests Node réussis, build Next.js 16.3.2 réussi avec 39 pages générées et pgTAP Production transactionnel réussi (`11/11`, rollback). Advisors sans niveau critique ; la nouvelle RPC `SECURITY DEFINER` est volontairement limitée à `authenticated`, contrôle `auth.uid()` et `organization.profile.manage`, avec `PUBLIC`/`anon` révoqués et `search_path` vide.
+- Lot 6D reste en validation fonctionnelle Blaise ; Lot 6E reste non commencé.

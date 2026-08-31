@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
 import { parseDocumentId, parseStatementRequest } from "../src/modules/documents/model.ts";
-import { generateFinancialDocumentPdf } from "../src/modules/documents/pdf.ts";
+import { formatPdfMoney, generateFinancialDocumentPdf } from "../src/modules/documents/pdf.ts";
 import { controlledDeliveryError, financialDocumentEmail } from "../src/modules/documents/email.ts";
 import type { FinancialDocumentRecord } from "../src/modules/documents/model.ts";
 
@@ -29,6 +29,13 @@ test("les filtres d’état de compte sont validés sans ambiguïté", () => {
   assert.equal(parseStatementRequest({ tenantId: "internal-slug" }).ok, false);
   assert.equal(parseDocumentId(tenantId), tenantId);
   assert.equal(parseDocumentId("../secret"), null);
+});
+
+test("les séparateurs de milliers PDF restent sans point d’interrogation", () => {
+  for (const amount of [12_000, 522_000, 379_994]) {
+    assert.doesNotMatch(formatPdfMoney(amount), /\?/);
+    assert.match(formatPdfMoney(amount), /^\d{1,3}( \d{3})* XAF$/);
+  }
 });
 
 test("les documents sont immuables, versionnés et invalidés sans suppression", () => {

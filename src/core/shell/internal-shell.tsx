@@ -24,7 +24,8 @@ function isActive(pathname: string, item: NavigationItem) {
   return item.exact ? currentPath === targetPath : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
 }
 
-function NavigationLink({ item, pathname, onClick }: { item: NavigationItem; pathname: string; onClick?: () => void }) {
+type NavigationBadge = { count: number; tone: "danger" | "warning" | "info" };
+function NavigationLink({ item, pathname, badges, onClick }: { item: NavigationItem; pathname: string; badges: Record<string, NavigationBadge>; onClick?: () => void }) {
   const Icon = item.icon;
   const active = isActive(pathname, item);
   return (
@@ -36,6 +37,7 @@ function NavigationLink({ item, pathname, onClick }: { item: NavigationItem; pat
     >
       <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
       <span>{item.label}</span>
+      {badges[item.href]?.count > 0 ? <span className={`nav-alert nav-alert--${badges[item.href].tone}`} aria-label={`${badges[item.href].count} élément(s) à traiter`}>{badges[item.href].count}</span> : null}
     </Link>
   );
 }
@@ -108,6 +110,7 @@ export function InternalShell({
   userEmail,
   userId,
   notifications,
+  navigationBadges,
 }: {
   children: ReactNode;
   organizations: OrganizationOption[];
@@ -115,6 +118,7 @@ export function InternalShell({
   userEmail: string | null;
   userId: string;
   notifications: NotificationSummary[];
+  navigationBadges: Record<string, NavigationBadge>;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -134,13 +138,13 @@ export function InternalShell({
         <OrganizationSwitcher organizations={organizations} activeOrganization={activeOrganization} />
         <nav className="desktop-rail__primary">
           {primaryNavigation.map((item) => (
-            <NavigationLink item={item} key={item.href} pathname={pathname} />
+            <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} />
           ))}
         </nav>
         <div className="desktop-rail__secondary">
           <p className="nav-caption">Espace secondaire</p>
           {secondaryNavigation.map((item) => (
-            <NavigationLink item={item} key={item.href} pathname={pathname} />
+            <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} />
           ))}
         </div>
         <div className="desktop-rail__footer">
@@ -190,7 +194,7 @@ export function InternalShell({
             </div>
             <nav>
               {secondaryNavigation.map((item) => (
-                <NavigationLink item={item} key={item.href} pathname={pathname} onClick={() => setMenuOpen(false)} />
+                <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} onClick={() => setMenuOpen(false)} />
               ))}
             </nav>
             <Link className="portal-preview-link" href="/portal" onClick={() => setMenuOpen(false)}>
@@ -210,7 +214,7 @@ export function InternalShell({
 
       <nav className="mobile-bottom-nav" aria-label="Navigation interne principale">
         {primaryNavigation.map((item) => (
-          <NavigationLink item={item} key={item.href} pathname={pathname} />
+          <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} />
         ))}
       </nav>
     </div>

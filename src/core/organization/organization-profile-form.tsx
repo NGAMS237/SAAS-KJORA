@@ -3,9 +3,13 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrganizationOption } from "@/core/organization/select-active-organization";
+import { ORGANIZATION_CURRENCIES, ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
+import { usePreferences } from "@/core/preferences/preferences-provider";
 
-export function OrganizationProfileForm({ organization }: { organization: OrganizationOption }) {
+export function OrganizationProfileForm({ organization, currencyLocked }: { organization: OrganizationOption; currencyLocked: boolean }) {
   const router = useRouter();
+  const { language } = usePreferences();
+  const t = (fr: string, en: string) => language === "FR" ? fr : en;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -21,27 +25,32 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
         name: form.get("name"),
         language: form.get("language"),
         timezone: form.get("timezone"),
+        currency: form.get("currency"),
       }),
     });
     setBusy(false);
     if (!response.ok) {
-      setMessage(response.status === 403 ? "Seul un Owner actif peut modifier ce profil." : "Modification impossible.");
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      setMessage(body.error === "organization_currency_locked"
+        ? t("La devise est verrouillée car l’Organization possède déjà des données financières.", "Currency is locked because the Organization already has financial data.")
+        : response.status === 403 ? t("Vous n’avez pas l’autorisation de modifier ces paramètres.", "You are not allowed to change these settings.") : t("Modification impossible.", "Update failed."));
       return;
     }
-    setMessage("Profil de l’Organization mis à jour.");
+    setMessage(t("Profil de l’Organization mis à jour.", "Organization profile updated."));
     router.refresh();
   }
 
   return (
     <form className="form-stack" onSubmit={submit}>
-      <label className="field"><span>Nom</span><input defaultValue={organization.name} maxLength={120} minLength={2} name="name" required /></label>
+      <label className="field"><span>{t("Nom", "Name")}</span><input defaultValue={organization.name} maxLength={120} minLength={2} name="name" required /></label>
       <div className="form-grid">
-        <label className="field"><span>Langue</span><select defaultValue={organization.language} name="language"><option value="fr">Français</option><option value="en">English</option></select></label>
-        <label className="field"><span>Fuseau horaire</span><input defaultValue={organization.timezone} name="timezone" required /></label>
+        <label className="field"><span>{t("Langue", "Language")}</span><select defaultValue={organization.language} name="language"><option value="fr">Français</option><option value="en">English</option></select></label>
+        <label className="field"><span>{t("Fuseau horaire", "Time zone")}</span><select defaultValue={organization.timezone} name="timezone" required>{!ORGANIZATION_TIMEZONES.some(([id]) => id === organization.timezone) ? <option value={organization.timezone}>{organization.timezone}</option> : null}{ORGANIZATION_TIMEZONES.map(([id, label]) => <option key={id} value={id}>{label} · {id}</option>)}</select></label>
+        <label className="field"><span>{t("Devise", "Currency")}</span><select defaultValue={organization.currencyCode} disabled={currencyLocked} name="currency">{ORGANIZATION_CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}</select><small>{currencyLocked ? t("XAF verrouillée : des données financières existent déjà. Aucun historique ne sera converti.", "XAF is locked: financial data already exists. History is never converted.") : t("XAF est la seule devise activée pour le MVP Cameroun.", "XAF is the only currency enabled for the Cameroon MVP.")}</small>{currencyLocked ? <input name="currency" type="hidden" value={organization.currencyCode} /> : null}</label>
       </div>
-      <div className="fixed-configuration"><span><small>Pays</small><strong>Cameroun</strong></span><span><small>Devise</small><strong>XAF</strong></span></div>
+      <div className="fixed-configuration"><span><small>{t("Pays", "Country")}</small><strong>{t("Cameroun", "Cameroon")}</strong></span></div>
       {message ? <p className="form-feedback" role="status">{message}</p> : null}
-      <button className="button button--primary" disabled={busy} type="submit">{busy ? "Enregistrement…" : "Enregistrer"}</button>
+      <button className="button button--primary" disabled={busy} type="submit">{busy ? t("Enregistrement…", "Saving…") : t("Enregistrer", "Save")}</button>
     </form>
   );
 }

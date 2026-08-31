@@ -12,6 +12,7 @@ import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, FinancialStateCard, PageHeader } from "@/core/ui/ui";
 import {
   PAYMENT_METHODS,
+  proposeInitialPaymentAllocations,
   proposePaymentAllocations,
   reconcilePaymentAllocation,
   type PaymentAllocationInput,
@@ -141,11 +142,11 @@ export function PaymentsView({ payments, canRecord }: { payments: PaymentSummary
   </div>;
 }
 
-export function NewPaymentView({ options, initialLeaseId }: { options: PaymentLeaseOption[]; initialLeaseId?: string }) {
+export function NewPaymentView({ options, initialLeaseId, initialAmountXaf = 0, initialAllocation = false }: { options: PaymentLeaseOption[]; initialLeaseId?: string; initialAmountXaf?: number; initialAllocation?: boolean }) {
   const t = useCopy(); const router = useRouter();
   const initial = options.some((option) => option.leaseId === initialLeaseId) ? initialLeaseId! : options.find((option) => option.status === "active")?.leaseId ?? options[0]?.leaseId ?? "";
   const [step, setStep] = useState(1); const [leaseId, setLeaseId] = useState(initial);
-  const [amount, setAmount] = useState(""); const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [amount, setAmount] = useState(initialAmountXaf > 0 ? String(initialAmountXaf) : ""); const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [method, setMethod] = useState<PaymentMethod>("cash"); const [externalReference, setExternalReference] = useState(""); const [note, setNote] = useState("");
   const [allocations, setAllocations] = useState<PaymentAllocationInput[]>([]); const [allocationEdited, setAllocationEdited] = useState(false);
   const [idempotencyKey] = useState(() => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -157,7 +158,7 @@ export function NewPaymentView({ options, initialLeaseId }: { options: PaymentLe
 
   function prepareAllocation() {
     if (!selected || !Number.isSafeInteger(amountXaf) || amountXaf <= 0) return;
-    const proposal = proposePaymentAllocations(selected.dues, amountXaf, paymentDate);
+    const proposal = initialAllocation ? proposeInitialPaymentAllocations(selected.dues, amountXaf, paymentDate) : proposePaymentAllocations(selected.dues, amountXaf, paymentDate);
     setAllocations(proposal.allocations); setAllocationEdited(false); setStep(3);
   }
   function setAllocation(dueId: string, value: number) {
@@ -180,7 +181,7 @@ export function NewPaymentView({ options, initialLeaseId }: { options: PaymentLe
   if (!options.length) return <div className="page-stack"><Link className="demo-back" href="/app/paiements"><ArrowLeft size={17} />{t("Paiements", "Payments")}</Link><Card><EmptyState icon={WalletCards} title={t("Aucune Location disponible", "No available lease")} description={t("Activez d’abord une Location et ses échéances.", "Activate a lease and its dues first.")} /></Card></div>;
   return <div className="page-stack payment-flow-v2">
     <Link className="demo-back" href="/app/paiements"><ArrowLeft size={17} />{t("Tous les paiements", "All payments")}</Link>
-    <PageHeader eyebrow="SCR-PAY-01" title={t("Enregistrer un paiement", "Record a payment")} description={t("Saisie, allocation, résumé puis confirmation atomique.", "Entry, allocation, summary and atomic confirmation.")} />
+    <PageHeader eyebrow="SCR-PAY-01" title={initialAllocation ? t("Répartir le montant reçu", "Allocate received amount") : t("Enregistrer un paiement", "Record a payment")} description={t("Saisie, allocation, résumé puis confirmation atomique.", "Entry, allocation, summary and atomic confirmation.")} />
     <ol className="payment-steps" aria-label={t("Étapes", "Steps")}>{[t("Location", "Lease"), t("Paiement", "Payment"), t("Allocation", "Allocation"), t("Confirmation", "Confirmation")].map((label, index) => <li className={step === index + 1 ? "is-active" : step > index + 1 ? "is-complete" : ""} key={label}><span>{index + 1}</span>{label}</li>)}</ol>
 
     {step === 1 ? <Card className="payment-step-card"><div className="section-heading"><div><p className="eyebrow">1 / 4</p><h2>{t("Locataire et Location", "Tenant and lease")}</h2></div><UserRound size={22} /></div><label className="field"><span>{t("Location", "Lease")}</span><select value={leaseId} onChange={(event) => setLeaseId(event.target.value)}>{options.map((option) => <option key={option.leaseId} value={option.leaseId}>{option.tenantName} · {option.propertyName} · {option.unitLabel}{option.status === "ended" ? ` · ${t("terminée", "ended")}` : ""}</option>)}</select></label>{selected ? <div className="payment-context-grid"><FinancialStateCard icon={CircleDollarSign} label={t("Solde dû", "Amount due")} value={money(selected.amountDueXaf)} helper={t("Après crédits déjà disponibles.", "After currently available credits.")} tone={selected.amountDueXaf > 0 ? "danger" : "positive"} /><FinancialStateCard icon={WalletCards} label={t("Crédit disponible", "Available credit")} value={money(selected.availableCreditXaf)} helper={t(`${selected.dues.length} échéance(s) encore ouverte(s)`, `${selected.dues.length} open due(s)`)} tone="positive" /></div> : null}<button className="button button--primary" disabled={!selected} onClick={() => setStep(2)} type="button">{t("Continuer", "Continue")}</button></Card> : null}

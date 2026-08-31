@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
 
 export function OrganizationOnboardingForm() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export function OrganizationOnboardingForm() {
         </label>
         <label className="field">
           <span>Fuseau horaire</span>
-          <input defaultValue="Africa/Douala" name="timezone" required />
+          <select defaultValue="Africa/Douala" name="timezone" required>{ORGANIZATION_TIMEZONES.map(([id, label]) => <option key={id} value={id}>{label} · {id}</option>)}</select>
         </label>
       </div>
       <div className="fixed-configuration">

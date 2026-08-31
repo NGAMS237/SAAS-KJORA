@@ -1371,6 +1371,11 @@ a.portfolio-metric:hover {
   color: var(--info);
 }
 
+.nav-alert { margin-inline-start: auto; min-width: 1.35rem; height: 1.35rem; padding: 0 .35rem; border-radius: 999px; display: inline-grid; place-items: center; font: 700 .72rem/1 var(--font-interface); }
+.nav-alert--danger { background: var(--danger-soft); color: var(--danger); }
+.nav-alert--warning { background: var(--warning-soft); color: var(--warning); }
+.nav-alert--info { background: var(--info-soft); color: var(--info); }
+
 .badge--due {
   background: var(--due-soft);
   border-color: color-mix(in srgb, var(--due) 30%, transparent);

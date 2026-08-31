@@ -200,3 +200,25 @@ export function reconcilePaymentAllocation(amountXaf: number, allocations: reado
       && allocatedXaf >= 0 && allocatedXaf <= amountXaf,
   };
 }
+
+export function proposeInitialPaymentAllocations(
+  dues: readonly PaymentDueOption[], amountXaf: number, paymentDate: string,
+) {
+  let available = Math.max(0, Number.isSafeInteger(amountXaf) ? amountXaf : 0);
+  const allocations: PaymentAllocationInput[] = [];
+  const eligible = [...dues]
+    .filter((due) => due.remainingXaf > 0 && (due.kind === "deposit" || due.dueDate <= paymentDate))
+    .sort((left, right) => {
+      if (left.kind === "deposit" && right.kind !== "deposit") return -1;
+      if (right.kind === "deposit" && left.kind !== "deposit") return 1;
+      return left.dueDate.localeCompare(right.dueDate)
+        || left.periodStart.localeCompare(right.periodStart) || left.id.localeCompare(right.id);
+    });
+  for (const due of eligible) {
+    if (available === 0) break;
+    const allocated = Math.min(available, due.remainingXaf);
+    allocations.push({ dueId: due.id, amountXaf: allocated });
+    available -= allocated;
+  }
+  return { allocations, allocatedXaf: amountXaf - available, creditCreatedXaf: available };
+}
