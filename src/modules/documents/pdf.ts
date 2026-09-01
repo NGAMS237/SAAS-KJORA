@@ -15,13 +15,30 @@ function text(value: unknown) {
     .replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\u00FF]/g, "?");
 }
 
-export function formatPdfMoney(value: unknown) {
+export function formatPdfMoney(value: unknown, currency = "XAF") {
   const amount = Number(value ?? 0);
   const formatted = Number.isFinite(amount) ? amount.toLocaleString("fr-FR") : "0";
-  return `${formatted.replace(/[\u00A0\u202F]/g, " ")} XAF`;
+  return `${formatted.replace(/[\u00A0\u202F]/g, " ")} ${currency}`;
 }
 
 const money = formatPdfMoney;
+
+export function dueNoticePresentation(snapshot: Record<string, unknown>, language: "fr" | "en") {
+  const remaining = Number(snapshot.remaining_xaf ?? 0);
+  const coveredUntil = remaining === 0 && typeof snapshot.last_covered_period_end === "string"
+    ? snapshot.last_covered_period_end : null;
+  return {
+    remaining,
+    covered: remaining === 0,
+    headline: remaining === 0
+      ? (language === "fr" ? "Échéance couverte" : "Due covered")
+      : (language === "fr" ? "Solde à payer" : "Balance due"),
+    message: remaining === 0
+      ? (language === "fr" ? "Cette échéance est entièrement couverte par les crédits et paiements affectés." : "This due is fully covered by allocated credits and payments.")
+      : (language === "fr" ? "Montant restant à régler pour cette échéance." : "Amount remaining for this due."),
+    coveredUntil,
+  };
+}
 
 function date(value: unknown, language: "fr" | "en") {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value)) return "—";
@@ -97,6 +114,15 @@ function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, docume
   page.drawText(`${text(s.property_name)} · ${text(s.unit_label)} · ${text(s.property_locality)}`, { x: PAGE.margin, y, size: 9.5, font: regular, color: MUTED });
   y -= 42;
 
+  if (document.type === "due_notice") {
+    const presentation = dueNoticePresentation(s, document.language);
+    const currency = typeof s.currency === "string" ? s.currency : "XAF";
+    page.drawRectangle({ x: PAGE.margin, y: y - 54, width: PAGE.width - PAGE.margin * 2, height: 72, color: rgb(.95, .92, .84) });
+    page.drawText(text(presentation.headline), { x: PAGE.margin + 16, y: y - 2, size: 9, font: bold, color: MUTED });
+    page.drawText(presentation.covered ? text(presentation.message) : money(presentation.remaining, currency), { x: PAGE.margin + 16, y: y - 30, size: presentation.covered ? 10 : 22, font: bold, color: INK });
+    y -= 92;
+  }
+
   if (document.type === "payment_receipt") {
     row(page, regular, bold, y, fr ? "Référence Payment" : "Payment reference", text(s.payment_reference)); y -= 34;
     row(page, regular, bold, y, fr ? "Date de réception" : "Receipt date", date(s.payment_date, document.language)); y -= 34;
@@ -127,15 +153,19 @@ function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, docume
   } else {
     row(page, regular, bold, y, fr ? "Période" : "Period", `${date(s.period_start, document.language)} - ${date(s.period_end, document.language)}`); y -= 34;
     row(page, regular, bold, y, fr ? "Date limite" : "Due date", date(s.due_date, document.language)); y -= 34;
-    row(page, regular, bold, y, fr ? "Loyer" : "Rent", money(s.rent_xaf)); y -= 34;
-    row(page, regular, bold, y, fr ? "Charges" : "Charges", money(s.recurring_charges_xaf)); y -= 34;
-    if (Number(s.deposit_xaf ?? 0) > 0) { row(page, regular, bold, y, fr ? "Dépôt" : "Deposit", money(s.deposit_xaf)); y -= 34; }
-    row(page, regular, bold, y, document.type === "rent_receipt" ? (fr ? "Montant acquitté" : "Settled amount") : (fr ? "Montant restant" : "Outstanding amount"), document.type === "rent_receipt" ? money(s.expected_xaf) : money(s.remaining_xaf));
-    if (document.type === "due_notice" && Number(s.credit_applied_xaf ?? 0) > 0) {
-      y -= 34;
-      row(page, regular, bold, y, fr ? "Crédit affecté à cette échéance" : "Credit applied to this due", money(s.credit_applied_xaf));
+    const currency = typeof s.currency === "string" ? s.currency : "XAF";
+    row(page, regular, bold, y, fr ? "Loyer" : "Rent", money(s.rent_xaf, currency)); y -= 34;
+    row(page, regular, bold, y, fr ? "Charges" : "Charges", money(s.recurring_charges_xaf, currency)); y -= 34;
+    if (Number(s.deposit_xaf ?? 0) > 0) { row(page, regular, bold, y, fr ? "Dépôt" : "Deposit", money(s.deposit_xaf, currency)); y -= 34; }
+    if (document.type === "due_notice") {
+      row(page, regular, bold, y, fr ? "Total de l’échéance" : "Due total", money(s.expected_xaf, currency)); y -= 34;
+      row(page, regular, bold, y, fr ? "Crédit appliqué" : "Credit applied", money(s.credit_applied_xaf, currency)); y -= 34;
+      row(page, regular, bold, y, fr ? "Paiements affectés" : "Payments allocated", money(s.payment_allocated_xaf, currency)); y -= 34;
+      row(page, regular, bold, y, fr ? "Reste dû" : "Remaining", money(s.remaining_xaf, currency));
+    } else {
+      row(page, regular, bold, y, fr ? "Montant acquitté" : "Settled amount", money(s.expected_xaf, currency));
     }
-    if (document.type === "due_notice" && s.last_covered_period_end) {
+    if (document.type === "due_notice" && dueNoticePresentation(s, document.language).coveredUntil) {
       y -= 34;
       row(page, regular, bold, y, fr ? "Dernière période prépayée" : "Last prepaid period", date(s.last_covered_period_end, document.language));
     }

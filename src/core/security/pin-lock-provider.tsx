@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { createPinVerifierRecord, isUnlockFresh, PIN_INACTIVITY_MS, sanitizeInternalAppPath } from "@/core/security/pin-lock";
+import { createPinVerifierRecord, isUnlockFresh, PIN_INACTIVITY_MS, sanitizeInternalAppPath, sanitizePortalPath } from "@/core/security/pin-lock";
+import type { PinStorageScope } from "@/core/security/pin-storage";
 import {
   clearLocalPinSecurity,
   clearPinUnlockState,
@@ -24,12 +25,13 @@ type PinLockContextValue = {
 
 const PinLockContext = createContext<PinLockContextValue | null>(null);
 
-function lockUrl(pathname: string) {
-  const next = sanitizeInternalAppPath(pathname);
-  return `/verrouillage?next=${encodeURIComponent(next)}`;
+function lockUrl(pathname: string, scope: PinStorageScope) {
+  const next = scope === "portal" ? sanitizePortalPath(pathname) : sanitizeInternalAppPath(pathname);
+  const route = scope === "portal" ? "/portal/verrouillage" : "/verrouillage";
+  return `${route}?next=${encodeURIComponent(next)}`;
 }
 
-export function PinLockProvider({ children, userId }: { children: ReactNode; userId: string }) {
+export function PinLockProvider({ children, userId, scope = "internal" }: { children: ReactNode; userId: string; scope?: PinStorageScope }) {
   const pathname = usePathname();
   const router = useRouter();
   const [checking, setChecking] = useState(true);
@@ -39,10 +41,10 @@ export function PinLockProvider({ children, userId }: { children: ReactNode; use
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lockNow = useCallback(() => {
-    clearPinUnlockState();
+    clearPinUnlockState(scope);
     setUnlocked(false);
-    router.replace(lockUrl(pathname));
-  }, [pathname, router]);
+    router.replace(lockUrl(pathname, scope));
+  }, [pathname, router, scope]);
 
   const scheduleLock = useCallback((activityAt: number) => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
@@ -54,26 +56,26 @@ export function PinLockProvider({ children, userId }: { children: ReactNode; use
     let active = true;
     async function initialize() {
       try {
-        if (isPinReauthenticationRequired(userId)) {
+        if (isPinReauthenticationRequired(userId, scope)) {
           setHasPin(true);
           setChecking(false);
-          router.replace(lockUrl(pathname));
+          router.replace(lockUrl(pathname, scope));
           return;
         }
-        const record = await readPinRecord(userId);
+        const record = await readPinRecord(userId, scope);
         if (!active) return;
         setHasPin(Boolean(record));
         if (!record) {
-          clearPinUnlockState();
+          clearPinUnlockState(scope);
           setUnlocked(true);
           setChecking(false);
           return;
         }
-        const unlockState = readPinUnlockState(userId);
+        const unlockState = readPinUnlockState(userId, scope);
         if (!unlockState || !isUnlockFresh(unlockState.lastActivityAt)) {
-          clearPinUnlockState();
+          clearPinUnlockState(scope);
           setChecking(false);
-          router.replace(lockUrl(pathname));
+          router.replace(lockUrl(pathname, scope));
           return;
         }
         lastActivityAt.current = unlockState.lastActivityAt;
@@ -81,7 +83,7 @@ export function PinLockProvider({ children, userId }: { children: ReactNode; use
         setChecking(false);
         scheduleLock(unlockState.lastActivityAt);
       } catch {
-        clearPinUnlockState();
+        clearPinUnlockState(scope);
         if (active) {
           setHasPin(false);
           setUnlocked(true);
@@ -94,7 +96,7 @@ export function PinLockProvider({ children, userId }: { children: ReactNode; use
       active = false;
       if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     };
-  }, [pathname, router, scheduleLock, userId]);
+  }, [pathname, router, scheduleLock, scope, userId]);
 
   useEffect(() => {
     if (!hasPin || !unlocked || checking) return;
@@ -103,7 +105,7 @@ export function PinLockProvider({ children, userId }: { children: ReactNode; use
       const now = Date.now();
       if (now - lastActivityAt.current < 1000) return;
       lastActivityAt.current = now;
-      markPinUnlocked(userId, now);
+      markPinUnlocked(userId, now, scope);
       scheduleLock(now);
     }
 
@@ -123,25 +125,25 @@ export function PinLockProvider({ children, userId }: { children: ReactNode; use
       document.removeEventListener("visibilitychange", checkVisibility);
       window.removeEventListener("focus", checkVisibility);
     };
-  }, [checking, hasPin, lockNow, scheduleLock, unlocked, userId]);
+  }, [checking, hasPin, lockNow, scheduleLock, scope, unlocked, userId]);
 
   const configurePin = useCallback(async (pin: string) => {
     const record = await createPinVerifierRecord(pin);
-    await writePinRecord(userId, record);
+    await writePinRecord(userId, record, scope);
     const now = Date.now();
     lastActivityAt.current = now;
-    markPinUnlocked(userId, now);
+    markPinUnlocked(userId, now, scope);
     setHasPin(true);
     setUnlocked(true);
     scheduleLock(now);
-  }, [scheduleLock, userId]);
+  }, [scheduleLock, scope, userId]);
 
   const removePin = useCallback(async () => {
-    await clearLocalPinSecurity(userId);
+    await clearLocalPinSecurity(userId, scope);
     setHasPin(false);
     setUnlocked(true);
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-  }, [userId]);
+  }, [scope, userId]);
 
   const value = useMemo<PinLockContextValue>(() => ({
     checking,

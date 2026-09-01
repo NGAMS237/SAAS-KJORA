@@ -4,6 +4,7 @@ import { loadOrganizationContext } from "@/core/organization/load-organization-c
 import { OrganizationProfileForm } from "@/core/organization/organization-profile-form";
 import { PinSecurityPanel } from "@/core/security/pin-controls";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { NotificationSoundToggle } from "@/core/notifications/notification-sound";
 
 export default async function SettingsPage() {
   const { activeOrganization } = await loadOrganizationContext();
@@ -31,6 +32,9 @@ export default async function SettingsPage() {
       </Card>
       <Card className="settings-card">
         <PinSecurityPanel />
+      </Card>
+      <Card className="settings-card">
+        <NotificationSoundToggle />
       </Card>
     </div>
   );

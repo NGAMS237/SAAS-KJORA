@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(62);
+select plan(75);
 
 insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at) values
   ('1e000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner-a-6e@kjora.test', now(), now(), now()),
@@ -85,12 +85,35 @@ insert into public.tenant_portal_sessions (organization_id, access_id, tenant_id
   ('2e000000-0000-4000-8000-00000000000a', 'ae000000-0000-4000-8000-00000000000a', '5e000000-0000-4000-8000-00000000000a', '1e000000-0000-4000-8000-000000000005', 'session-portal-a', now() + interval '30 days'),
   ('2e000000-0000-4000-8000-00000000000b', 'ae000000-0000-4000-8000-00000000000b', '5e000000-0000-4000-8000-00000000000b', '1e000000-0000-4000-8000-000000000007', 'session-portal-b', now() + interval '30 days');
 
+insert into public.notifications (
+  organization_id, recipient_user_id, required_capability, notification_type,
+  deduplication_key, title_code, payload, document_id, tenant_id, lease_id
+) values (
+  '2e000000-0000-4000-8000-00000000000a', '1e000000-0000-4000-8000-000000000001',
+  'receipt.view', 'due_notice_ready', 'portal-notification-fixture-6e-a', 'DUE_NOTICE_READY',
+  '{"reference":"AVI-2026-600001"}'::jsonb, 'de000000-0000-4000-8000-00000000000c',
+  '5e000000-0000-4000-8000-00000000000a', '6e000000-0000-4000-8000-00000000000a'
+);
+
 select has_table('public', 'tenant_portal_accesses', 'TenantPortalAccess existe');
 select has_table('public', 'tenant_portal_lease_accesses', 'scope Lease explicite existe');
 select has_table('public', 'tenant_portal_invitations', 'invitations portail existent');
 select has_table('public', 'tenant_portal_sessions', 'sessions portail existent');
 select has_table('public', 'tenant_portal_document_views', 'état reçu consulté existe');
 select has_table('private', 'tenant_portal_access_log', 'journal accès privé existe');
+select has_column('public', 'notifications', 'recipient_tenant_portal_access_id', 'destinataire portail explicite existe');
+select ok(exists (select 1 from pg_constraint where conname = 'notifications_recipient_scope_check'), 'une notification a exactement un scope destinataire');
+select ok(not has_function_privilege('anon', 'public.list_my_tenant_portal_notifications(uuid,integer)', 'execute'), 'anon ne liste pas les notifications portail');
+select ok(not has_function_privilege('anon', 'public.set_tenant_portal_notification_read_state(uuid,uuid,boolean)', 'execute'), 'anon ne modifie pas une notification portail');
+select ok(not has_function_privilege('anon', 'public.mark_all_tenant_portal_notifications_read(uuid)', 'execute'), 'anon ne marque pas les notifications portail');
+select ok(not exists (
+  select 1
+  from pg_proc procedure
+  cross join lateral aclexplode(coalesce(procedure.proacl, acldefault('f', procedure.proowner))) privilege
+  where procedure.oid = 'public.list_my_tenant_portal_notifications(uuid,integer)'::regprocedure
+    and privilege.grantee = 0
+    and privilege.privilege_type = 'EXECUTE'
+), 'PUBLIC ne peut exécuter la liste des notifications portail');
 select ok((select bool_and(c.relrowsecurity) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'tenant_portal_%'), 'RLS active sur toutes les tables portail publiques');
 select ok(not has_function_privilege('anon', 'public.get_tenant_portal_home(uuid)', 'execute'), 'anon ne peut exécuter les projections portail');
 select ok(not has_table_privilege('authenticated', 'public.tenant_portal_accesses', 'select'), 'authenticated ne lit pas directement TenantPortalAccess');
@@ -112,6 +135,15 @@ select is(jsonb_array_length(public.get_tenant_portal_home('ae000000-0000-4000-8
 select is((select count(*) from public.list_tenant_portal_dues('ae000000-0000-4000-8000-00000000000a', '6e000000-0000-4000-8000-00000000000a') where due_id in ('7e000000-0000-4000-8000-00000000000a', '7e000000-0000-4000-8000-00000000000d')), 2::bigint, 'échéance périodique et dépôt A autorisés');
 select is((select count(*) from public.list_tenant_portal_payments('ae000000-0000-4000-8000-00000000000a', '6e000000-0000-4000-8000-00000000000a')), 1::bigint, 'Payment A autorisé');
 select is((select count(*) from public.list_tenant_portal_documents('ae000000-0000-4000-8000-00000000000a', '6e000000-0000-4000-8000-00000000000a')), 2::bigint, 'reçu partiel et avis A autorisés');
+select is((select count(*) from public.list_my_tenant_portal_notifications('ae000000-0000-4000-8000-00000000000a')), 1::bigint, 'locataire A voit sa notification projetée');
+select throws_ok($$ select * from public.list_my_tenant_portal_notifications('ae000000-0000-4000-8000-00000000000b') $$, '42501', 'not_found', 'locataire A ne liste pas les notifications de B');
+select ok(public.set_tenant_portal_notification_read_state(
+  'ae000000-0000-4000-8000-00000000000a',
+  (select notification_id from public.list_my_tenant_portal_notifications('ae000000-0000-4000-8000-00000000000a') limit 1), true
+) is not null, 'lecture d’une notification autorisée est enregistrée');
+select ok((select bool_and(read_at is not null) from public.list_my_tenant_portal_notifications('ae000000-0000-4000-8000-00000000000a')), 'badge non lu peut décroître après lecture');
+select is(public.mark_all_tenant_portal_notifications_read('ae000000-0000-4000-8000-00000000000a'), 0, 'tout marquer lu reste idempotent');
+select is((select count(*) from public.notifications), 0::bigint, 'le portail ne lit jamais directement la table notifications');
 select ok((select count(*) = 2 and count(*) filter (where item->>'status' = 'active') = 1 and count(*) filter (where item->>'status' = 'ended') = 1 from jsonb_array_elements(public.get_tenant_portal_home('ae000000-0000-4000-8000-00000000000a')->'leases') item), 'Location active et historique restent distinguées');
 select is((select count(distinct item->>'unitLabel') from jsonb_array_elements(public.get_tenant_portal_home('ae000000-0000-4000-8000-00000000000a')->'leases') item), 2::bigint, 'plusieurs logements autorisés restent distincts');
 select is((select status from public.list_tenant_portal_dues('ae000000-0000-4000-8000-00000000000a', '6e000000-0000-4000-8000-00000000000a') where due_id = '7e000000-0000-4000-8000-00000000000a'), 'partially_paid', 'paiement partiel est projeté sans recalcul client');
@@ -179,6 +211,7 @@ select lives_ok($$ select public.revoke_tenant_portal_access((select access_id f
 select set_config('request.jwt.claim.sub', '1e000000-0000-4000-8000-000000000006', true);
 select set_config('request.jwt.claims', '{"sub":"1e000000-0000-4000-8000-000000000006","role":"authenticated","session_id":"session-portal-a2"}', true);
 select is((select count(*) from public.list_my_tenant_portal_accesses()), 0::bigint, 'révocation prend effet pendant la session');
+select throws_ok($$ select * from public.list_my_tenant_portal_notifications((select access_id from pg_temp.portal_invite limit 1)) $$, '42501', 'not_found', 'révocation invalide immédiatement les notifications et le PIN local ne peut pas la contourner');
 
 delete from pg_temp.portal_invite;
 select set_config('request.jwt.claim.sub', '1e000000-0000-4000-8000-000000000001', true);

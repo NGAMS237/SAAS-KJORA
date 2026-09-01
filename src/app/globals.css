@@ -3045,6 +3045,72 @@ a.portfolio-metric:hover {
   }
 }
 
+/* Patch post-6E — local quick lock and actionable in-app notifications. */
+.notification-sound-setting {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.notification-sound-setting > span {
+  align-items: center;
+  background: var(--brand-gold-soft);
+  border-radius: 50%;
+  color: var(--brand-blue);
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.notification-sound-setting > div {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-sound-setting small {
+  color: var(--text-muted);
+}
+
+.portal-preview-link .nav-alert {
+  margin-left: auto;
+}
+
+.portal-mobile-header .notification-bell__trigger {
+  position: relative;
+}
+
+.portal-mobile-header .notification-bell__trigger > span {
+  align-items: center;
+  background: var(--danger);
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  color: white;
+  display: flex;
+  font-size: .58rem;
+  font-weight: 800;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 4px;
+  position: absolute;
+  right: -5px;
+  top: -5px;
+}
+
+@media (max-width: 520px) {
+  .notification-sound-setting {
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .notification-sound-setting .button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 /* Visual Direction v2B — Organic Signature Geometry */
 .signature-surface {
   overflow: hidden;

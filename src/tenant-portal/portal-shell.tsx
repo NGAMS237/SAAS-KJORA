@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { Bell, ChevronDown, LogOut } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 import { portalNavigation, type NavigationItem } from "@/core/navigation/navigation";
+import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls";
+import { NotificationSoundEffect } from "@/core/notifications/notification-sound";
+import type { PortalNotification } from "@/tenant-portal/model";
 
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -33,15 +36,20 @@ export function PortalShell({
   children,
   language,
   organizationName,
+  notifications,
+  userId,
 }: {
   accessId: string;
   accesses: Array<{ accessId: string; organizationName: string; tenantName: string }>;
   children: ReactNode;
   language: "fr" | "en";
   organizationName: string;
+  notifications: PortalNotification[];
+  userId: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const unread = notifications.filter((notification) => !notification.readAt).length;
 
   async function switchAccess(nextAccessId: string) {
     if (nextAccessId === accessId) return;
@@ -55,6 +63,7 @@ export function PortalShell({
 
   return (
     <div className="app-shell app-shell--portal">
+      <NotificationSoundEffect notifications={notifications.map((item) => ({ id: item.notificationId, type: item.notificationType, readAt: item.readAt }))} scope={`portal:${accessId}`} />
       <aside className="desktop-rail portal-rail" aria-label="Navigation du portail locataire">
         <Link className="wordmark" href="/portal">
           Kjora<span>.</span>
@@ -75,11 +84,12 @@ export function PortalShell({
           ))}
         </nav>
         <div className="desktop-rail__footer">
-          <button className="portal-preview-link" type="button" disabled aria-label={language === "en" ? "Notifications coming later" : "Notifications à venir"}>
+          <Link className="portal-preview-link" href="/portal/notifications">
             <Bell aria-hidden="true" size={18} />
-            {language === "en" ? "Notifications" : "Notifications"}
-          </button>
-          <form action="/auth/signout?scope=portal" method="post"><button className="portal-preview-link portal-preview-link--quiet" type="submit"><LogOut aria-hidden="true" size={18} />{language === "en" ? "Sign out" : "Se déconnecter"}</button></form>
+            {language === "en" ? "Notifications" : "Notifications"}{unread ? <span className="nav-alert nav-alert--info">{Math.min(unread, 99)}</span> : null}
+          </Link>
+          <PinLockButton language={language} />
+          <SecureSignOutButton language={language} scope="portal" userId={userId} />
         </div>
       </aside>
 
@@ -90,9 +100,9 @@ export function PortalShell({
           </Link>
           <p>{organizationName}</p>
         </div>
-        <button className="icon-button" type="button" disabled aria-label="Notifications disponibles avec le Lot 6E">
-          <Bell aria-hidden="true" size={20} />
-        </button>
+        <Link className="icon-button notification-bell__trigger" href="/portal/notifications" aria-label={language === "en" ? `${unread} unread notifications` : `${unread} notification(s) non lue(s)`}>
+          <Bell aria-hidden="true" size={20} />{unread ? <span>{Math.min(unread, 99)}</span> : null}
+        </Link>
       </header>
 
       <main className="shell-content">{children}</main>

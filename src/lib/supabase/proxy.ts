@@ -13,6 +13,7 @@ function isProtectedPage(pathname: string) {
 function isProtectedPortalPage(pathname: string) {
   return pathname === "/portal" || pathname.startsWith("/portal/loyers")
     || pathname.startsWith("/portal/recus") || pathname.startsWith("/portal/compte")
+    || pathname.startsWith("/portal/notifications") || pathname.startsWith("/portal/verrouillage")
     || pathname.startsWith("/portal/auth/complete");
 }
 

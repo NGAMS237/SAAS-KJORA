@@ -17,6 +17,7 @@ import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls
 import { hasCapability } from "@/core/authorization/capabilities";
 import type { NotificationSummary } from "@/modules/documents/model";
 import { NotificationBell } from "@/modules/documents/views";
+import { NotificationSoundEffect } from "@/core/notifications/notification-sound";
 
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -131,6 +132,7 @@ export function InternalShell({
 
   return (
     <div className="app-shell app-shell--internal">
+      <NotificationSoundEffect notifications={notifications.map((item) => ({ id: item.id, type: item.type, readAt: item.readAt }))} scope={`internal:${activeOrganization.id}`} />
       <aside className="desktop-rail" aria-label="Navigation interne">
         <Link className="wordmark" href="/app" aria-label="Kjora — Accueil interne">
           Kjora<span>.</span>

@@ -99,6 +99,26 @@ export type PortalDocument = {
   viewed: boolean;
 };
 
+export type PortalNotification = {
+  notificationId: string;
+  notificationType: "due_notice_ready" | "payment_receipt_ready" | "rent_receipt_ready" | "payment_overdue";
+  titleCode: string;
+  payload: Record<string, unknown>;
+  documentId: string | null;
+  tenantId: string;
+  leaseId: string;
+  dueId: string | null;
+  paymentId: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export function portalNotificationHref(notification: Pick<PortalNotification, "documentId" | "dueId" | "leaseId">) {
+  if (notification.documentId) return `/portal/recus?lease=${notification.leaseId}`;
+  if (notification.dueId) return `/portal/loyers?lease=${notification.leaseId}`;
+  return `/portal/loyers?lease=${notification.leaseId}`;
+}
+
 export type PortalAccessStatus = {
   accessId: string;
   status: "invited" | "active" | "revoked";

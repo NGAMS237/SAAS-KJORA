@@ -515,7 +515,7 @@ Ouvrir une lecture locataire sûre des mêmes Lease, Dues, Payments et Receipts.
 - invitation/relance/révocation Owner/gestionnaire ;
 - OTP/lien email préparé ; téléphone OTP différé jusqu’au choix `PhoneOtpProvider` ;
 - abstraction `PhoneOtpProvider` sans logique métier liée au fournisseur choisi ;
-- sessions 30 jours, aucun PIN ;
+- sessions 30 jours et PIN local facultatif de confort selon D-130, sans remplacement de Supabase Auth ;
 - accueil, Loyers, Reçus, Compte et centre notifications léger ;
 - paiements en lecture ;
 - reçus privés consultables/téléchargeables ;
@@ -596,3 +596,5 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
 Faire valider par Blaise le parcours réel invitation → Auth → portail → révocation sur Vercel Production avant tout statut `VALIDÉ`. Ne démarrer aucun nouveau lot dans cette intervention.
+
+Le patch post-6E ajoute une entrée Notifications légère et un verrou PIN portail facultatif ; sa migration Production et ses 75 assertions pgTAP sont passées, tandis que sa validation fonctionnelle par Blaise reste attendue. Le futur module **Messages** reste une capacité séparée à concevoir ultérieurement : il ne doit dépendre ni du centre de notifications, ni de l’Activity, ni de l’Audit, et n’est pas commencé par ce patch.

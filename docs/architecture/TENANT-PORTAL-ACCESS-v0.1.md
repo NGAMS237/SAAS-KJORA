@@ -43,7 +43,7 @@ Le chemin OTP d’une invitation conduit d’abord à l’écran d’acceptation
 
 La communication utilise la préférence Tenant, sinon la langue Organization. Elle ne contient aucune donnée financière. Les emails financiers 6C3 restent désactivés.
 
-Le PIN interne n’est jamais chargé dans le portail. Une session portail expire au plus après 30 jours ; le même `session_id` Auth ne peut pas prolonger une session portail expirée. Le téléphone OTP et le changement de canal ne sont pas implémentés dans cette passe : D-076 exige un `PhoneOtpProvider` concret avant cette partie et le Lot 6E interdit l’ajout d’un fournisseur SMS arbitraire.
+Le PIN interne et le PIN portail utilisent des scopes locaux séparés. Selon D-130, le portail peut proposer un PIN facultatif de 6 chiffres sur un appareil déjà authentifié : seul un vérificateur PBKDF2 salé est conservé dans IndexedDB, cinq erreurs imposent un verrou local de 5 minutes et environ une heure d’inactivité verrouille l’interface. Après le délai, le PIN peut être essayé à nouveau. « J’ai oublié mon PIN » déclenche explicitement la récupération email normale sans nouvelle invitation tant que l’accès demeure actif. Ce PIN ne crée, ne prolonge ni ne remplace jamais Supabase Auth ou `TenantPortalAccess`. Une révocation, une expiration d’accès ou l’absence de session active est toujours refusée côté serveur avant le verrou local. Une session portail expire au plus après 30 jours ; le même `session_id` Auth ne peut pas la prolonger. Le téléphone OTP et le changement de canal ne sont pas implémentés.
 
 ## Données exposées
 
@@ -64,7 +64,11 @@ Les documents réutilisent les snapshots et le moteur PDF 6C3. Un artefact exist
 
 ## Interface
 
-Le layout `/portal` reste séparé de `/app`, sans navigation interne ni PIN. Les destinations sont Accueil, Loyers, Reçus et Compte. Accueil montre la Lease active en priorité ; les Leases historiques restent sélectionnables et en lecture seule. Plusieurs accès Organization utilisent un sélecteur explicite. L’interface suit la préférence FR/EN du Tenant et le design system Kjora v2.
+Le layout `/portal` reste séparé de `/app`, sans navigation interne. Les destinations sont Accueil, Loyers, Reçus et Compte ; Notifications reste une entrée légère dédiée. Accueil montre la Lease active en priorité ; les Leases historiques restent sélectionnables et en lecture seule. Plusieurs accès Organization utilisent un sélecteur explicite. L’interface suit la préférence FR/EN du Tenant et le design system Kjora v2.
+
+Les notifications portail ne constituent aucune nouvelle vérité financière : elles projettent seulement des événements futurs autorisés vers un accès actif et une Lease explicitement accordée. Lecture/non-lecture et badge sont propres à cet accès. Le son est une préférence locale opt-in, désactivée par défaut, sans push, email ni fournisseur externe.
+
+Le futur module **Messages** restera distinct : Conversation/Message seront tenant-scoped, leurs participants seront explicitement autorisés, et leurs communications/notifications éventuelles seront des consommateurs séparés. Aucun chat, schéma de conversation, pièce jointe ou fournisseur temps réel n’est implémenté dans ce patch.
 
 ## Audit et révocation
 
@@ -78,7 +82,7 @@ Le journal administratif existant reçoit invitation, relance, acceptation, rév
 - Advisors post-migration : aucun niveau critique. Les tables portail sans policy directe sont volontairement default-deny, les RPC `SECURITY DEFINER` sont limitées à `authenticated` et contrôlent Auth/Organization/Access ;
 - l’index simple `tenant_portal_lease_accesses(access_id)` n’a pas été ajouté : `EXPLAIN` utilise déjà l’index composite existant pour le chemin de suppression/rotation observé ;
 - téléphone OTP, récupération/changement de canal et fournisseur SMS non implémentés ;
-- notifications portail dédiées et états de compte non exposés dans ce MVP local ;
+- notifications portail ciblées préparées localement ; aucun état de compte parallèle ni donnée financière dupliquée ;
 - aucun paiement provider, contrat, signature, WhatsApp ou SMS ;
 - aucune activation des emails financiers.
 

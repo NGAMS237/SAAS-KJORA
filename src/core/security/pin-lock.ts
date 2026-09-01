@@ -3,6 +3,7 @@ export const PIN_MAX_ATTEMPTS = 5;
 export const PIN_INACTIVITY_MINUTES = 60;
 export const PIN_INACTIVITY_MS = PIN_INACTIVITY_MINUTES * 60 * 1000;
 export const PIN_PBKDF2_ITERATIONS = 600_000;
+export const PORTAL_PIN_LOCKOUT_MS = 5 * 60 * 1000;
 
 export type PinVerifierRecord = {
   version: 1;
@@ -12,6 +13,7 @@ export type PinVerifierRecord = {
   salt: string;
   verifier: string;
   failedAttempts: number;
+  lockoutUntil?: number | null;
   createdAt: string;
 };
 
@@ -28,6 +30,11 @@ export function normalizePin(value: string) {
 export function sanitizeInternalAppPath(value: string | null | undefined) {
   if (!value || value.includes("\\") || value.startsWith("//")) return "/app";
   return value === "/app" || value.startsWith("/app/") ? value : "/app";
+}
+
+export function sanitizePortalPath(value: string | null | undefined) {
+  if (!value || value.includes("\\") || value.startsWith("//")) return "/portal";
+  return value === "/portal" || value.startsWith("/portal/") ? value : "/portal";
 }
 
 export function isValidPin(pin: string) {
@@ -114,7 +121,24 @@ export function isUsablePinRecord(value: unknown): value is PinVerifierRecord {
     && typeof record.verifier === "string"
     && typeof record.failedAttempts === "number"
     && record.failedAttempts >= 0
-    && record.failedAttempts < PIN_MAX_ATTEMPTS;
+    && record.failedAttempts <= PIN_MAX_ATTEMPTS
+    && (record.lockoutUntil === undefined || record.lockoutUntil === null || typeof record.lockoutUntil === "number")
+    && (record.failedAttempts < PIN_MAX_ATTEMPTS || typeof record.lockoutUntil === "number");
+}
+
+export function isPortalPinLockoutActive(record: PinVerifierRecord, now = Date.now()) {
+  return record.failedAttempts >= PIN_MAX_ATTEMPTS
+    && typeof record.lockoutUntil === "number"
+    && record.lockoutUntil > now;
+}
+
+export function portalPinLockoutRecord(record: PinVerifierRecord, now = Date.now()): PinVerifierRecord {
+  return { ...record, failedAttempts: PIN_MAX_ATTEMPTS, lockoutUntil: now + PORTAL_PIN_LOCKOUT_MS };
+}
+
+export function resetExpiredPortalPinLockout(record: PinVerifierRecord, now = Date.now()): PinVerifierRecord {
+  if (record.failedAttempts < PIN_MAX_ATTEMPTS || isPortalPinLockoutActive(record, now)) return record;
+  return { ...record, failedAttempts: 0, lockoutUntil: null };
 }
 
 export async function verifyPin(pin: string, record: PinVerifierRecord) {

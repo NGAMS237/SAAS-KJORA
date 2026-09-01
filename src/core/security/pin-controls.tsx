@@ -6,15 +6,16 @@ import { validatePinConfirmation } from "@/core/security/pin-lock";
 import { PinInput } from "@/core/security/pin-input";
 import { usePinLock } from "@/core/security/pin-lock-provider";
 import { clearLocalPinSecurity, clearPinReauthenticationRequirement } from "@/core/security/pin-storage";
+import type { PinStorageScope } from "@/core/security/pin-storage";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 
-function useCopy() {
+function useCopy(languageOverride?: "fr" | "en") {
   const { language } = usePreferences();
-  return (fr: string, en: string) => language === "FR" ? fr : en;
+  return (fr: string, en: string) => languageOverride ? (languageOverride === "fr" ? fr : en) : (language === "FR" ? fr : en);
 }
 
-export function SecureSignOutButton({ userId }: { userId: string }) {
-  const t = useCopy();
+export function SecureSignOutButton({ userId, scope = "internal", language }: { userId: string; scope?: PinStorageScope; language?: "fr" | "en" }) {
+  const t = useCopy(language);
   const [busy, setBusy] = useState(false);
 
   async function prepareSignOut(event: FormEvent<HTMLFormElement>) {
@@ -23,15 +24,15 @@ export function SecureSignOutButton({ userId }: { userId: string }) {
     const form = event.currentTarget;
     setBusy(true);
     try {
-      await clearLocalPinSecurity(userId);
-      clearPinReauthenticationRequirement();
+      await clearLocalPinSecurity(userId, scope);
+      clearPinReauthenticationRequirement(scope);
     } finally {
       form.submit();
     }
   }
 
   return (
-    <form action="/auth/signout" method="post" onSubmit={prepareSignOut}>
+    <form action={scope === "portal" ? "/auth/signout?scope=portal" : "/auth/signout"} method="post" onSubmit={prepareSignOut}>
       <button className="portal-preview-link" disabled={busy} type="submit">
         <LogOut aria-hidden="true" size={18} />
         {busy ? t("Déconnexion…", "Signing out…") : t("Déconnexion", "Sign out")}
@@ -40,8 +41,8 @@ export function SecureSignOutButton({ userId }: { userId: string }) {
   );
 }
 
-export function PinLockButton() {
-  const t = useCopy();
+export function PinLockButton({ language }: { language?: "fr" | "en" } = {}) {
+  const t = useCopy(language);
   const { hasPin, lockNow } = usePinLock();
   if (!hasPin) return null;
   return (
@@ -72,8 +73,8 @@ export function PinSetupPrompt() {
   );
 }
 
-export function PinSecurityPanel() {
-  const t = useCopy();
+export function PinSecurityPanel({ language }: { language?: "fr" | "en" } = {}) {
+  const t = useCopy(language);
   const { configurePin, hasPin, lockNow, removePin } = usePinLock();
   const [editing, setEditing] = useState(false);
   const [pin, setPin] = useState("");

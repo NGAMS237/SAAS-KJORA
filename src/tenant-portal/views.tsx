@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CalendarDays, ChevronRight, CreditCard, Download, Home, ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
+import { NotificationSoundToggle } from "@/core/notifications/notification-sound";
+import { PinSecurityPanel } from "@/core/security/pin-controls";
 import type { PortalDocument, PortalDue, PortalHome, PortalLease, PortalPayment } from "@/tenant-portal/model";
 
 type Language = "fr" | "en";
@@ -77,7 +79,9 @@ export function PortalDocumentsView({ documents, home, language, lease }: { docu
 export function PortalAccountView({ home, language }: { home: PortalHome; language: Language }) {
   return <div className="page-stack portal-page"><PageHeader eyebrow={copy(language, "Compte portail", "Portal account")} title={copy(language, "Mon compte", "My account")} description={copy(language, "Cet accès est distinct des membres internes de l’Organization.", "This access is separate from internal Organization members.")} />
     <Card><div className="section-heading"><div><p className="eyebrow">{copy(language, "Identité / contact", "Identity / contact")}</p><h2>{home.tenantName}</h2></div><ShieldCheck size={21} /></div><dl className="record-detail-list"><div><dt>Email</dt><dd>{home.email ?? "—"}</dd></div><div><dt>{copy(language, "Téléphone", "Phone")}</dt><dd>{home.phone ?? "—"}</dd></div></dl></Card>
-    <Card><div className="section-heading"><div><p className="eyebrow">{copy(language, "Sécurité / appareil", "Security / device")}</p><h2>{copy(language, "Session protégée", "Protected session")}</h2></div><ShieldCheck size={21} /></div><p>{copy(language, "La session portail expire au plus tard après 30 jours. Aucun PIN locataire n’est utilisé.", "The portal session expires after at most 30 days. No tenant PIN is used.")}</p></Card>
+    <Card><div className="section-heading"><div><p className="eyebrow">{copy(language, "Sécurité / appareil", "Security / device")}</p><h2>{copy(language, "Session protégée", "Protected session")}</h2></div><ShieldCheck size={21} /></div><p>{copy(language, "Votre accès reste actif. Pour votre sécurité, KJORA peut parfois vous demander de vous reconnecter. Le PIN local facultatif verrouille seulement cet appareil.", "Your access remains active. For security, KJORA may occasionally ask you to sign in again. The optional local PIN only locks this device.")}</p></Card>
+    <Card><PinSecurityPanel language={language} /></Card>
+    <Card><NotificationSoundToggle language={language} /></Card>
   </div>;
 }
 

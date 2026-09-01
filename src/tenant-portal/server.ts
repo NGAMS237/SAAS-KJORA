@@ -9,6 +9,7 @@ import type {
   PortalDue,
   PortalHome,
   PortalPayment,
+  PortalNotification,
 } from "@/tenant-portal/model";
 
 export const ACTIVE_PORTAL_ACCESS_COOKIE = "kjora-active-portal-access";
@@ -21,6 +22,26 @@ function accessOption(row: Record<string, unknown>): PortalAccessOption {
     lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null,
     leaseCount: Number(row.lease_count),
   };
+}
+
+export async function getPortalNotifications(accessId: string): Promise<PortalNotification[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_my_tenant_portal_notifications", {
+    target_access_id: accessId, result_limit: 100,
+  });
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    notificationId: String(row.notification_id),
+    notificationType: row.notification_type as PortalNotification["notificationType"],
+    titleCode: String(row.title_code),
+    payload: (row.payload ?? {}) as Record<string, unknown>,
+    documentId: typeof row.document_id === "string" ? row.document_id : null,
+    tenantId: String(row.tenant_id), leaseId: String(row.lease_id),
+    dueId: typeof row.due_id === "string" ? row.due_id : null,
+    paymentId: typeof row.payment_id === "string" ? row.payment_id : null,
+    readAt: typeof row.read_at === "string" ? row.read_at : null,
+    createdAt: String(row.created_at),
+  }));
 }
 
 export async function loadPortalContext() {

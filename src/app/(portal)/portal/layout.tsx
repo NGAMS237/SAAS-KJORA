@@ -1,17 +1,23 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { PortalShell } from "@/tenant-portal/portal-shell";
-import { loadPortalContext } from "@/tenant-portal/server";
+import { getPortalNotifications, loadPortalContext } from "@/tenant-portal/server";
+import { PinLockProvider } from "@/core/security/pin-lock-provider";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenantPortalLayout({ children }: { children: ReactNode }) {
   const context = await loadPortalContext();
   if (!context?.activeAccess) redirect("/portal/connexion?reason=portal-access-required");
-  return <PortalShell
-    accessId={context.activeAccess.accessId}
-    accesses={context.accesses}
-    language={context.activeAccess.preferredLanguage}
-    organizationName={context.activeAccess.organizationName}
-  >{children}</PortalShell>;
+  const notifications = await getPortalNotifications(context.activeAccess.accessId);
+  return <PinLockProvider scope="portal" userId={context.userId}>
+    <PortalShell
+      accessId={context.activeAccess.accessId}
+      accesses={context.accesses}
+      language={context.activeAccess.preferredLanguage}
+      organizationName={context.activeAccess.organizationName}
+      notifications={notifications}
+      userId={context.userId}
+    >{children}</PortalShell>
+  </PinLockProvider>;
 }

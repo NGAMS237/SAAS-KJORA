@@ -8,10 +8,20 @@ const PIN_STORE = "pin-configurations";
 const UNLOCK_STATE_KEY = "kjora.pin.unlock-state.v1";
 const REAUTH_STATE_KEY = "kjora.pin.reauth-required.v1";
 
+export type PinStorageScope = "internal" | "portal";
+
 type UnlockState = {
   userId: string;
   lastActivityAt: number;
 };
+
+function recordKey(userId: string, scope: PinStorageScope) {
+  return scope === "internal" ? userId : `portal:${userId}`;
+}
+
+function stateKey(key: string, scope: PinStorageScope) {
+  return scope === "internal" ? key : `${key}.portal`;
+}
 
 function openPinDatabase() {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -48,30 +58,31 @@ async function runPinTransaction<T>(
   }
 }
 
-export async function readPinRecord(userId: string) {
-  const value = await runPinTransaction<unknown>("readonly", (store) => store.get(userId));
+export async function readPinRecord(userId: string, scope: PinStorageScope = "internal") {
+  const value = await runPinTransaction<unknown>("readonly", (store) => store.get(recordKey(userId, scope)));
   if (!isUsablePinRecord(value)) {
-    if (value !== undefined) await deletePinRecord(userId);
+    if (value !== undefined) await deletePinRecord(userId, scope);
     return null;
   }
   return value;
 }
 
-export async function writePinRecord(userId: string, record: PinVerifierRecord) {
-  await runPinTransaction<IDBValidKey>("readwrite", (store) => store.put(record, userId));
+export async function writePinRecord(userId: string, record: PinVerifierRecord, scope: PinStorageScope = "internal") {
+  await runPinTransaction<IDBValidKey>("readwrite", (store) => store.put(record, recordKey(userId, scope)));
 }
 
-export async function deletePinRecord(userId: string) {
-  await runPinTransaction<undefined>("readwrite", (store) => store.delete(userId));
+export async function deletePinRecord(userId: string, scope: PinStorageScope = "internal") {
+  await runPinTransaction<undefined>("readwrite", (store) => store.delete(recordKey(userId, scope)));
 }
 
-export function markPinUnlocked(userId: string, lastActivityAt = Date.now()) {
+export function markPinUnlocked(userId: string, lastActivityAt = Date.now(), scope: PinStorageScope = "internal") {
   const state: UnlockState = { userId, lastActivityAt };
-  sessionStorage.setItem(UNLOCK_STATE_KEY, JSON.stringify(state));
+  sessionStorage.setItem(stateKey(UNLOCK_STATE_KEY, scope), JSON.stringify(state));
 }
 
-export function readPinUnlockState(userId: string): UnlockState | null {
-  const value = sessionStorage.getItem(UNLOCK_STATE_KEY);
+export function readPinUnlockState(userId: string, scope: PinStorageScope = "internal"): UnlockState | null {
+  const key = stateKey(UNLOCK_STATE_KEY, scope);
+  const value = sessionStorage.getItem(key);
   if (!value) return null;
   try {
     const state = JSON.parse(value) as Partial<UnlockState>;
@@ -81,28 +92,28 @@ export function readPinUnlockState(userId: string): UnlockState | null {
   } catch {
     // Un état local invalide est traité comme verrouillé.
   }
-  sessionStorage.removeItem(UNLOCK_STATE_KEY);
+  sessionStorage.removeItem(key);
   return null;
 }
 
-export function clearPinUnlockState() {
-  sessionStorage.removeItem(UNLOCK_STATE_KEY);
+export function clearPinUnlockState(scope: PinStorageScope = "internal") {
+  sessionStorage.removeItem(stateKey(UNLOCK_STATE_KEY, scope));
 }
 
-export function markPinReauthenticationRequired(userId: string) {
-  sessionStorage.setItem(REAUTH_STATE_KEY, userId);
-  clearPinUnlockState();
+export function markPinReauthenticationRequired(userId: string, scope: PinStorageScope = "internal") {
+  sessionStorage.setItem(stateKey(REAUTH_STATE_KEY, scope), userId);
+  clearPinUnlockState(scope);
 }
 
-export function isPinReauthenticationRequired(userId: string) {
-  return sessionStorage.getItem(REAUTH_STATE_KEY) === userId;
+export function isPinReauthenticationRequired(userId: string, scope: PinStorageScope = "internal") {
+  return sessionStorage.getItem(stateKey(REAUTH_STATE_KEY, scope)) === userId;
 }
 
-export function clearPinReauthenticationRequirement() {
-  sessionStorage.removeItem(REAUTH_STATE_KEY);
+export function clearPinReauthenticationRequirement(scope: PinStorageScope = "internal") {
+  sessionStorage.removeItem(stateKey(REAUTH_STATE_KEY, scope));
 }
 
-export async function clearLocalPinSecurity(userId: string) {
-  clearPinUnlockState();
-  await deletePinRecord(userId);
+export async function clearLocalPinSecurity(userId: string, scope: PinStorageScope = "internal") {
+  clearPinUnlockState(scope);
+  await deletePinRecord(userId, scope);
 }

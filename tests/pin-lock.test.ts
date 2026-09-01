@@ -11,8 +11,13 @@ import {
   PIN_INACTIVITY_MS,
   PIN_MAX_ATTEMPTS,
   PIN_PBKDF2_ITERATIONS,
+  PORTAL_PIN_LOCKOUT_MS,
+  isPortalPinLockoutActive,
+  portalPinLockoutRecord,
+  resetExpiredPortalPinLockout,
   registerFailedPinAttempt,
   sanitizeInternalAppPath,
+  sanitizePortalPath,
   validatePinConfirmation,
   verifyPin,
 } from "../src/core/security/pin-lock.ts";
@@ -29,6 +34,12 @@ test("le retour après déverrouillage reste strictement dans l'espace interne",
   assert.equal(sanitizeInternalAppPath("/portal"), "/app");
   assert.equal(sanitizeInternalAppPath("//example.com"), "/app");
   assert.equal(sanitizeInternalAppPath("/application"), "/app");
+});
+
+test("le retour du verrou portail reste strictement dans le portail", () => {
+  assert.equal(sanitizePortalPath("/portal/loyers"), "/portal/loyers");
+  assert.equal(sanitizePortalPath("/app"), "/portal");
+  assert.equal(sanitizePortalPath("//example.com"), "/portal");
 });
 
 test("une confirmation différente est refusée", () => {
@@ -58,7 +69,7 @@ test("la comparaison du verifier traite aussi les longueurs différentes", () =>
   assert.equal(constantTimeEqual(new Uint8Array([1]), new Uint8Array([1, 0])), false);
 });
 
-test("le cinquième échec bloque le PIN et ne laisse aucun essai", () => {
+test("le cinquième échec verrouille temporairement le PIN portail pendant cinq minutes", () => {
   let state = registerFailedPinAttempt(0);
   assert.equal(state.attemptsRemaining, 4);
   for (let failed = 1; failed < PIN_MAX_ATTEMPTS; failed += 1) {
@@ -67,6 +78,17 @@ test("le cinquième échec bloque le PIN et ne laisse aucun essai", () => {
   assert.equal(state.failedAttempts, PIN_MAX_ATTEMPTS);
   assert.equal(state.attemptsRemaining, 0);
   assert.equal(state.lockedOut, true);
+  const verifier = {
+    version: 1 as const, algorithm: "PBKDF2" as const, hash: "SHA-256" as const,
+    iterations: PIN_PBKDF2_ITERATIONS, salt: "salt", verifier: "hash", failedAttempts: 4, createdAt: "2026-09-01T00:00:00Z",
+  };
+  const now = 1_000_000;
+  const locked = portalPinLockoutRecord(verifier, now);
+  assert.equal(PORTAL_PIN_LOCKOUT_MS, 5 * 60 * 1000);
+  assert.equal(locked.lockoutUntil, now + PORTAL_PIN_LOCKOUT_MS);
+  assert.equal(isPortalPinLockoutActive(locked, now + PORTAL_PIN_LOCKOUT_MS - 1), true);
+  assert.equal(isPortalPinLockoutActive(locked, now + PORTAL_PIN_LOCKOUT_MS), false);
+  assert.equal(resetExpiredPortalPinLockout(locked, now + PORTAL_PIN_LOCKOUT_MS).failedAttempts, 0);
 });
 
 test("l'état déverrouillé expire après une heure d'inactivité", () => {
@@ -76,11 +98,16 @@ test("l'état déverrouillé expire après une heure d'inactivité", () => {
   assert.equal(isUnlockFresh(now - PIN_INACTIVITY_MS, now), false);
 });
 
-test("le stockage PIN n'utilise pas localStorage et le portail n'importe aucune logique PIN", async () => {
+test("les PIN interne et portail restent hachés dans des scopes locaux distincts", async () => {
   const storageSource = await readFile(new URL("../src/core/security/pin-storage.ts", import.meta.url), "utf8");
   const portalShell = await readFile(new URL("../src/tenant-portal/portal-shell.tsx", import.meta.url), "utf8");
   const portalLayout = await readFile(new URL("../src/app/(portal)/portal/layout.tsx", import.meta.url), "utf8");
+  const lockScreen = await readFile(new URL("../src/core/security/pin-lock-screen.tsx", import.meta.url), "utf8");
   assert.equal(storageSource.includes("localStorage"), false);
-  assert.equal(portalShell.toLowerCase().includes("pin-lock"), false);
-  assert.equal(portalLayout.toLowerCase().includes("pin-lock"), false);
+  assert.match(storageSource, /portal:\$\{userId\}/);
+  assert.match(portalShell, /PinLockButton/);
+  assert.match(portalLayout, /scope="portal"/);
+  assert.doesNotMatch(storageSource, /pin:\s*string/i);
+  assert.match(lockScreen, /J’ai oublié mon PIN/);
+  assert.match(lockScreen, /portalPinLockoutRecord/);
 });

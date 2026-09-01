@@ -6,11 +6,13 @@ const migration = readFileSync(new URL("../supabase/migrations/20260831090000_lo
 const server = readFileSync(new URL("../src/tenant-portal/server.ts", import.meta.url), "utf8");
 const shell = readFileSync(new URL("../src/tenant-portal/portal-shell.tsx", import.meta.url), "utf8");
 const views = readFileSync(new URL("../src/tenant-portal/views.tsx", import.meta.url), "utf8");
+const notificationView = readFileSync(new URL("../src/tenant-portal/notifications-view.tsx", import.meta.url), "utf8");
 const management = readFileSync(new URL("../src/tenant-portal/access-management.tsx", import.meta.url), "utf8");
 const login = readFileSync(new URL("../src/tenant-portal/login-form.tsx", import.meta.url), "utf8");
 const documentRoute = readFileSync(new URL("../src/app/api/tenant-portal/documents/[documentId]/download/route.ts", import.meta.url), "utf8");
 const portalLayout = readFileSync(new URL("../src/app/(portal)/portal/layout.tsx", import.meta.url), "utf8");
 const internalLayout = readFileSync(new URL("../src/app/(internal)/app/layout.tsx", import.meta.url), "utf8");
+const notificationPatch = readFileSync(new URL("../supabase/migrations/20260901120731_post_6e_portal_notifications_pin_notice.sql", import.meta.url), "utf8");
 
 test("TenantPortalAccess is structurally separate from internal Memberships", () => {
   assert.match(migration, /create table public\.tenant_portal_accesses/i);
@@ -58,12 +60,31 @@ test("invitations are explicit, hashed, expiring, single-use and capability scop
   assert.match(management, /action: "revoke"/);
 });
 
-test("portal auth reuses Supabase email OTP or Magic Link and never uses the internal PIN", () => {
+test("portal auth remains Supabase email OTP or Magic Link while the PIN is only a local lock", () => {
   assert.match(login, /signInWithOtp/);
   assert.match(login, /verifyOtp/);
   assert.match(login, /startsWith\("\/portal\/invitation\/accepter"\)/);
   assert.match(portalLayout, /loadPortalContext/);
-  for (const source of [login, shell, server, views]) assert.doesNotMatch(source, /pin-lock|PBKDF2|indexedDB/i);
+  assert.match(portalLayout, /PinLockProvider/);
+  assert.match(portalLayout, /scope="portal"/);
+  assert.doesNotMatch(notificationPatch, /pin|PBKDF2|indexedDB/i);
+});
+
+test("portal notifications are active-access scoped, actionable and unavailable to anon/public", () => {
+  assert.match(notificationPatch, /private\.has_active_tenant_portal_access\(target_access_id\)/i);
+  assert.match(notificationPatch, /recipient_tenant_portal_access_id/i);
+  assert.match(notificationPatch, /revoke all on function public\.list_my_tenant_portal_notifications\(uuid, integer\) from public, anon/i);
+  assert.match(notificationPatch, /grant execute on function public\.list_my_tenant_portal_notifications\(uuid, integer\) to authenticated/i);
+  assert.match(notificationView, /portalNotificationHref/);
+  assert.match(notificationView, /mark_all_read/);
+  assert.doesNotMatch(notificationPatch, /email_enabled\s*=\s*true|public\s*=\s*true/i);
+});
+
+test("future due notices reuse financial truth without backfill", () => {
+  assert.match(notificationPatch, /public\.dues_with_status/i);
+  assert.match(notificationPatch, /'payment_allocated_xaf'/i);
+  assert.match(notificationPatch, /'credit_applied_xaf'/i);
+  assert.doesNotMatch(notificationPatch, /update public\.financial_documents|insert into public\.financial_documents/i);
 });
 
 test("portal child scopes are constrained by Organization, Access and Tenant", () => {

@@ -25,11 +25,9 @@ export default async function InternalLayout({ children }: { children: ReactNode
   const dashboard = canSeeFinance
     ? await getOperationalDashboard(context.activeOrganization.id, dashboardPeriod(null)).catch(() => null)
     : null;
-  const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
   const paymentAttention = (dashboard?.overdueCount ?? 0) + (dashboard?.partialCount ?? 0);
   const navigationBadges = {
     ...(paymentAttention > 0 ? { "/app/paiements": { count: paymentAttention, tone: "danger" as const } } : {}),
-    ...(unreadNotifications > 0 ? { "/app/activite": { count: unreadNotifications, tone: "info" as const } } : {}),
   };
   return (
     <PinLockProvider userId={context.user.id}>

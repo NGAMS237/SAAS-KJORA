@@ -2,6 +2,8 @@
 
 > Mise à jour : 2026-09-01 — Lot 6E migré, testé et déployé en Production ; validation fonctionnelle Blaise en attente
 
+> Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
+
 ## Lots
 
 - **Lot 1 — Architecture fonctionnelle v0.1 : VALIDÉ**
@@ -30,9 +32,10 @@
 ## Terminé
 
 - Lot 6E préparé localement conformément à D-127 : `TenantPortalAccess` distinct des Memberships, scope Lease explicite, invitation email hashée 7 jours, session portail 30 jours, révocation immédiate, journal privé 12 mois et projections minimales depuis les vérités 6C1–6C3.
+- Patch post-6E conforme à D-130–D-133 : le PIN portail reste un verrou local facultatif dépendant d’une session/access actifs ; les notifications portail réutilisent les faits financiers existants ; le son est local et opt-in ; Messages reste seulement documenté.
 - Le layout `/portal` lit les données réelles autorisées en FR/EN avec Accueil, Loyers/Paiements, Reçus et Compte ; il ne charge ni PIN interne, ni rôle Membership, ni provider de paiement.
 - Owner et gestionnaire utilisent la capability existante `tenant_portal.manage` depuis le dossier Tenant pour inviter, relancer, révoquer et voir un statut synthétique. Aucun accès n’est créé automatiquement depuis l’email du Tenant.
-- Le chemin email OTP/lien PKCE, les sessions multi-Organization sans renouvellement silencieux, les scopes composites et les liens documentaires signés 120 secondes sont couverts. La suite compte 138 tests Node ; les 62/62 assertions pgTAP passent sur Production avec rollback, sans ligne portail de test persistante. Les Advisors post-migration ne signalent aucun niveau critique.
+- Le chemin email OTP/lien PKCE, les sessions multi-Organization sans renouvellement silencieux, les scopes composites et les liens documentaires signés 120 secondes sont couverts. La suite compte 142 tests Node ; les 75/75 assertions pgTAP passent sur Production avec rollback, sans fixture persistante. Les Advisors post-migration ne signalent aucun niveau critique.
 
 - Lot 0 — gouvernance, contexte et préparation d’architecture terminé.
 - Lot 1 et ses décisions D-021 à D-028 validés et conservés.
@@ -50,7 +53,7 @@
 - Portail locataire minimal inclus dans le premier MVP.
 - `Tenant Portal Access` validé comme mécanisme distinct des Memberships internes.
 - Source unique de vérité validée pour Lease, Rent/Dues, Payments et Receipts.
-- Portail sans PIN, session persistante 30 jours, durées d’invitation/OTP/lien validées.
+- Portail avec PIN local facultatif selon D-130, session persistante 30 jours et durées d’invitation/OTP/lien validées ; le PIN ne remplace jamais Supabase Auth.
 - Fin de bail en historique lecture seule et anciens reçus accessibles selon rétention validés.
 - Journal d’accès portail de 12 mois et visibilité opérationnelle minimisée validés.
 - Notifications portail essentielles et priorité de langue locataire puis Organization validées.
@@ -92,7 +95,7 @@
 - Sous-lot PIN interne livré : configuration, modification et suppression facultatives dans Paramètres, verrouillage manuel et automatique après 1 heure d’inactivité réelle par défaut, puis écran mobile-first `/verrouillage`.
 - Le PIN interne reste un `quick lock` local sur session Supabase existante : PBKDF2-SHA-256 à 600 000 itérations, sel aléatoire, verifier et compteur d’échecs dans IndexedDB, aucun PIN brut conservé ou transmis.
 - Après cinq erreurs ou choix de l’email, le PIN local est supprimé et la session Supabase est terminée afin d’imposer une authentification forte. La déconnexion interne supprime également le PIN et l’état de déverrouillage locaux.
-- Le Tenant Portal reste séparé et ne charge aucune logique PIN.
+- Le Tenant Portal reste séparé de l’espace interne ; son PIN facultatif utilise un scope local distinct et ne modifie jamais la session Supabase.
 - Prévisualisation UX interactive livrée pour Biens, Unités, Locataires et Baux : listes, recherche, création minimale, détails contextuels, vacance/occupation, brouillon, résumé, activation et clôture simulées.
 - Le modèle de démonstration respecte `Property → Unit → Lease`, crée « Maison entière » pour une maison, impose un contact locataire minimal, ne crée aucun accès portail et refuse l’activation de périodes Lease qui se chevauchent sur une Unit.
 - Toutes les données de cette prévisualisation sont manifestement fictives, bornées à l’Organization active, conservées uniquement dans un store client réinitialisé au refresh et accompagnées d’une bannière « Mode démonstration — données fictives, non enregistrées ».

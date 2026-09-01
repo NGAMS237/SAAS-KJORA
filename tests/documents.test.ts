@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
 import { parseDocumentId, parseStatementRequest } from "../src/modules/documents/model.ts";
-import { formatPdfMoney, generateFinancialDocumentPdf } from "../src/modules/documents/pdf.ts";
+import { dueNoticePresentation, formatPdfMoney, generateFinancialDocumentPdf } from "../src/modules/documents/pdf.ts";
 import { controlledDeliveryError, financialDocumentEmail } from "../src/modules/documents/email.ts";
 import type { FinancialDocumentRecord } from "../src/modules/documents/model.ts";
 
@@ -36,6 +36,16 @@ test("les séparateurs de milliers PDF restent sans point d’interrogation", ()
     assert.doesNotMatch(formatPdfMoney(amount), /\?/);
     assert.match(formatPdfMoney(amount), /^\d{1,3}( \d{3})* XAF$/);
   }
+});
+
+test("l’avis distingue un solde restant d’une échéance entièrement couverte", () => {
+  const partial = dueNoticePresentation({ remaining_xaf: 4_006, last_covered_period_end: "2026-08-31" }, "fr");
+  assert.equal(partial.headline, "Solde à payer");
+  assert.equal(partial.remaining, 4_006);
+  assert.equal(partial.coveredUntil, null);
+  const covered = dueNoticePresentation({ remaining_xaf: 0, last_covered_period_end: "2026-09-30" }, "en");
+  assert.equal(covered.headline, "Due covered");
+  assert.equal(covered.coveredUntil, "2026-09-30");
 });
 
 test("les documents sont immuables, versionnés et invalidés sans suppression", () => {
@@ -168,6 +178,7 @@ for (const language of ["fr", "en"] as const) {
         recurring_charges_xaf: 2000,
         expected_xaf: 42000,
         credit_applied_xaf: 34000,
+        payment_allocated_xaf: 0,
         remaining_xaf: 8000,
         last_covered_period_end: "2026-08-31",
       },
