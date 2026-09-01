@@ -17,6 +17,8 @@ import { PaymentHistoryPanel } from "@/modules/payments/views";
 import type { PaymentSummary } from "@/modules/payments/model";
 import type { FinancialDocumentSummary } from "@/modules/documents/model";
 import { FinancialDocumentsPanel } from "@/modules/documents/views";
+import { TenantPortalAccessManagement } from "@/tenant-portal/access-management";
+import type { PortalAccessStatus } from "@/tenant-portal/model";
 import {
   calendarEntryProration,
   calendarEntryProrationDetail,
@@ -164,7 +166,7 @@ export function TenantCreateForm() {
   return <div className="page-stack demo-narrow form-page-v2"><Link className="demo-back" href="/app/locataires"><ArrowLeft size={17} />{t("Tous les locataires", "All tenants")}</Link><PageHeader eyebrow="SCR-TEN-02" title={t("Ajouter un locataire", "Add tenant")} description={t("Créez le dossier métier uniquement. Aucun compte portail n’est créé.", "Create the business record only. No portal account is created.")} /><LiveDataNotice /><Card><form className="form-stack" onSubmit={submit}><TenantFields /><button className="button button--primary" disabled={busy} type="submit">{busy ? t("Création…", "Creating…") : t("Créer le dossier", "Create record")}</button>{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}</form></Card></div>;
 }
 
-export function TenantDetailView({ tenant, canManage, financial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled }: { tenant: TenantDetail; canManage: boolean; financial: TenantFinancialDetail | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean }) {
+export function TenantDetailView({ tenant, canManage, financial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled, canManagePortal, portalAccess }: { tenant: TenantDetail; canManage: boolean; financial: TenantFinancialDetail | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean; canManagePortal: boolean; portalAccess: PortalAccessStatus | null }) {
   const t = useCopy();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -223,6 +225,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
         <a href="#historique">{t("Historique", "History")}</a>
         {payments ? <a href="#paiements">{t("Paiements", "Payments")}</a> : null}
         {documents ? <a href="#documents">{t("Documents", "Documents")}</a> : null}
+        {canManagePortal ? <a href="#portail">{t("Portail", "Portal")}</a> : null}
         <a href="#notes">{t("Notes", "Notes")}</a>
       </nav>
 
@@ -256,6 +259,12 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
 
       {payments ? <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={current?.id} /> : null}
       {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
+      {canManagePortal ? <TenantPortalAccessManagement
+        email={tenant.email}
+        leases={tenant.leases.map((lease) => ({ id: lease.id, label: `${lease.propertyName} · ${lease.unitLabel}`, status: lease.status }))}
+        status={portalAccess}
+        tenantId={tenant.id}
+      /> : null}
 
       <div className="future-module-grid">
         <Card id="notes" className="future-module-card tenant-notes-card"><span className="future-module-card__icon"><StickyNote size={20} /></span><div><strong>{t("Notes internes", "Internal notes")}</strong><span>{tenant.internalNotes ?? t("Aucune note interne enregistrée.", "No internal note recorded.")}</span></div><Badge tone="neutral">{t("Interne", "Internal")}</Badge></Card>

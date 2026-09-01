@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { Bell, ChevronLeft } from "lucide-react";
+import { Bell, ChevronDown, LogOut } from "lucide-react";
 import { portalNavigation, type NavigationItem } from "@/core/navigation/navigation";
-import { DemoNotice } from "@/core/ui/ui";
 
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -13,7 +12,7 @@ function isActive(pathname: string, item: NavigationItem) {
   return item.exact ? currentPath === targetPath : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
 }
 
-function PortalLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
+function PortalLink({ item, pathname, language }: { item: NavigationItem; pathname: string; language: "fr" | "en" }) {
   const Icon = item.icon;
   const active = isActive(pathname, item);
   return (
@@ -23,13 +22,36 @@ function PortalLink({ item, pathname }: { item: NavigationItem; pathname: string
       href={item.href}
     >
       <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
-      <span>{item.label}</span>
+      <span>{language === "en" ? ({ Accueil: "Home", Loyers: "Rent", "Reçus": "Receipts", Compte: "Account" }[item.label] ?? item.label) : item.label}</span>
     </Link>
   );
 }
 
-export function PortalShell({ children }: { children: ReactNode }) {
+export function PortalShell({
+  accessId,
+  accesses,
+  children,
+  language,
+  organizationName,
+}: {
+  accessId: string;
+  accesses: Array<{ accessId: string; organizationName: string; tenantName: string }>;
+  children: ReactNode;
+  language: "fr" | "en";
+  organizationName: string;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function switchAccess(nextAccessId: string) {
+    if (nextAccessId === accessId) return;
+    await fetch("/api/tenant-portal/active", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accessId: nextAccessId }),
+    });
+    router.replace("/portal");
+    router.refresh();
+  }
 
   return (
     <div className="app-shell app-shell--portal">
@@ -38,25 +60,26 @@ export function PortalShell({ children }: { children: ReactNode }) {
           Kjora<span>.</span>
         </Link>
         <div className="portal-context">
-          <span>Espace locataire</span>
-          <strong>Accès à venir</strong>
-          <small>Disponible avec le Lot 6E</small>
+          <span>{language === "en" ? "Tenant space" : "Espace locataire"}</span>
+          <strong>{organizationName}</strong>
+          {accesses.length > 1 ? <label className="portal-access-select">
+            <span className="sr-only">{language === "en" ? "Select a space" : "Sélectionner un espace"}</span>
+            <select value={accessId} onChange={(event) => switchAccess(event.target.value)}>
+              {accesses.map((access) => <option key={access.accessId} value={access.accessId}>{access.organizationName}</option>)}
+            </select><ChevronDown aria-hidden="true" size={15} />
+          </label> : <small>{language === "en" ? "Secure read-only access" : "Accès sécurisé en lecture"}</small>}
         </div>
         <nav className="desktop-rail__primary">
           {portalNavigation.map((item) => (
-            <PortalLink item={item} key={item.href} pathname={pathname} />
+            <PortalLink item={item} key={item.href} pathname={pathname} language={language} />
           ))}
         </nav>
         <div className="desktop-rail__footer">
-          <button className="portal-preview-link" type="button" disabled aria-label="Notifications disponibles avec le Lot 6E">
+          <button className="portal-preview-link" type="button" disabled aria-label={language === "en" ? "Notifications coming later" : "Notifications à venir"}>
             <Bell aria-hidden="true" size={18} />
-            Notifications
+            {language === "en" ? "Notifications" : "Notifications"}
           </button>
-          <Link className="portal-preview-link portal-preview-link--quiet" href="/app">
-            <ChevronLeft aria-hidden="true" size={18} />
-            Quitter l’aperçu portail
-          </Link>
-          <DemoNotice compact />
+          <form action="/auth/signout?scope=portal" method="post"><button className="portal-preview-link portal-preview-link--quiet" type="submit"><LogOut aria-hidden="true" size={18} />{language === "en" ? "Sign out" : "Se déconnecter"}</button></form>
         </div>
       </aside>
 
@@ -65,7 +88,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           <Link className="wordmark wordmark--mobile" href="/portal">
             Kjora<span>.</span>
           </Link>
-          <p>Espace locataire · Lot 6E</p>
+          <p>{organizationName}</p>
         </div>
         <button className="icon-button" type="button" disabled aria-label="Notifications disponibles avec le Lot 6E">
           <Bell aria-hidden="true" size={20} />
@@ -76,7 +99,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
       <nav className="mobile-bottom-nav portal-bottom-nav" aria-label="Navigation du portail locataire">
         {portalNavigation.map((item) => (
-          <PortalLink item={item} key={item.href} pathname={pathname} />
+          <PortalLink item={item} key={item.href} pathname={pathname} language={language} />
         ))}
       </nav>
     </div>

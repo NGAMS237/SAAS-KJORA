@@ -497,7 +497,7 @@ Donner la visibilité propriétaire et fiabiliser le traitement asynchrone du mo
 
 ## 14. Lot 6E — Tenant Portal minimal
 
-> Gate post-6D : le patch UX/settings/dépôt/PDF est testé localement et sa migration contrôlée est appliquée en Production avec pgTAP transactionnel concluant. Il réutilise les transactions Payment/Allocation/Ledger 6C2, ne démarre pas 6E et n’active ni email, backfill, portail/public ni fournisseur de paiement.
+> Statut au 31 août 2026 : **TERMINÉ / TESTÉ — MIGRATIONS PRODUCTION APPLIQUÉES — DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Les 62/62 pgTAP transactionnels passent avec rollback et les Advisors ne signalent aucun niveau critique. Le téléphone OTP reste bloqué par D-076.
 
 ### Objectif
 
@@ -513,7 +513,7 @@ Ouvrir une lecture locataire sûre des mêmes Lease, Dues, Payments et Receipts.
 
 - Tenant Portal Access et Portal Lease Access ;
 - invitation/relance/révocation Owner/gestionnaire ;
-- OTP téléphone, OTP/lien email ;
+- OTP/lien email préparé ; téléphone OTP différé jusqu’au choix `PhoneOtpProvider` ;
 - abstraction `PhoneOtpProvider` sans logique métier liée au fournisseur choisi ;
 - sessions 30 jours, aucun PIN ;
 - accueil, Loyers, Reçus, Compte et centre notifications léger ;
@@ -595,4 +595,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Faire valider fonctionnellement 6D par Blaise sur Vercel Production. Consolider séparément les validations fonctionnelles encore en attente pour 6A, 6B/6B.1 et 6C1–6C3. Ne pas commencer 6E.
+Finaliser le commit/push autorisé du Lot 6E et contrôler Vercel Production. Faire ensuite valider par Blaise le parcours réel invitation → Auth → portail → révocation avant tout statut `VALIDÉ`. Ne démarrer aucun nouveau lot dans cette intervention.

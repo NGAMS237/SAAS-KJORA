@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-30 — Lot 6D migré, testé et déployé en Production ; validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-08-31 — Lot 6E migré et testé sur Production ; déploiement et validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -23,10 +23,16 @@
 - **Lot 6C3 — Documents + Notifications + Quittances + États de compte : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Patch UX post-6C3 — ventilation + reçu partiel : TERMINÉ / TESTÉ / DÉPLOYÉ — aucun changement Ledger/Payment/Allocation**
 - **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ — MIGRATIONS PRODUCTION APPLIQUÉES — DÉPLOIEMENT / VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
 ## Terminé
+
+- Lot 6E préparé localement conformément à D-127 : `TenantPortalAccess` distinct des Memberships, scope Lease explicite, invitation email hashée 7 jours, session portail 30 jours, révocation immédiate, journal privé 12 mois et projections minimales depuis les vérités 6C1–6C3.
+- Le layout `/portal` lit les données réelles autorisées en FR/EN avec Accueil, Loyers/Paiements, Reçus et Compte ; il ne charge ni PIN interne, ni rôle Membership, ni provider de paiement.
+- Owner et gestionnaire utilisent la capability existante `tenant_portal.manage` depuis le dossier Tenant pour inviter, relancer, révoquer et voir un statut synthétique. Aucun accès n’est créé automatiquement depuis l’email du Tenant.
+- Le chemin email OTP/lien PKCE, les sessions multi-Organization sans renouvellement silencieux, les scopes composites et les liens documentaires signés 120 secondes sont couverts. La suite compte 138 tests Node ; les 62/62 assertions pgTAP passent sur Production avec rollback, sans ligne portail de test persistante. Les Advisors post-migration ne signalent aucun niveau critique.
 
 - Lot 0 — gouvernance, contexte et préparation d’architecture terminé.
 - Lot 1 et ses décisions D-021 à D-028 validés et conservés.
@@ -202,7 +208,7 @@
 
 - Aucun blocage ou contradiction identifié pour la validation des Lots 1 à 4 et l’exécution du Lot 5A.
 - Le runtime précis du worker reste un choix d’implémentation compatible avec D-073 et ne bloque pas 5B.
-- Le fournisseur OTP téléphone reste volontairement différé par D-076 ; il doit être choisi avant 6E mais ne bloque pas 5B ni les lots propriétaires.
+- Le fournisseur OTP téléphone reste volontairement différé par D-076. Le chemin email du Lot 6E est préparé ; le téléphone OTP, le changement/récupération de canal et AC-TPAUTH-002 restent bloqués jusqu’au choix explicite d’un `PhoneOtpProvider`.
 - Les paramètres techniques de retry et la politique légale de rétention restent à préciser dans leurs lots concernés sans remettre en cause l’architecture validée.
 - Les canaux SMS/WhatsApp métier généraux restent non validés ; l’OTP téléphone confirmé est limité à l’authentification portail.
 - `supabase test db` local n’a pas été exécuté : Supabase CLI et Docker sont absents de l’environnement ; les mêmes assertions ont été exécutées directement sur KJORA dans des transactions annulées.
@@ -236,11 +242,11 @@
 
 ## Proposé ensuite
 
-**Faire valider fonctionnellement le Lot 6D par Blaise sur Vercel Production. Ne pas commencer 6E.**
+**Finaliser le commit/push autorisé du Lot 6E, vérifier Vercel Production puis faire exécuter à Blaise le parcours fonctionnel réel invitation → Auth → portail → révocation. Ne pas démarrer un nouveau lot.**
 
 ### Patch post-6D — gate technique Production
 
 - PIN 1 heure, timezone IANA, devise Organization XAF-only verrouillée après donnée financière, dépôt optionnel, ventilation de l’encaissement initial via Payment 6C2, badges contextuels et correction des séparateurs PDF sont préparés localement.
 - Migration `20260830190349_post_6d_settings_deposit_ux.sql` appliquée au seul projet Production KJORA `alvheiwlfzuefljcfrtv` et enregistrée à distance sous `20260831004839_post_6d_settings_deposit_ux` ; aucun backfill, email financier, portail/public ni fournisseur de paiement activé.
 - Validation du patch : TypeScript réussi, ESLint réussi, 128 tests Node réussis, build Next.js 16.3.2 réussi avec 39 pages générées et pgTAP Production transactionnel réussi (`11/11`, rollback). Advisors sans niveau critique ; la nouvelle RPC `SECURITY DEFINER` est volontairement limitée à `authenticated`, contrôle `auth.uid()` et `organization.profile.manage`, avec `PUBLIC`/`anon` révoqués et `search_path` vide.
-- Lot 6D reste en validation fonctionnelle Blaise ; Lot 6E reste non commencé.
+- Lot 6D reste en validation fonctionnelle Blaise ; Lot 6E a ses migrations Production et ses tests distants concluants, mais reste en attente du déploiement puis de la validation fonctionnelle explicite de Blaise.

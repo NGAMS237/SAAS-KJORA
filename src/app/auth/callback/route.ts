@@ -11,10 +11,11 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const flowId = request.nextUrl.searchParams.get("sb_flow_id");
   const nextPath = safeNextPath(request.nextUrl.searchParams.get("next"), request.nextUrl.origin);
+  const loginPath = nextPath.startsWith("/portal") ? "/portal/connexion" : "/connexion";
 
   if (!code) {
     return NextResponse.redirect(
-      new URL("/connexion?reason=invalid-or-expired-link", request.url),
+      new URL(`${loginPath}?reason=invalid-or-expired-link`, request.url),
     );
   }
 
@@ -41,6 +42,6 @@ export async function GET(request: NextRequest) {
 
   const reason = classifyAuthCallbackFailure(error);
   return applyAuthState(
-    NextResponse.redirect(new URL(`/connexion?reason=${reason}`, request.url)),
+    NextResponse.redirect(new URL(`${loginPath}?reason=${reason}`, request.url)),
   );
 }

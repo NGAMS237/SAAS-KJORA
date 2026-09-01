@@ -10,6 +10,12 @@ function isProtectedPage(pathname: string) {
     || pathname.startsWith("/verrouillage/");
 }
 
+function isProtectedPortalPage(pathname: string) {
+  return pathname === "/portal" || pathname.startsWith("/portal/loyers")
+    || pathname.startsWith("/portal/recus") || pathname.startsWith("/portal/compte")
+    || pathname.startsWith("/portal/auth/complete");
+}
+
 function loginRedirect(request: NextRequest, reason?: string, cookiesFrom?: NextResponse) {
   const url = request.nextUrl.clone();
   url.pathname = "/connexion";
@@ -25,9 +31,15 @@ export async function updateSession(request: NextRequest) {
   const config = getSupabasePublicConfig();
 
   if (!config) {
+    if (isProtectedPortalPage(request.nextUrl.pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/portal/connexion";
+      url.search = "";
+      url.searchParams.set("reason", "supabase-not-configured");
+      return NextResponse.redirect(url);
+    }
     return isProtectedPage(request.nextUrl.pathname)
-      ? loginRedirect(request, "supabase-not-configured")
-      : NextResponse.next({ request });
+      ? loginRedirect(request, "supabase-not-configured") : NextResponse.next({ request });
   }
 
   let response = NextResponse.next({ request });
@@ -51,6 +63,16 @@ export async function updateSession(request: NextRequest) {
 
   if (!authenticated && isProtectedPage(pathname)) {
     return loginRedirect(request, undefined, response);
+  }
+
+  if (!authenticated && isProtectedPortalPage(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal/connexion";
+    url.search = "";
+    url.searchParams.set("next", request.nextUrl.pathname);
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
   }
 
   if (authenticated && pathname === "/connexion") {

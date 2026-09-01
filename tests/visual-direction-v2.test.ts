@@ -92,17 +92,18 @@ test("v2B reaches properties, units, team, settings and auth surfaces", () => {
   assert.match(css, /\.desktop-rail[\s\S]*linear-gradient/);
 });
 
-test("6C2 payments and contextual 6C3 documents are real while the portal stays honest", () => {
+test("6C2 payments, 6C3 documents and the secured 6E portal use real projections", () => {
   assert.match(ui, /export function FutureState/);
   assert.match(payments, /getPayments/);
   assert.match(paymentViews, /Confirmer l’encaissement/);
   assert.match(paymentViews, /FinancialDocumentsPanel/);
   assert.match(activity, /OperationsPageView/);
   assert.match(operationsViews, /NotificationsView/);
-  assert.match(portalHome, /Disponible avec le Lot 6E/);
-  assert.match(portalRents, /Disponible avec le Lot 6C1 puis le Portail 6E/);
-  assert.match(portalReceipts, /Disponible avec le Lot 6C3 puis le Portail 6E/);
-  assert.match(portalShell, /Disponible avec le Lot 6E/);
+  assert.match(portalHome, /getPortalHome/);
+  assert.match(portalRents, /getPortalDues/);
+  assert.match(portalRents, /getPortalPayments/);
+  assert.match(portalReceipts, /getPortalDocuments/);
+  assert.match(portalShell, /Espace locataire/);
   for (const source of [payments, paymentViews, activity, portalHome, portalRents, portalReceipts, portalShell]) {
     assert.doesNotMatch(source, /80 000 XAF|160 000 XAF|240 000 XAF|Échéances fictives|Paiement fictif|demoPortalContext|Horizon Habitat|reçu fictif/i);
   }

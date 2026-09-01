@@ -1,21 +1,10 @@
-import { House } from "lucide-react";
-import { FutureState, PageHeader } from "@/core/ui/ui";
+import { notFound } from "next/navigation";
+import { getPortalHome, loadPortalContext } from "@/tenant-portal/server";
+import { PortalHomeView } from "@/tenant-portal/views";
 
-export default function PortalHomePage() {
-  return (
-    <div className="page-stack portal-page">
-      <PageHeader
-        eyebrow="Espace locataire · Lecture seule"
-        title="Portail locataire"
-        description="Cet espace utilisera les mêmes vérités métier que l’interface interne, sans copie ni montant simulé."
-      />
-      <FutureState
-        className="future-state-card--signature"
-        icon={House}
-        title="Votre logement et votre situation"
-        description="Le résumé du bail, les échéances, les paiements et les reçus apparaîtront uniquement lorsque le portail réel sera activé."
-        availability="Disponible avec le Lot 6E — Tenant Portal minimal"
-      />
-    </div>
-  );
+export default async function PortalHomePage({ searchParams }: { searchParams: Promise<{ lease?: string }> }) {
+  const [context, query] = await Promise.all([loadPortalContext(), searchParams]);
+  if (!context?.activeAccess) notFound();
+  const home = await getPortalHome(context.activeAccess.accessId);
+  return <PortalHomeView home={home} language={context.activeAccess.preferredLanguage} requestedLease={query.lease} />;
 }
