@@ -1,6 +1,6 @@
 # Kjora — Tenant Portal Access v0.1
 
-> Statut au 31 août 2026 : **TERMINÉ / TESTÉ — MIGRATIONS PRODUCTION APPLIQUÉES — DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Le téléphone OTP reste bloqué par le choix fournisseur différé D-076.
+> Statut au 1er septembre 2026 : **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Le téléphone OTP reste bloqué par le choix fournisseur différé D-076.
 
 ## Modèle d’accès
 
@@ -82,4 +82,4 @@ Le journal administratif existant reçoit invitation, relance, acceptation, rév
 - aucun paiement provider, contrat, signature, WhatsApp ou SMS ;
 - aucune activation des emails financiers.
 
-Le commit, le push et le contrôle Vercel sont autorisés après ces contrôles concluants. La validation fonctionnelle du parcours réel invitation → Auth → portail → révocation demeure explicitement réservée à Blaise.
+Le commit `03c1993` est déployé `Ready` sur `https://saas-kjora.vercel.app`. La route de connexion portail répond, `/portal` refuse l’anonyme, `/app` conserve sa frontière interne et l’endpoint d’invitation refuse l’anonyme. La validation fonctionnelle du parcours réel invitation → Auth → portail → révocation demeure explicitement réservée à Blaise.

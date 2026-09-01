@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-08-31 — Lot 6E migré et testé sur Production ; déploiement et validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-09-01 — Lot 6E migré, testé et déployé en Production ; validation fonctionnelle Blaise en attente
 
 ## Lots
 
@@ -23,7 +23,7 @@
 - **Lot 6C3 — Documents + Notifications + Quittances + États de compte : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Patch UX post-6C3 — ventilation + reçu partiel : TERMINÉ / TESTÉ / DÉPLOYÉ — aucun changement Ledger/Payment/Allocation**
 - **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ — MIGRATIONS PRODUCTION APPLIQUÉES — DÉPLOIEMENT / VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
@@ -242,11 +242,11 @@
 
 ## Proposé ensuite
 
-**Finaliser le commit/push autorisé du Lot 6E, vérifier Vercel Production puis faire exécuter à Blaise le parcours fonctionnel réel invitation → Auth → portail → révocation. Ne pas démarrer un nouveau lot.**
+**Faire exécuter à Blaise le parcours fonctionnel réel invitation → Auth → portail → révocation sur Vercel Production. Ne pas démarrer un nouveau lot avant cette validation.**
 
 ### Patch post-6D — gate technique Production
 
 - PIN 1 heure, timezone IANA, devise Organization XAF-only verrouillée après donnée financière, dépôt optionnel, ventilation de l’encaissement initial via Payment 6C2, badges contextuels et correction des séparateurs PDF sont préparés localement.
 - Migration `20260830190349_post_6d_settings_deposit_ux.sql` appliquée au seul projet Production KJORA `alvheiwlfzuefljcfrtv` et enregistrée à distance sous `20260831004839_post_6d_settings_deposit_ux` ; aucun backfill, email financier, portail/public ni fournisseur de paiement activé.
 - Validation du patch : TypeScript réussi, ESLint réussi, 128 tests Node réussis, build Next.js 16.3.2 réussi avec 39 pages générées et pgTAP Production transactionnel réussi (`11/11`, rollback). Advisors sans niveau critique ; la nouvelle RPC `SECURITY DEFINER` est volontairement limitée à `authenticated`, contrôle `auth.uid()` et `organization.profile.manage`, avec `PUBLIC`/`anon` révoqués et `search_path` vide.
-- Lot 6D reste en validation fonctionnelle Blaise ; Lot 6E a ses migrations Production et ses tests distants concluants, mais reste en attente du déploiement puis de la validation fonctionnelle explicite de Blaise.
+- Lot 6D reste en validation fonctionnelle Blaise ; Lot 6E est migré, testé et déployé sur `https://saas-kjora.vercel.app`, mais reste en attente de la validation fonctionnelle explicite de Blaise.

@@ -497,7 +497,7 @@ Donner la visibilité propriétaire et fiabiliser le traitement asynchrone du mo
 
 ## 14. Lot 6E — Tenant Portal minimal
 
-> Statut au 31 août 2026 : **TERMINÉ / TESTÉ — MIGRATIONS PRODUCTION APPLIQUÉES — DÉPLOIEMENT ET VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Les 62/62 pgTAP transactionnels passent avec rollback et les Advisors ne signalent aucun niveau critique. Le téléphone OTP reste bloqué par D-076.
+> Statut au 1er septembre 2026 : **TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**. Les 62/62 pgTAP transactionnels passent avec rollback et les Advisors ne signalent aucun niveau critique. Le téléphone OTP reste bloqué par D-076.
 
 ### Objectif
 
@@ -595,4 +595,4 @@ Cette gate n’est pas un lot de développement lancé par le présent document.
 
 Faire valider visuellement la **Visual Direction v2B** par Blaise sur Dashboard, Biens, Unit, Locataire, Location, Équipe, Paramètres, Connexion, clair/sombre et mobile.
 
-Finaliser le commit/push autorisé du Lot 6E et contrôler Vercel Production. Faire ensuite valider par Blaise le parcours réel invitation → Auth → portail → révocation avant tout statut `VALIDÉ`. Ne démarrer aucun nouveau lot dans cette intervention.
+Faire valider par Blaise le parcours réel invitation → Auth → portail → révocation sur Vercel Production avant tout statut `VALIDÉ`. Ne démarrer aucun nouveau lot dans cette intervention.
