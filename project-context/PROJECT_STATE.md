@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-09-02 — Lot 6F implémenté localement ; Gate Production bloqué sur l’exécution pgTAP locale, aucune action Production
+> Mise à jour : 2026-09-02 — Lot 6F TERMINÉ / TESTÉ / DÉPLOYÉ (commit d1f5367, push main) ; ALIGN-00 commercial et billing validé et documenté
 
 > Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
 
@@ -26,12 +26,17 @@
 - **Patch UX post-6C3 — ventilation + reçu partiel : TERMINÉ / TESTÉ / DÉPLOYÉ — aucun changement Ledger/Payment/Allocation**
 - **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 6F — Contrats / Modèles / Signature simple / Cachet : IMPLÉMENTÉ LOCALEMENT — TYPECHECK/LINT/NODE/BUILD RÉUSSIS — pgTAP NON EXÉCUTÉ — PRODUCTION NON AUTORISÉE**
+- **Lot 6F — Contrats / Modèles / Signature simple / Cachet : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
+## Gouvernance commerciale
+
+- **ALIGN-00 — TERMINÉ (2026-09-02).** Les décisions commerciales et billing de KJORA sont validées et canonisées dans `docs/product/KJORA-COMMERCIAL-BILLING-DECISIONS-v0.1.md` (D-140). Aucune implémentation billing, quota serveur, provider de paiement SaaS ni cycle de vie abonnement n'est présumée livrée à cette date. L'implémentation est découpée en lots séparés ; aucun lot billing n'est autorisé à démarrer sans instruction explicite.
+
 ## Terminé
 
+- Lot 6F déployé en Production : migration `20260902121306`, 43/43 pgTAP, bucket `contract-documents` privé, capability `contract.manage`, commit `d1f5367`, push `main`. Validation fonctionnelle Blaise en attente.
 - Lot 6F préparé localement conformément à D-134 à D-139 : modèles système/Organization FR/EN versionnés, snapshots contractuels, workflow formel, signature simple avec consentement et hash, cachet graphique, portail exact Tenant/Lease, PDF final privé et audit réutilisé.
 - Interface interne disponible contextuellement depuis une Location et configuration des modèles/cachet dans Paramètres ; interface portail `Contrats` ajoutée comme entrée légère sans modifier les quatre onglets validés.
 - Tests 6F : 13 tests Node ajoutés, portant la suite à 155 tests réussis ; TypeScript, ESLint et build Next.js réussis avec 48 pages statiques analysées et les nouvelles routes dynamiques contrat.
