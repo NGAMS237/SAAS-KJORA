@@ -5,9 +5,11 @@ import { OrganizationProfileForm } from "@/core/organization/organization-profil
 import { PinSecurityPanel } from "@/core/security/pin-controls";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NotificationSoundToggle } from "@/core/notifications/notification-sound";
+import Link from "next/link";
+import { getActiveAuthorization } from "@/core/authorization/server";
 
 export default async function SettingsPage() {
-  const { activeOrganization } = await loadOrganizationContext();
+  const [{ activeOrganization }, authorization] = await Promise.all([loadOrganizationContext(), getActiveAuthorization()]);
   if (!activeOrganization) redirect("/onboarding/organization");
   const supabase = await createSupabaseServerClient();
   const financeChecks = await Promise.all(["leases", "dues", "payments", "ledger_entries"].map((table) =>
@@ -36,6 +38,7 @@ export default async function SettingsPage() {
       <Card className="settings-card">
         <NotificationSoundToggle />
       </Card>
+      {authorization?.capabilities.includes("contract.manage") ? <Card className="settings-card"><div className="section-heading"><div><p className="eyebrow">Contrats</p><h2>Modèles et cachet</h2><p>Configurer les modèles versionnés et le cachet visuel de cette Organization.</p></div><Link className="button button--secondary" href="/app/parametres/contrats">Configurer</Link></div></Card> : null}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BellRing, Volume2, VolumeX } from "lucide-react";
 
 const PREFERENCE_KEY = "kjora.notification-sound.enabled.v1";
-const IMPORTANT_TYPES = new Set(["payment_overdue", "due_notice_ready", "payment_receipt_ready", "rent_receipt_ready"]);
+const IMPORTANT_TYPES = new Set(["payment_overdue", "due_notice_ready", "payment_receipt_ready", "rent_receipt_ready", "contract_ready", "contract_completed"]);
 
 export function isImportantNotification(type: string) {
   return IMPORTANT_TYPES.has(type);

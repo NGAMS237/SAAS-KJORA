@@ -109,6 +109,8 @@ function notificationCopy(notification: NotificationSummary, t: ReturnType<typeo
     payment_receipt_ready: t("Reçu de paiement prêt", "Payment receipt ready"),
     rent_receipt_ready: t("Quittance de loyer prête", "Rent receipt ready"),
     payment_overdue: t("Échéance en retard", "Payment overdue"),
+    contract_ready: t("Contrat à consulter", "Contract ready"),
+    contract_completed: t("Contrat final disponible", "Final contract available"),
     last_prepaid_period: t("Dernière période prépayée atteinte", "Last prepaid period reached"),
     low_credit: t("Crédit insuffisant pour la prochaine échéance", "Credit does not cover the next due"),
     delivery_failed: t("Échec d’envoi", "Delivery failed"),

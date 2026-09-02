@@ -552,6 +552,35 @@ Ouvrir une lecture locataire sûre des mêmes Lease, Dues, Payments et Receipts.
 - rétention journal 12 mois ;
 - aucune route interne, mutation financière ou partage public.
 
+## 14 bis. Lot 6F — Contrats / Modèles / Signature simple / Cachet
+
+> Statut au 2 septembre 2026 : **IMPLÉMENTÉ LOCALEMENT — GATE PRODUCTION NON FRANCHI**. TypeScript, ESLint, Node et build réussissent. Les 43 assertions pgTAP sont préparées mais restent non exécutées faute de runtime Docker/Podman local. Aucune migration Production, commit, push ou livraison Vercel 6F.
+
+### Objectif
+
+Ajouter un document contractuel facultatif et traçable à une Lease, depuis un modèle contrôlé jusqu’au PDF final signé par les deux parties, sans provider payant ni validation juridique automatique.
+
+### Contenu
+
+- modèles système et Organization FR/EN, duplication, historique et versions immuables ;
+- variables/conditions fermées, snapshot du modèle et des données ;
+- états `draft → ready → owner_signed → sent → tenant_signed → completed` et annulation avant finalisation ;
+- signature tracée ou stylisée avec consentement, `auth.uid()`, heure serveur et hash exact ;
+- cachet visuel Organization avec avertissement non certifié ;
+- notification et accès `TenantPortalAccess` exact Tenant/Lease ;
+- PDF final dans Storage privé, URL signée 120 secondes et audit existant ;
+- socle minimal d’avenant, sans moteur complexe.
+
+### Gate avant Production
+
+- exécuter `rls_contracts_signatures.test.sql` et obtenir 43/43 ;
+- rejouer les régressions pgTAP antérieures ;
+- vérifier Advisors sécurité/performance et absence de fixture après rollback ;
+- présenter migration, RPC, grants, RLS, Storage, impact données et risques ;
+- obtenir l’autorisation explicite de Blaise avant migration Production, commit, push ou Vercel.
+
+Le détail est dans `docs/architecture/CONTRACTS-SIGNATURES-v0.1.md`.
+
 ## 15. Gate de release MVP après 6E
 
 Avant toute mise en production future :

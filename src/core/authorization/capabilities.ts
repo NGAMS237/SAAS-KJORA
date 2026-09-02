@@ -32,6 +32,7 @@ export const CAPABILITIES = [
   "activity.view",
   "audit.view",
   "tenant_portal.manage",
+  "contract.manage",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-09-01 — Lot 6E migré, testé et déployé en Production ; validation fonctionnelle Blaise en attente
+> Mise à jour : 2026-09-02 — Lot 6F implémenté localement ; Gate Production bloqué sur l’exécution pgTAP locale, aucune action Production
 
 > Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
 
@@ -26,10 +26,16 @@
 - **Patch UX post-6C3 — ventilation + reçu partiel : TERMINÉ / TESTÉ / DÉPLOYÉ — aucun changement Ledger/Payment/Allocation**
 - **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6F — Contrats / Modèles / Signature simple / Cachet : IMPLÉMENTÉ LOCALEMENT — TYPECHECK/LINT/NODE/BUILD RÉUSSIS — pgTAP NON EXÉCUTÉ — PRODUCTION NON AUTORISÉE**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
 ## Terminé
+
+- Lot 6F préparé localement conformément à D-134 à D-139 : modèles système/Organization FR/EN versionnés, snapshots contractuels, workflow formel, signature simple avec consentement et hash, cachet graphique, portail exact Tenant/Lease, PDF final privé et audit réutilisé.
+- Interface interne disponible contextuellement depuis une Location et configuration des modèles/cachet dans Paramètres ; interface portail `Contrats` ajoutée comme entrée légère sans modifier les quatre onglets validés.
+- Tests 6F : 13 tests Node ajoutés, portant la suite à 155 tests réussis ; TypeScript, ESLint et build Next.js réussis avec 48 pages statiques analysées et les nouvelles routes dynamiques contrat.
+- Fixture pgTAP 6F de 43 assertions préparé. Son exécution reste bloquée localement par l’absence de Docker/Podman ; aucune migration 6F n’a été appliquée à KJORA Production.
 
 - Lot 6E préparé localement conformément à D-127 : `TenantPortalAccess` distinct des Memberships, scope Lease explicite, invitation email hashée 7 jours, session portail 30 jours, révocation immédiate, journal privé 12 mois et projections minimales depuis les vérités 6C1–6C3.
 - Patch post-6E conforme à D-130–D-133 : le PIN portail reste un verrou local facultatif dépendant d’une session/access actifs ; les notifications portail réutilisent les faits financiers existants ; le son est local et opt-in ; Messages reste seulement documenté.
@@ -208,6 +214,8 @@
 - Visual Direction v2B — 79 tests Node réussis ; TypeScript, ESLint et build Production Next.js 16.3.2 réussis avec 36 routes. La connexion publique a aussi été contrôlée à 390 × 844 sans débordement horizontal, avec réduction mobile de la forme signature.
 
 ## Bloqué
+
+- Lot 6F : la base Supabase locale ne peut pas démarrer car Docker Desktop et Podman sont absents du poste. Les 43 assertions pgTAP 6F et les régressions SQL doivent être exécutées sur une base locale/éphémère avant de demander l’autorisation Production. Ce blocage n’autorise ni migration Production, ni commit/push, ni déploiement.
 
 - Aucun blocage ou contradiction identifié pour la validation des Lots 1 à 4 et l’exécution du Lot 5A.
 - Le runtime précis du worker reste un choix d’implémentation compatible avec D-073 et ne bloque pas 5B.

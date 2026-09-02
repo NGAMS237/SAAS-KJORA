@@ -101,7 +101,7 @@ export type PortalDocument = {
 
 export type PortalNotification = {
   notificationId: string;
-  notificationType: "due_notice_ready" | "payment_receipt_ready" | "rent_receipt_ready" | "payment_overdue";
+  notificationType: "due_notice_ready" | "payment_receipt_ready" | "rent_receipt_ready" | "payment_overdue" | "contract_ready" | "contract_completed";
   titleCode: string;
   payload: Record<string, unknown>;
   documentId: string | null;
@@ -113,7 +113,11 @@ export type PortalNotification = {
   createdAt: string;
 };
 
-export function portalNotificationHref(notification: Pick<PortalNotification, "documentId" | "dueId" | "leaseId">) {
+export function portalNotificationHref(notification: Pick<PortalNotification, "documentId" | "dueId" | "leaseId" | "notificationType" | "payload">) {
+  if (notification.notificationType === "contract_ready" || notification.notificationType === "contract_completed") {
+    const contractId = typeof notification.payload.contractId === "string" ? notification.payload.contractId : "";
+    return contractId ? `/portal/contrats?contract=${contractId}` : `/portal/contrats?lease=${notification.leaseId}`;
+  }
   if (notification.documentId) return `/portal/recus?lease=${notification.leaseId}`;
   if (notification.dueId) return `/portal/loyers?lease=${notification.leaseId}`;
   return `/portal/loyers?lease=${notification.leaseId}`;

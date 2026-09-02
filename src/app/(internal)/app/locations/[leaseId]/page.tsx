@@ -5,6 +5,7 @@ import { getLeaseDetail, getLeaseOptions } from "@/modules/tenancy/server";
 import { LeaseDetailView, MissingTenancyResource } from "@/modules/tenancy/views";
 import { getPayments } from "@/modules/payments/server";
 import { getFinancialDocuments } from "@/modules/documents/server";
+import Link from "next/link";
 
 export default async function LeasePage({ params, searchParams }: { params: Promise<{ leaseId: string }>; searchParams: Promise<{ initialReceived?: string }> }) {
   const [{ leaseId }, query] = await Promise.all([params, searchParams]);
@@ -26,5 +27,6 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
     canViewPayments ? getPayments(authorization.organizationId, { leaseId }) : Promise.resolve(null),
     canViewDocuments ? getFinancialDocuments(authorization.organizationId, { leaseId }) : Promise.resolve(null),
   ]);
-  return <LeaseDetailView lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />;
+  return <><LeaseDetailView lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />
+    {authorization.capabilities.includes("contract.manage") ? <div className="lease-contract-entry"><Link className="button button--secondary" href={`/app/locations/${lease.id}/contrat`}>Générer ou consulter le contrat</Link><small>Facultatif · le bail n’est jamais bloqué par ce document.</small></div> : null}</>;
 }

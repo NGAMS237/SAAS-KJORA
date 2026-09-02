@@ -16,6 +16,8 @@ function notificationCopy(notification: PortalNotification, language: Language) 
     payment_receipt_ready: ["Reçu de paiement disponible", "Payment receipt available"],
     rent_receipt_ready: ["Quittance disponible", "Rent receipt available"],
     payment_overdue: ["Loyer en retard", "Rent overdue"],
+    contract_ready: ["Contrat à consulter", "Contract ready"],
+    contract_completed: ["Contrat final disponible", "Final contract available"],
   } satisfies Record<PortalNotification["notificationType"], [string, string]>;
   const title = labels[notification.notificationType][language === "en" ? 1 : 0];
   const reference = typeof notification.payload.reference === "string" ? notification.payload.reference : "";

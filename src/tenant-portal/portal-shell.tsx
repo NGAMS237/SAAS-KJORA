@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, FileSignature } from "lucide-react";
 import { portalNavigation, type NavigationItem } from "@/core/navigation/navigation";
 import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls";
 import { NotificationSoundEffect } from "@/core/notifications/notification-sound";
@@ -84,6 +84,10 @@ export function PortalShell({
           ))}
         </nav>
         <div className="desktop-rail__footer">
+          <Link className="portal-preview-link" href="/portal/contrats">
+            <FileSignature aria-hidden="true" size={18} />
+            {language === "en" ? "Contracts" : "Contrats"}
+          </Link>
           <Link className="portal-preview-link" href="/portal/notifications">
             <Bell aria-hidden="true" size={18} />
             {language === "en" ? "Notifications" : "Notifications"}{unread ? <span className="nav-alert nav-alert--info">{Math.min(unread, 99)}</span> : null}
@@ -100,9 +104,9 @@ export function PortalShell({
           </Link>
           <p>{organizationName}</p>
         </div>
-        <Link className="icon-button notification-bell__trigger" href="/portal/notifications" aria-label={language === "en" ? `${unread} unread notifications` : `${unread} notification(s) non lue(s)`}>
+        <div className="portal-mobile-actions"><Link className="icon-button" href="/portal/contrats" aria-label={language === "en" ? "Contracts" : "Contrats"}><FileSignature aria-hidden="true" size={20}/></Link><Link className="icon-button notification-bell__trigger" href="/portal/notifications" aria-label={language === "en" ? `${unread} unread notifications` : `${unread} notification(s) non lue(s)`}>
           <Bell aria-hidden="true" size={20} />{unread ? <span>{Math.min(unread, 99)}</span> : null}
-        </Link>
+        </Link></div>
       </header>
 
       <main className="shell-content">{children}</main>

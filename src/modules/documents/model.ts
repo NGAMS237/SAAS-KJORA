@@ -47,7 +47,7 @@ export type FinancialDocumentRecord = FinancialDocumentSummary & {
 export type NotificationSummary = {
   id: string;
   type: "due_notice_ready" | "payment_receipt_ready" | "rent_receipt_ready" | "payment_overdue"
-    | "last_prepaid_period" | "low_credit" | "delivery_failed";
+    | "last_prepaid_period" | "low_credit" | "delivery_failed" | "contract_ready" | "contract_completed";
   titleCode: string;
   payload: Record<string, unknown>;
   documentId: string | null;
