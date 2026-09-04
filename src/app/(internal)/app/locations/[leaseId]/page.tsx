@@ -1,4 +1,5 @@
 import { getActiveAuthorization } from "@/core/authorization/server";
+import { requirePlanFeature } from "@/core/entitlements/server";
 import { UUID_PATTERN } from "@/modules/properties/model";
 import { getLeaseFinancialDetail, getTenantFinancialPosition } from "@/modules/finance/server";
 import { getLeaseDetail, getLeaseOptions } from "@/modules/tenancy/server";
@@ -15,10 +16,14 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
   if (!authorization?.capabilities.includes("lease.view") || !UUID_PATTERN.test(leaseId)) return <MissingTenancyResource leases />;
   const canViewFinancial = authorization.capabilities.includes("due.view");
   const canViewPayments = authorization.capabilities.includes("payment.view");
-  const [lease, options] = await Promise.all([
+  // ALIGN-01 — plan feature gating: contracts requires Essentiel+
+  const hasContractRbac = authorization.capabilities.includes("contract.manage");
+  const [lease, options, contractEntitlementError] = await Promise.all([
     getLeaseDetail(authorization.organizationId, leaseId),
     getLeaseOptions(authorization.organizationId),
+    hasContractRbac ? requirePlanFeature(authorization.organizationId, "contracts") : Promise.resolve(null as unknown),
   ]);
+  const canManageContracts = hasContractRbac && !contractEntitlementError;
   if (!lease) return <MissingTenancyResource leases />;
   const canViewDocuments = authorization.capabilities.includes("due.view") || authorization.capabilities.includes("receipt.view");
   const [financial, tenantFinancial, payments, documents] = await Promise.all([
@@ -28,5 +33,5 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
     canViewDocuments ? getFinancialDocuments(authorization.organizationId, { leaseId }) : Promise.resolve(null),
   ]);
   return <><LeaseDetailView lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />
-    {authorization.capabilities.includes("contract.manage") ? <div className="lease-contract-entry"><Link className="button button--secondary" href={`/app/locations/${lease.id}/contrat`}>Générer ou consulter le contrat</Link><small>Facultatif · le bail n’est jamais bloqué par ce document.</small></div> : null}</>;
+    {canManageContracts ? <div className="lease-contract-entry"><Link className="button button--secondary" href={`/app/locations/${lease.id}/contrat`}>Générer ou consulter le contrat</Link><small>Facultatif · le bail n’est jamais bloqué par ce document.</small></div> : null}</>;
 }

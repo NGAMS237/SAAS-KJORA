@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-09-04 — ALIGN-01 Plans/Quotas/Entitlements TERMINÉ / TESTÉ / DÉPLOYÉ (commit feat: complete ALIGN-01, push main). NEXT : ALIGN-02 — Auth / Routing / SaaS Onboarding / Site-App integration.
+> Mise à jour : 2026-09-03 — PATCH-6F-UX : portal navigation contrats + SaaS entitlement gating + RPC protection. 6F FULLY DEPLOYED. NEXT : ALIGN-02 — Auth / Routing / SaaS Onboarding / Site-App integration.
 
 > Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
 
@@ -26,8 +26,9 @@
 - **Patch UX post-6C3 — ventilation + reçu partiel : TERMINÉ / TESTÉ / DÉPLOYÉ — aucun changement Ledger/Payment/Allocation**
 - **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
-- **Lot 6F — Contrats / Modèles / Signature simple / Cachet : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **Lot 6F — Contrats / Modèles / Signature simple / Cachet : TERMINÉ / TESTÉ / FULLY DEPLOYED (PATCH-6F-UX 2026-09-03)**
 - **ALIGN-01 — Plans / Quotas / Entitlements : TERMINÉ / TESTÉ / DÉPLOYÉ (2026-09-04)**
+- **PATCH-6F-UX — Portal navigation contrats + entitlement gating UI + protection RPC : TERMINÉ / TESTÉ (2026-09-03)**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 

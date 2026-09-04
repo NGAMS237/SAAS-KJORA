@@ -42,6 +42,7 @@ export const portalNavigation: NavigationItem[] = [
   { href: "/portal", label: "Accueil", icon: House, exact: true },
   { href: "/portal/loyers", label: "Loyers", icon: WalletCards },
   { href: "/portal/recus", label: "Reçus", icon: ReceiptText },
+  { href: "/portal/contrats", label: "Contrats", icon: FileCheck2 },
   { href: "/portal/compte", label: "Compte", icon: CircleUserRound },
 ];
 
