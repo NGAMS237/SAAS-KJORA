@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-09-02 — Lot 6F TERMINÉ / TESTÉ / DÉPLOYÉ (commit d1f5367, push main) ; ALIGN-00 commercial et billing validé et documenté
+> Mise à jour : 2026-09-04 — ALIGN-01 Plans/Quotas/Entitlements TERMINÉ / TESTÉ / DÉPLOYÉ (commit feat: complete ALIGN-01, push main). NEXT : ALIGN-02 — Auth / Routing / SaaS Onboarding / Site-App integration.
 
 > Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
 
@@ -27,14 +27,19 @@
 - **Lot 6D — Dashboard opérationnel + Notifications + Activity + Audit : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6E — Tenant Portal Access : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
 - **Lot 6F — Contrats / Modèles / Signature simple / Cachet : TERMINÉ / TESTÉ / DÉPLOYÉ — VALIDATION FONCTIONNELLE BLAISE EN ATTENTE**
+- **ALIGN-01 — Plans / Quotas / Entitlements : TERMINÉ / TESTÉ / DÉPLOYÉ (2026-09-04)**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
 ## Gouvernance commerciale
 
+- **ALIGN-01 — TERMINÉ (2026-09-04).** Plan catalog (decouverte/essentiel/avance/patrimoine/sur_mesure), feature gating, quota enforcement (property/unit/collaborator/organization), `organization_plans` + `plan_features` avec RLS, triggers BEFORE INSERT/UPDATE, RPCs `get_organization_entitlements` et `org_has_feature`, backfill individuel des 6 Organizations Production validé par Blaise, 178/178 Node, 42/42 pgTAP, migrations déployées. ENFORCEMENT CREATE ORGANIZATION → ALIGN-02.
+
 - **ALIGN-00 — TERMINÉ (2026-09-02).** Les décisions commerciales et billing de KJORA sont validées et canonisées dans `docs/product/KJORA-COMMERCIAL-BILLING-DECISIONS-v0.1.md` (D-140). Aucune implémentation billing, quota serveur, provider de paiement SaaS ni cycle de vie abonnement n'est présumée livrée à cette date. L'implémentation est découpée en lots séparés ; aucun lot billing n'est autorisé à démarrer sans instruction explicite.
 
 ## Terminé
+
+- **ALIGN-01 déployé en Production (2026-09-04).** Migrations `align_01_plans_entitlements` (version 20260904030350) + `align_01_advisor_fixes`. 6 Organizations backfillées individuellement avec les plans validés par Blaise : RESIDENCE VERALUZ → decouverte, residence pola → decouverte, residence pauline → avance (2 collaborateurs actifs), Residence pola → essentiel (4 unités actives dans quota), Immeuble Axel → decouverte, STQ-BAT → decouverte. Aucune org au-delà des quotas. RLS actif, aucun write client direct. Advisors ALIGN-01 : multiple_permissive_policies corrigé, index assigned_by ajouté. Gate SQL 42/42 pgTAP, 178/178 Node. NEXT : ALIGN-02 — Auth / Routing / SaaS Onboarding / Site-App integration — devra produire `docs/product/KJORA-SITE-APP-INTEGRATION-CONTRACT-v0.1.md`.
 
 - Lot 6F déployé en Production : migration `20260902121306`, 43/43 pgTAP, bucket `contract-documents` privé, capability `contract.manage`, commit `d1f5367`, push `main`. Validation fonctionnelle Blaise en attente.
 - Lot 6F préparé localement conformément à D-134 à D-139 : modèles système/Organization FR/EN versionnés, snapshots contractuels, workflow formel, signature simple avec consentement et hash, cachet graphique, portail exact Tenant/Lease, PDF final privé et audit réutilisé.
