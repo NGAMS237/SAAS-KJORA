@@ -33,6 +33,9 @@ export const CAPABILITIES = [
   "audit.view",
   "tenant_portal.manage",
   "contract.manage",
+  // ALIGN-03 — facturation SaaS, réservée à l'Organization Owner
+  "billing.view",
+  "billing.manage",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

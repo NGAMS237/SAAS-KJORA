@@ -4731,3 +4731,56 @@ a.portfolio-metric:hover {
   font-size: 0.82rem;
   margin: 12px 0 0;
 }
+
+/* ---------------------------------------------------------------------------
+   Abonnement & facturation (ALIGN-03)
+   --------------------------------------------------------------------------- */
+
+.billing-state--blocked { border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+
+.billing-quotas { display: grid; gap: 10px; margin-top: 12px; }
+
+.billing-quota {
+  align-items: center; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; padding-bottom: 8px;
+}
+.billing-quota:last-child { border-bottom: none; padding-bottom: 0; }
+.billing-quota span { color: var(--text-secondary); }
+.billing-quota--over { color: var(--danger); }
+
+.billing-plan-grid {
+  display: grid; gap: 10px; margin: 14px 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.billing-plan-option {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); cursor: pointer; display: grid;
+  gap: 4px; padding: 14px 16px; text-align: left;
+}
+.billing-plan-option:hover:not(:disabled) { border-color: var(--brand-gold); }
+.billing-plan-option:disabled { cursor: default; opacity: 0.6; }
+.billing-plan-option span { color: var(--text-secondary); font-size: 0.9rem; }
+
+.billing-quote {
+  background: var(--surface-muted); border: 1px solid var(--border);
+  border-radius: var(--radius-md); margin-top: 14px; padding: 14px 16px;
+}
+.billing-quote--refused { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.billing-quote h3 { font-size: 1rem; margin: 0 0 8px; }
+.billing-quote p, .billing-quote li { color: var(--text-secondary); line-height: 1.6; margin: 0 0 6px; }
+.billing-quote ul { margin: 0 0 8px; padding-left: 20px; }
+
+.billing-invoice-list { display: grid; gap: 10px; margin-top: 14px; }
+
+.billing-invoice-row {
+  align-items: center; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); display: grid; gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto auto; padding: 14px 16px;
+}
+.billing-invoice-row > div { display: grid; gap: 2px; min-width: 0; }
+.billing-invoice-row span { color: var(--text-secondary); font-size: 0.88rem; }
+
+@media (max-width: 640px) {
+  .billing-invoice-row { grid-template-columns: 1fr; }
+}
