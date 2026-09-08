@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublicFooter } from "@/core/ui/public-footer";
+import { FORMULATION_CANONIQUE } from "@/core/legal/legal-facts";
 
 export const metadata = {
   title: "Contact — Kjora",
@@ -20,6 +21,7 @@ export default function ContactPage() {
         <p className="auth-intro">
           Kjora est en bêta. Nous lisons chaque message et répondons généralement sous un jour ouvré.
         </p>
+        <p className="auth-intro">{FORMULATION_CANONIQUE}</p>
 
         <div className="aide-bloc">
           <h2>Vous utilisez déjà Kjora</h2>

@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { PublicFooter } from "@/core/ui/public-footer";
-import { DATA_CATEGORIES, PROCESSORS, RETENTION_RULES } from "@/core/legal/legal-facts";
+import {
+  DATA_CATEGORIES,
+  PROCESSORS,
+  RETENTION_RULES,
+  EDITEUR_NOM,
+  MARQUE_NOM,
+  FORMULATION_CANONIQUE,
+  LEGAL_REVIEW_BEFORE_LAUNCH,
+} from "@/core/legal/legal-facts";
 
 export const metadata = {
   title: "Confidentialité — Kjora",
@@ -16,15 +24,25 @@ export default function ConfidentialitePage() {
         <h1>Vos données dans Kjora</h1>
 
         <p className="legal-banner" role="note">
-          <strong>LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH</strong> — Ce texte décrit
-          fidèlement le fonctionnement réel du produit. Il n’a pas été relu par un juriste et ne
-          constitue pas une déclaration de conformité à une réglementation particulière.
+          <strong>{LEGAL_REVIEW_BEFORE_LAUNCH}</strong> — Ce texte décrit fidèlement le
+          fonctionnement réel du produit. Il n’a pas été relu par un juriste et ne constitue pas une
+          déclaration de conformité à une réglementation particulière.
         </p>
 
         <p className="auth-intro">
           Kjora est un outil de gestion locative. Vous y saisissez des informations sur vos biens et
           vos locataires : nous les traitons pour faire fonctionner le service, pas pour autre chose.
         </p>
+
+        <div className="aide-bloc">
+          <h2>Qui traite vos données</h2>
+          <p>
+            {FORMULATION_CANONIQUE} Le responsable du traitement est {EDITEUR_NOM} ; {MARQUE_NOM} en
+            est l’activité numérique et n’a pas de personnalité juridique distincte. Les
+            informations d’identification complètes figurent dans les{" "}
+            <Link href="/mentions-legales">mentions légales</Link>.
+          </p>
+        </div>
 
         <div className="aide-bloc">
           <h2>Ce que nous traitons, et pourquoi</h2>

@@ -8,12 +8,19 @@ import test from "node:test";
 
 import {
   EDITEUR_FIELDS,
+  EDITEUR_NOM,
+  MARQUE_NOM,
+  PRODUIT_NOM,
+  MARQUE_DESCRIPTION,
+  FORMULATION_CANONIQUE,
+  LEGAL_OPEN_ITEMS,
   PROCESSORS,
   DATA_CATEGORIES,
   RETENTION_RULES,
   SECURITY_MEASURES,
   CERTIFICATIONS_NON_DETENUES,
   LEGAL_REVIEW_REQUIRED,
+  LEGAL_REVIEW_BEFORE_LAUNCH,
 } from "../src/core/legal/legal-facts.ts";
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
@@ -87,44 +94,130 @@ test("aucune certification n'est revendiquée comme détenue", () => {
 
 test("les pages portent l'avertissement de revue juridique", () => {
   assert.match(mentions, /LEGAL_REVIEW_REQUIRED|LEGAL REVIEW REQUIRED/);
-  assert.match(confidentialite, /LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH/);
+  // La page référence la constante ; c'est elle qui porte le texte exact.
+  assert.match(confidentialite, /LEGAL_REVIEW_BEFORE_LAUNCH|LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH/);
   assert.equal(LEGAL_REVIEW_REQUIRED, "LEGAL REVIEW REQUIRED");
+  assert.equal(LEGAL_REVIEW_BEFORE_LAUNCH, "LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH");
 });
 
 // ---------------------------------------------------------------------------
 // Aucune donnée d'identification inventée
 // ---------------------------------------------------------------------------
 
-test("aucun champ d'identification de l'éditeur n'est renseigné", () => {
-  for (const champ of EDITEUR_FIELDS) {
-    assert.equal(champ.valeur, null, `champ inventé : ${champ.libelle}`);
-  }
-  // Les six champs obligatoires sont bien présents et affichés comme manquants
-  const libelles = EDITEUR_FIELDS.map((c) => c.libelle.toLowerCase()).join(" ");
-  for (const attendu of ["dénomination", "forme juridique", "immatriculation", "siège", "publication", "données"]) {
-    assert.ok(libelles.includes(attendu), `champ obligatoire absent : ${attendu}`);
+// ---------------------------------------------------------------------------
+// Identité canonique (D-143)
+// ---------------------------------------------------------------------------
+
+test("les champs d'identification établis sont renseignés, sans placeholder", () => {
+  const attendus: Record<string, string> = {
+    "Dénomination sociale": "STE VERALUZ SARL",
+    "Forme juridique": "Société à responsabilité limitée pluripersonnelle (SARL)",
+    "Capital social": "900 000 FCFA",
+    "Numéro d’identifiant unique (NIU)": "M062618820539S",
+    RCCM: "CM-NSI-02-2026-B12-00615",
+    "Date d’immatriculation": "29/06/2026",
+    "Durée de la société": "99 ans",
+    "Siège social": "Yaoundé, AWAE – ESCALIER, Cameroun",
+  };
+  for (const [libelle, valeur] of Object.entries(attendus)) {
+    const champ = EDITEUR_FIELDS.find((c) => c.libelle === libelle);
+    assert.ok(champ, `champ absent : ${libelle}`);
+    assert.equal(champ?.valeur, valeur, `valeur incorrecte pour ${libelle}`);
   }
 });
 
-test("aucun numéro d'immatriculation ni adresse ne figure dans les pages", () => {
-  for (const page of PAGES_LEGALES.map(sansCommentaires)) {
-    // SIRET (14 chiffres), SIREN (9), RCCM, numéro de TVA
-    assert.doesNotMatch(page, /\b\d{9,14}\b/, "suite de chiffres évoquant une immatriculation");
-    assert.doesNotMatch(page, /\bRCCM\b|\bSIRET\b|\bSIREN\b|\bTVA\s*:/i);
+test("seuls les champs non arrêtés restent en revue juridique", () => {
+  const enRevue = EDITEUR_FIELDS.filter((c) => c.valeur === null).map((c) => c.libelle);
+  assert.deepEqual(enRevue, [
+    "Directeur de la publication",
+    "Délégué à la protection des données",
+  ]);
+});
+
+test("le siège publié est celui du RCCM, pas une adresse bancaire ou fiscale", () => {
+  const siege = EDITEUR_FIELDS.find((c) => c.libelle === "Siège social")?.valeur ?? "";
+  assert.match(siege, /Yaoundé/);
+  assert.match(siege, /AWAE/);
+  assert.match(siege, /Cameroun/);
+  assert.doesNotMatch(siege, /banque|bancaire|agence|BP\s*\d/i);
+});
+
+test("VERALUZ SARL est présenté comme éditeur sur les pages légales", () => {
+  assert.ok(mentions.includes("EDITEUR_NOM") || mentions.includes(EDITEUR_NOM));
+  assert.match(mentions, /Éditeur du service/);
+  assert.equal(EDITEUR_NOM, "STE VERALUZ SARL");
+});
+
+test("KJEMO Studios est une activité/marque, jamais une société autonome", () => {
+  assert.equal(MARQUE_NOM, "KJEMO Studios");
+  assert.match(MARQUE_DESCRIPTION, /[Aa]ctivité et marque de VERALUZ SARL/);
+
+  // Scan de ce que voit l'utilisateur. Le document canonique est exclu : il
+  // LISTE ces formulations comme proscrites, ce qu'un autre test vérifie.
+  const visibles = [
+    mentions, confidentialite, securite, footer, read("../src/app/contact/page.tsx"),
+    read("../src/core/legal/legal-facts.ts"),
+  ].map(sansCommentaires);
+  for (const source of visibles) {
+    assert.doesNotMatch(source, /KJEMO Studios SARL/i, "KJEMO ne doit jamais porter une forme juridique");
+    assert.doesNotMatch(source, /KJEMO[^.]{0,60}\bfiliale\b/i, "KJEMO ne doit pas être qualifié de filiale");
+    assert.doesNotMatch(source, /sous-entreprise/i, "terme « sous-entreprise » interdit");
+  }
+  // Le lien de subordination est explicite
+  assert.match(mentions, /ne dispose pas d’une personnalité\s+juridique distincte/);
+});
+
+test("KJORA est présenté comme produit, et la formulation canonique est utilisée", () => {
+  assert.equal(PRODUIT_NOM, "KJORA");
+  assert.equal(
+    FORMULATION_CANONIQUE,
+    "KJORA est un logiciel SaaS développé et exploité par KJEMO Studios, activité numérique et SaaS de VERALUZ SARL.",
+  );
+  assert.match(mentions, /FORMULATION_CANONIQUE/);
+});
+
+test("aucune donnée bancaire ni personnelle d'associé n'est exposée", () => {
+  // Le document canonique est exclu : sa section « données à ne jamais publier »
+  // nomme précisément ces éléments pour les interdire.
+  const sources = [...PAGES_LEGALES, footer, read("../src/core/legal/legal-facts.ts")]
+    .map(sansCommentaires);
+  for (const source of sources) {
+    // IBAN, RIB, SWIFT/BIC, numéro de compte
+    assert.doesNotMatch(source, /\bIBAN\b|\bRIB\b|\bSWIFT\b|\bBIC\b/i, "donnée bancaire exposée");
+    assert.doesNotMatch(source, /CM\d{2}\s?\d{4}/, "IBAN camerounais exposé");
+    assert.doesNotMatch(source, /num[ée]ro de compte|coordonn[ée]es bancaires\s*:/i);
+    // Données personnelles d'associés
+    assert.doesNotMatch(source, /date de naissance|né\(?e\)? le|pièce d’identité|passeport n/i);
   }
 });
 
-test("VERALUZ n'est jamais présenté comme éditeur", () => {
-  // Dans le dépôt, VERALUZ désigne uniquement un projet Supabase distinct
-  // dont KJORA doit rester isolé (D-011, D-074).
-  const facts = read("../src/core/legal/legal-facts.ts");
-  for (const page of [...PAGES_LEGALES, footer]) {
-    assert.doesNotMatch(page, /VERALUZ/i, "VERALUZ ne doit pas apparaître sur une page publique");
+test("le document canonique d'identité existe et fixe la hiérarchie", () => {
+  const doc = read("../docs/product/KJORA-LEGAL-IDENTITY-v0.1.md");
+  assert.match(doc, /VERALUZ SARL/);
+  assert.match(doc, /KJEMO Studios/);
+  assert.match(doc, /KJORA/);
+  assert.match(doc, /CM-NSI-02-2026-B12-00615/);
+  assert.match(doc, /M062618820539S/);
+  assert.match(doc, /900 000 FCFA/);
+  // Le vocabulaire proscrit est explicitement listé
+  for (const interdit of ["KJEMO Studios SARL", "filiale", "sous-entreprise", "groupe"]) {
+    assert.ok(doc.includes(interdit), `vocabulaire proscrit non documenté : ${interdit}`);
   }
-  // Le module de faits documente explicitement pourquoi VERALUZ n'est pas l'éditeur.
-  assert.match(facts, /VERALUZ/);
-  assert.match(facts, /projet Supabase/);
-  assert.match(facts, /pas une\s+\/\/ désignation d.éditeur|pas une désignation d.éditeur/);
+  // Ces mentions n'apparaissent que dans le tableau des interdits, jamais comme
+  // affirmation — c'est ce qui justifie d'exclure ce document des scans.
+  assert.match(doc, /## 5\. Vocabulaire imposé/);
+  assert.match(doc, /\|\s*«?\s*KJEMO Studios SARL\s*»?\s*\|/);
+  assert.match(doc, /## 6\. Données à ne jamais publier/);
+  assert.doesNotMatch(doc, /Éditeur\s*:\s*KJEMO/i);
+});
+
+test("les points encore ouverts restent signalés", () => {
+  assert.ok(LEGAL_OPEN_ITEMS.length >= 6);
+  const joints = LEGAL_OPEN_ITEMS.join(" | ").toLowerCase();
+  for (const attendu of ["droits des personnes", "conservation", "clauses", "confidentialité", "utilisation", "vente"]) {
+    assert.ok(joints.includes(attendu), `point ouvert non listé : ${attendu}`);
+  }
+  assert.equal(LEGAL_REVIEW_BEFORE_LAUNCH, "LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH");
 });
 
 // ---------------------------------------------------------------------------

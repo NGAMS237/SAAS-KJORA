@@ -1,42 +1,73 @@
 // =============================================================================
-// Faits légaux — source unique, séparation stricte entre vérifiable et inconnu
+// Faits légaux — source unique, séparation stricte entre établi et non établi
 // =============================================================================
-// Règle absolue : ce module ne contient que des informations réellement
-// établies dans le dépôt canonique ou observables sur le déploiement.
+// Hiérarchie canonique (D-143) :
+//   • VERALUZ SARL  = entité juridique, éditeur du service
+//   • KJEMO Studios = activité / marque numérique et SaaS de VERALUZ SARL
+//   • KJORA         = produit SaaS développé et exploité par KJEMO Studios
 //
-// Tout ce qui relève de l'identité juridique de l'éditeur — raison sociale,
-// forme, immatriculation, siège, directeur de publication, DPO — n'est PAS
-// canonisé dans ce dépôt et n'est donc PAS écrit ici. Ces champs sont marqués
-// LEGAL_REVIEW_REQUIRED et affichés comme tels, jamais devinés.
+// KJEMO Studios n'a ni personnalité morale distincte, ni RCCM, ni NIU, ni
+// capital, ni siège propres. Il ne doit jamais être écrit « KJEMO Studios SARL »,
+// ni présenté comme filiale, sous-entreprise ou groupe.
 //
-// Note : « VERALUZ » n'apparaît dans le dépôt que comme projet Supabase
-// distinct dont KJORA doit rester isolé (D-011, D-074). Ce n'est pas une
-// désignation d'éditeur et ne doit pas être utilisée comme telle.
+// Ce module ne contient que des informations établies. Ce qui relève encore
+// d'une revue juridique est marqué LEGAL_REVIEW_REQUIRED et affiché comme tel.
 // =============================================================================
 
 export const LEGAL_REVIEW_REQUIRED = "LEGAL REVIEW REQUIRED" as const;
+export const LEGAL_REVIEW_BEFORE_LAUNCH =
+  "LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH" as const;
+
+// ---------------------------------------------------------------------------
+// Identité canonique
+// ---------------------------------------------------------------------------
+
+export const EDITEUR_NOM = "STE VERALUZ SARL" as const;
+export const MARQUE_NOM = "KJEMO Studios" as const;
+export const PRODUIT_NOM = "KJORA" as const;
+
+/** Formulation de référence, à réutiliser telle quelle. */
+export const FORMULATION_CANONIQUE =
+  "KJORA est un logiciel SaaS développé et exploité par KJEMO Studios, activité numérique et SaaS de VERALUZ SARL." as const;
+
+export const MARQUE_DESCRIPTION =
+  "Activité et marque de VERALUZ SARL dédiée au développement logiciel, aux solutions SaaS, aux services numériques et à l’accompagnement informatique." as const;
 
 export type LegalField = { libelle: string; valeur: string | null };
 
-/** Champs d'identification obligatoires non établis dans le dépôt canonique. */
+/** Identification de l'éditeur. `null` = encore soumis à revue juridique. */
 export const EDITEUR_FIELDS: LegalField[] = [
-  { libelle: "Dénomination sociale de l’éditeur", valeur: null },
-  { libelle: "Forme juridique", valeur: null },
-  { libelle: "Numéro d’immatriculation", valeur: null },
-  { libelle: "Siège social", valeur: null },
+  { libelle: "Dénomination sociale", valeur: EDITEUR_NOM },
+  { libelle: "Forme juridique", valeur: "Société à responsabilité limitée pluripersonnelle (SARL)" },
+  { libelle: "Capital social", valeur: "900 000 FCFA" },
+  { libelle: "Numéro d’identifiant unique (NIU)", valeur: "M062618820539S" },
+  { libelle: "RCCM", valeur: "CM-NSI-02-2026-B12-00615" },
+  { libelle: "Date d’immatriculation", valeur: "29/06/2026" },
+  { libelle: "Durée de la société", valeur: "99 ans" },
+  { libelle: "Siège social", valeur: "Yaoundé, AWAE – ESCALIER, Cameroun" },
+  // Non encore arrêtés : affichés comme tels, jamais devinés.
   { libelle: "Directeur de la publication", valeur: null },
   { libelle: "Délégué à la protection des données", valeur: null },
 ];
 
-/** Sous-traitants techniques réellement utilisés, vérifiables dans le dépôt. */
+/** Champs encore soumis à revue juridique, hors identification de l'éditeur. */
+export const LEGAL_OPEN_ITEMS: string[] = [
+  "Droits des personnes selon les juridictions concernées (Cameroun et diaspora)",
+  "Matrice de conservation légale par type de document et par juridiction",
+  "Clauses contractuelles applicables au service",
+  "Politique de confidentialité définitive",
+  "Conditions générales d’utilisation",
+  "Conditions générales de vente",
+];
+
+// ---------------------------------------------------------------------------
+// Sous-traitants techniques réellement utilisés
+// ---------------------------------------------------------------------------
+
 export type Processor = { nom: string; role: string; localisation: string | null };
 
 export const PROCESSORS: Processor[] = [
-  {
-    nom: "Vercel",
-    role: "Hébergement de l’application web",
-    localisation: null,
-  },
+  { nom: "Vercel", role: "Hébergement de l’application web", localisation: null },
   {
     nom: "Supabase",
     role: "Base de données PostgreSQL, authentification et stockage de fichiers",
@@ -49,7 +80,10 @@ export const PROCESSORS: Processor[] = [
   },
 ];
 
-/** Catégories de données réellement traitées par le produit. */
+// ---------------------------------------------------------------------------
+// Données traitées
+// ---------------------------------------------------------------------------
+
 export type DataCategory = { categorie: string; contenu: string; finalite: string };
 
 export const DATA_CATEGORIES: DataCategory[] = [
@@ -100,7 +134,10 @@ export const DATA_CATEGORIES: DataCategory[] = [
   },
 ];
 
-/** Durées de conservation déjà arbitrées dans le dépôt canonique. */
+// ---------------------------------------------------------------------------
+// Conservation
+// ---------------------------------------------------------------------------
+
 export type RetentionRule = { objet: string; duree: string; source: string };
 
 export const RETENTION_RULES: RetentionRule[] = [
@@ -114,7 +151,10 @@ export const RETENTION_RULES: RetentionRule[] = [
   { objet: "Lien de téléchargement d’un document", duree: "120 secondes", source: "D-111, D-138" },
 ];
 
-/** Mesures de sécurité réellement implémentées et vérifiables dans le dépôt. */
+// ---------------------------------------------------------------------------
+// Sécurité
+// ---------------------------------------------------------------------------
+
 export type SecurityMeasure = { titre: string; description: string };
 
 export const SECURITY_MEASURES: SecurityMeasure[] = [
@@ -171,8 +211,4 @@ export const SECURITY_MEASURES: SecurityMeasure[] = [
 ];
 
 /** Aucune certification n'est détenue : la page Sécurité doit le dire. */
-export const CERTIFICATIONS_NON_DETENUES = [
-  "SOC 2",
-  "ISO 27001",
-  "HDS",
-] as const;
+export const CERTIFICATIONS_NON_DETENUES = ["SOC 2", "ISO 27001", "HDS"] as const;

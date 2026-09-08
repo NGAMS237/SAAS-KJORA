@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-09-08 — Bêta Découverte : pages légales minimales (mentions, confidentialité, sécurité) sans conformité inventée, footer public, surface Documents (D-142), support bêta par email, pages Aide/Contact, nettoyage du jargon interne, `auth_completed` câblé. ALIGN-02 reste déployé en Production (contrat Site↔App, context resolver serveur, onboarding reprenable, quota Organizations, analytics funnel ; 35/35 pgTAP, 23/23 E2E Production). NEXT : ALIGN-03 (non démarré).
+> Mise à jour : 2026-09-08 — **KJORA DÉCOUVERTE = BETA READY FOR CONTROLLED PILOT** (voir « Statut bêta »). Pages légales minimales (mentions, confidentialité, sécurité) sans conformité inventée, footer public, surface Documents (D-142), support bêta par email, pages Aide/Contact, nettoyage du jargon interne, `auth_completed` câblé. ALIGN-02 reste déployé en Production (contrat Site↔App, context resolver serveur, onboarding reprenable, quota Organizations, analytics funnel ; 35/35 pgTAP, 23/23 E2E Production). NEXT : ALIGN-03 (non démarré).
 
 > Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
 
@@ -31,9 +31,22 @@
 - **PATCH-6F-UX — Portal navigation contrats + entitlement gating UI + protection RPC : TERMINÉ / TESTÉ (2026-09-03)**
 - **ALIGN-02 — Auth / Context resolver / Routing / Onboarding SaaS / Site↔App : TERMINÉ / TESTÉ / DÉPLOYÉ EN PRODUCTION (2026-09-08)**
 - **Préparation bêta Découverte — Documents (D-142) / Support / Aide / Contact / nettoyage UX : TERMINÉ / TESTÉ (2026-09-08)**
-- **Pages légales bêta — Mentions légales / Confidentialité / Sécurité + footer public : TERMINÉ / TESTÉ — EN ATTENTE ESLINT + BUILD WINDOWS (2026-09-08)**
+- **Pages légales bêta — Mentions légales / Confidentialité / Sécurité + footer public : TERMINÉ / TESTÉ / GATE COMPLET VERT (2026-09-08)**
+- **Identité juridique éditeur / marque / produit canonisée (D-143) : TERMINÉ / TESTÉ (2026-09-08)**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
+
+## Statut bêta
+
+> ## KJORA DÉCOUVERTE = BETA READY FOR CONTROLLED PILOT
+>
+> Gate bêta validé au 2026-09-08 sur le commit `26ec5c4` (poussé sur `origin/main`) : 269/269 tests Node, `tsc --noEmit`, ESLint et `npm run build` confirmés sur Windows, `git diff --check` propre.
+>
+> La canonisation d'identité D-143 qui a suivi porte la suite à **275/275** avec `tsc --noEmit` vert ; ESLint et `npm run build` restent à reconfirmer sur Windows pour ce delta avant commit.
+>
+> **Ce statut vaut pour un pilote contrôlé uniquement** : utilisateurs invités nominativement, périmètre Découverte, accompagnement direct.
+>
+> **KJORA n'est PAS `PUBLIC LAUNCH READY`.** L'identité juridique est désormais canonisée (D-143) : éditeur **STE VERALUZ SARL**, marque **KJEMO Studios**, produit **KJORA**. Restent sous `LEGAL REVIEW REQUIRED` : directeur de la publication, DPO, droits des personnes par juridiction, matrice de conservation légale, clauses contractuelles, politique de confidentialité définitive, CGU et CGV. La politique de confidentialité porte la mention `LEGAL REVIEW REQUIRED BEFORE PUBLIC COMMERCIAL LAUNCH`. Aucune certification et aucune conformité réglementaire ne sont revendiquées.
 
 ## Gouvernance commerciale
 
@@ -42,6 +55,8 @@
 - **ALIGN-00 — TERMINÉ (2026-09-02).** Les décisions commerciales et billing de KJORA sont validées et canonisées dans `docs/product/KJORA-COMMERCIAL-BILLING-DECISIONS-v0.1.md` (D-140). Aucune implémentation billing, quota serveur, provider de paiement SaaS ni cycle de vie abonnement n'est présumée livrée à cette date. L'implémentation est découpée en lots séparés ; aucun lot billing n'est autorisé à démarrer sans instruction explicite.
 
 ## Terminé
+
+- **Identité juridique canonisée (2026-09-08, D-143).** Hiérarchie de référence : **VERALUZ SARL** entité juridique et éditeur, **KJEMO Studios** activité et marque numérique/SaaS de VERALUZ SARL, **KJORA** produit SaaS développé et exploité par KJEMO Studios. Faits publiés : STE VERALUZ SARL, SARL pluripersonnelle, capital 900 000 FCFA, NIU M062618820539S, RCCM CM-NSI-02-2026-B12-00615, immatriculation 29/06/2026, durée 99 ans, siège Yaoundé AWAE – ESCALIER (Cameroun). KJEMO Studios n'a ni personnalité morale, ni RCCM, NIU, capital ou siège propres ; les formulations « KJEMO Studios SARL », « filiale », « sous-entreprise » et « groupe » sont proscrites et testées. Aucune coordonnée bancaire ni donnée personnelle d'associé publiée. Pages mises à jour : `/mentions-legales` (structure Éditeur / Marque / Produit), `/confidentialite` (responsable du traitement), `/securite`, `/contact`, footer public. Source unique côté code : `src/core/legal/legal-facts.ts` ; document canonique : `docs/product/KJORA-LEGAL-IDENTITY-v0.1.md`. 25 tests légaux (dont 6 nouveaux sur l'identité), suite à 275/275, `tsc --noEmit` vert. Aucune modification base.
 
 - **Pages légales bêta (2026-09-08).** `/mentions-legales`, `/confidentialite` et `/securite` créées, publiques, sans session. Un module unique `src/core/legal/legal-facts.ts` sépare strictement le vérifiable de l'inconnu. **Aucune identité d'éditeur n'a été écrite** : dénomination, forme juridique, immatriculation, siège, directeur de publication et DPO ne sont pas établis dans le dépôt canonique et sont affichés comme `LEGAL REVIEW REQUIRED`. « VERALUZ » n'apparaît dans le dépôt que comme projet Supabase distinct dont KJORA doit rester isolé (D-011, D-074) et n'a donc **pas** été utilisé comme éditeur ; « KJEMO Studios » et « SARL » n'y figurent nulle part. Faits réellement établis et publiés : sous-traitants (Vercel, Supabase Paris, Resend), 9 catégories de données avec finalités, 8 durées de conservation toutes rattachées à une décision (D-041, D-053, D-054, D-065, D-111, D-138, D-140), 10 mesures de sécurité implémentées. La page Sécurité déclare explicitement **ne détenir aucune certification** (SOC 2, ISO 27001, HDS). Aucune allégation de conformité réglementaire. Footer public discret sur les 6 surfaces publiques, hors navigation principale. `KJORA_SUPPORT_EMAIL_TO` et `NEXT_PUBLIC_KJORA_CONTACT_EMAIL` documentées dans `.env.example` ; aucun email en dur (test exhaustif sur `src/**`). 19 tests ajoutés, suite à 269/269. `tsc --noEmit` exécuté et vert. Aucune modification base.
 

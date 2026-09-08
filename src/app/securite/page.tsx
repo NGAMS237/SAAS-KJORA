@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { PublicFooter } from "@/core/ui/public-footer";
-import { SECURITY_MEASURES, CERTIFICATIONS_NON_DETENUES } from "@/core/legal/legal-facts";
+import {
+  SECURITY_MEASURES,
+  CERTIFICATIONS_NON_DETENUES,
+  EDITEUR_NOM,
+  MARQUE_NOM,
+} from "@/core/legal/legal-facts";
 
 export const metadata = {
   title: "Sécurité — Kjora",
@@ -18,6 +23,9 @@ export default function SecuritePage() {
         <p className="auth-intro">
           Cette page décrit des mesures effectivement implémentées, pas des intentions. Chacune est
           vérifiable dans le fonctionnement du produit.
+        </p>
+        <p className="auth-intro">
+          Le service est édité par {EDITEUR_NOM} et exploité sous la marque {MARQUE_NOM}.
         </p>
 
         <div className="aide-bloc">
