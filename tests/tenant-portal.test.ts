@@ -12,6 +12,8 @@ const login = readFileSync(new URL("../src/tenant-portal/login-form.tsx", import
 const documentRoute = readFileSync(new URL("../src/app/api/tenant-portal/documents/[documentId]/download/route.ts", import.meta.url), "utf8");
 const portalLayout = readFileSync(new URL("../src/app/(portal)/portal/layout.tsx", import.meta.url), "utf8");
 const internalLayout = readFileSync(new URL("../src/app/(internal)/app/layout.tsx", import.meta.url), "utf8");
+// ALIGN-02 : la détection d'identité portail a été centralisée dans le context resolver.
+const contextResolver = readFileSync(new URL("../src/core/routing/context-resolver.ts", import.meta.url), "utf8");
 const notificationPatch = readFileSync(new URL("../supabase/migrations/20260901120731_post_6e_portal_notifications_pin_notice.sql", import.meta.url), "utf8");
 
 test("TenantPortalAccess is structurally separate from internal Memberships", () => {
@@ -21,7 +23,13 @@ test("TenantPortalAccess is structurally separate from internal Memberships", ()
   assert.match(migration, /tenant_id uuid not null/i);
   assert.doesNotMatch(migration, /insert into public\.memberships/i);
   assert.doesNotMatch(shell, /\/app(?:\/|"|')/);
-  assert.match(internalLayout, /has_tenant_portal_identity/);
+  // ALIGN-02 : le layout interne délègue au context resolver, qui reste seul
+  // responsable de distinguer identité portail et Membership interne.
+  assert.match(internalLayout, /resolveUserContext/);
+  assert.match(contextResolver, /has_tenant_portal_identity/);
+  assert.match(contextResolver, /kind: "tenant_only"/);
+  // Une identité portail ne crée jamais de Membership interne
+  assert.doesNotMatch(contextResolver, /insert into public\.memberships/i);
 });
 
 test("portal tables are default-deny and public/anon cannot execute portal RPCs", () => {

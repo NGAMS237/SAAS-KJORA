@@ -1,12 +1,20 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { safeNextPath } from "@/core/auth/safe-next-path";
+import { trackEvent } from "@/core/analytics/events";
+import type { PlanSlug } from "@/core/entitlements/model";
 
-export function LoginForm({ nextPath = "/app" }: { nextPath?: string }) {
+export function LoginForm({
+  nextPath = "/app",
+  planRequested = null,
+}: {
+  nextPath?: string;
+  planRequested?: PlanSlug | null;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
@@ -14,6 +22,12 @@ export function LoginForm({ nextPath = "/app" }: { nextPath?: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const configured = Boolean(getSupabasePublicConfig());
+
+  // ALIGN-02 §16 — début du parcours d'authentification
+  useEffect(() => {
+    trackEvent("auth_started", { plan_requested: planRequested });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function sendAccess(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,6 +44,7 @@ export function LoginForm({ nextPath = "/app" }: { nextPath?: string }) {
         },
       });
       if (error) throw error;
+      trackEvent("magic_link_sent", { plan_requested: planRequested });
       setSent(true);
       setMessage("Email envoyé. Ouvrez le lien dans ce même navigateur et sur cet appareil, ou saisissez le code reçu.");
     } catch {

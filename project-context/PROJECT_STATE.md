@@ -1,6 +1,6 @@
 # Kjora — État du projet
 
-> Mise à jour : 2026-09-03 — PATCH-6F-UX : portal navigation contrats + SaaS entitlement gating + RPC protection. 6F FULLY DEPLOYED. NEXT : ALIGN-02 — Auth / Routing / SaaS Onboarding / Site-App integration.
+> Mise à jour : 2026-09-08 — ALIGN-02 DÉPLOYÉ EN PRODUCTION : contrat Site↔App, context resolver serveur, onboarding reprenable et idempotent, enforcement quota Organizations, analytics funnel. 228/228 Node, 35/35 pgTAP, 23/23 E2E Production. NEXT : ALIGN-03 (non démarré).
 
 > Patch post-6E **migré et testé en Production** : PIN portail facultatif, notifications in-app actionnables, préférence sonore locale et amélioration des futurs avis PDF. Déploiement applicatif autorisé après 75/75 pgTAP et Advisors sans niveau critique ; validation fonctionnelle Blaise en attente.
 
@@ -29,6 +29,7 @@
 - **Lot 6F — Contrats / Modèles / Signature simple / Cachet : TERMINÉ / TESTÉ / FULLY DEPLOYED (PATCH-6F-UX 2026-09-03)**
 - **ALIGN-01 — Plans / Quotas / Entitlements : TERMINÉ / TESTÉ / DÉPLOYÉ (2026-09-04)**
 - **PATCH-6F-UX — Portal navigation contrats + entitlement gating UI + protection RPC : TERMINÉ / TESTÉ (2026-09-03)**
+- **ALIGN-02 — Auth / Context resolver / Routing / Onboarding SaaS / Site↔App : TERMINÉ / TESTÉ / DÉPLOYÉ EN PRODUCTION (2026-09-08)**
 - **Roadmap confirmée : 6C1 Dues + Charges + Ledger → 6C2 Payments + Allocation + Tenant credit → 6C3 Documents + Notifications + Receipts + Statements**
 - **Biens + Unités + Locataires + Locations : BACKEND RÉEL — vues 6C1 câblées ; vérité financière Production initialisée**
 
@@ -39,6 +40,8 @@
 - **ALIGN-00 — TERMINÉ (2026-09-02).** Les décisions commerciales et billing de KJORA sont validées et canonisées dans `docs/product/KJORA-COMMERCIAL-BILLING-DECISIONS-v0.1.md` (D-140). Aucune implémentation billing, quota serveur, provider de paiement SaaS ni cycle de vie abonnement n'est présumée livrée à cette date. L'implémentation est découpée en lots séparés ; aucun lot billing n'est autorisé à démarrer sans instruction explicite.
 
 ## Terminé
+
+- **ALIGN-02 déployé en Production (2026-09-08).** Migrations `align_02_onboarding_and_org_quota` (version 20260908120300) + `align_02_advisor_fixes`. Table `onboarding_states` (RLS par User, policy SELECT seule, aucun write client direct), RPCs `get_onboarding_state` / `upsert_onboarding_state` (SECURITY DEFINER, `search_path=''`, anon révoqué), colonne `organization_profiles.rent_collection_method` (préférence déclarative sans automatisation), et `create_organization` câblé sur `private.assert_organization_quota` — l'ENFORCEMENT CREATE ORGANIZATION promis par ALIGN-01 est livré. Gate : 228/228 Node, 35/35 pgTAP transactionnels avec ROLLBACK vérifié, 23/23 scénarios E2E Production en transaction annulée. E2E confirmé : tunnel Découverte complet (plan `decouverte`, quotas 1/3/0/1, maison → logement `whole_house` automatique), idempotence anti-double-submit, `PLAN_ORGANIZATION_LIMIT_REACHED` sans suppression d'Organization, et surtout **intention `avance` → plan effectif `decouverte`, features Avancé `false`, quota Découverte** — aucune intention payante n'accorde d'entitlement. Isolation multi-tenant intacte. Advisors : aucune nouvelle catégorie ; les 2 FK sans index signalées ont été corrigées ; `onboarding_states` n'apparaît pas dans `rls_enabled_no_policy`. Données Production inchangées : 6 Organizations, 8 memberships actifs, 6 plans, 7 paiements. Contrat canonique : `docs/product/KJORA-SITE-APP-INTEGRATION-CONTRACT-v0.1.md`. NEXT : ALIGN-03 — non démarré.
 
 - **ALIGN-01 déployé en Production (2026-09-04).** Migrations `align_01_plans_entitlements` (version 20260904030350) + `align_01_advisor_fixes`. 6 Organizations backfillées individuellement avec les plans validés par Blaise : RESIDENCE VERALUZ → decouverte, residence pola → decouverte, residence pauline → avance (2 collaborateurs actifs), Residence pola → essentiel (4 unités actives dans quota), Immeuble Axel → decouverte, STQ-BAT → decouverte. Aucune org au-delà des quotas. RLS actif, aucun write client direct. Advisors ALIGN-01 : multiple_permissive_policies corrigé, index assigned_by ajouté. Gate SQL 42/42 pgTAP, 178/178 Node. NEXT : ALIGN-02 — Auth / Routing / SaaS Onboarding / Site-App integration — devra produire `docs/product/KJORA-SITE-APP-INTEGRATION-CONTRACT-v0.1.md`.
 

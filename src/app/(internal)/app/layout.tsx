@@ -7,15 +7,15 @@ import { DemoRentalProvider } from "@/modules/rental-demo/store";
 import { getNotifications } from "@/modules/documents/server";
 import { getOperationalDashboard } from "@/modules/operations/server";
 import { dashboardPeriod } from "@/modules/operations/model";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveUserContext, destinationFor } from "@/core/routing/context-resolver";
 
 export default async function InternalLayout({ children }: { children: ReactNode }) {
   const context = await loadOrganizationContext();
   if (!context.activeOrganization) {
-    const supabase = await createSupabaseServerClient();
-    const portal = await supabase.rpc("has_tenant_portal_identity");
-    if (!portal.error && portal.data === true) redirect("/portal");
-    redirect("/onboarding/organization");
+    // ALIGN-02 — le contexte réel est résolu côté serveur uniquement.
+    // Les invitations en attente priment sur toute création d'Organization (§15).
+    const resolved = await resolveUserContext();
+    redirect(destinationFor(resolved));
   }
   const notifications = context.activeOrganization.capabilities.includes("activity.view")
     ? await getNotifications(context.activeOrganization.id)
