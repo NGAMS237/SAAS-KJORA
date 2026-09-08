@@ -177,7 +177,7 @@ export function PropertyCreateForm() {
     <div className="page-stack demo-narrow form-page-v2">
       <Link className="demo-back" href="/app/biens"><ArrowLeft size={17} />{t("Retour aux biens", "Back to properties")}</Link>
       <PageHeader
-        eyebrow="SCR-PROP-02"
+        eyebrow={t("Biens", "Properties")}
         title={t("Ajouter un bien", "Add property")}
         description={t("Trois informations suffisent pour commencer.", "Three details are enough to get started.")}
       />
@@ -288,7 +288,7 @@ export function PropertyDetailView({
       ) : null}
       <Card>
         <div className="section-heading">
-          <div><p className="eyebrow">SCR-UNIT-01</p><h2>{t("Logements et unités", "Units and spaces")}</h2></div>
+          <div><p className="eyebrow">{t("Logements", "Units")}</p><h2>{t("Logements et unités", "Units and spaces")}</h2></div>
           {canManageUnits && property.type === "building" ? <button className="button button--primary" onClick={() => setAdding(true)} type="button"><Plus size={17} />{t("Ajouter une unité", "Add unit")}</button> : null}
         </div>
         {property.units.length ? (
@@ -357,7 +357,7 @@ export function UnitDetailView({
     <div className="page-stack resource-detail-v2 unit-detail-v2">
       <Link className="demo-back" href={`/app/biens/${property.id}`}><ArrowLeft size={17} />{property.name}</Link>
       <PageHeader
-        eyebrow="SCR-UNIT-03"
+        eyebrow={t("Logement", "Unit")}
         title={unit.label}
         description={`${property.name} · ${unitLabel(unit.type, t)}`}
         action={canManage ? <button className="button button--secondary" onClick={() => setEditing((value) => !value)} type="button"><Pencil size={17} />{t("Modifier", "Edit")}</button> : undefined}

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { InternalShell } from "@/core/shell/internal-shell";
 import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { PinLockProvider } from "@/core/security/pin-lock-provider";
-import { DemoRentalProvider } from "@/modules/rental-demo/store";
+import { AuthCompletedTracker } from "@/core/analytics/auth-completed-tracker";
 import { getNotifications } from "@/modules/documents/server";
 import { getOperationalDashboard } from "@/modules/operations/server";
 import { dashboardPeriod } from "@/modules/operations/model";
@@ -31,18 +31,18 @@ export default async function InternalLayout({ children }: { children: ReactNode
   };
   return (
     <PinLockProvider userId={context.user.id}>
-      <DemoRentalProvider key={context.activeOrganization.id}>
-        <InternalShell
-          activeOrganization={context.activeOrganization}
-          organizations={context.organizations}
-          userEmail={context.user.email}
-          userId={context.user.id}
-          notifications={notifications}
-          navigationBadges={navigationBadges}
-        >
-          {children}
-        </InternalShell>
-      </DemoRentalProvider>
+      {/* ALIGN-02 §16 — auth_completed est émis une fois par session de navigateur */}
+      <AuthCompletedTracker />
+      <InternalShell
+        activeOrganization={context.activeOrganization}
+        organizations={context.organizations}
+        userEmail={context.user.email}
+        userId={context.user.id}
+        notifications={notifications}
+        navigationBadges={navigationBadges}
+      >
+        {children}
+      </InternalShell>
     </PinLockProvider>
   );
 }

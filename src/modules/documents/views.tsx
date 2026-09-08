@@ -75,10 +75,10 @@ export function FinancialDocumentsPanel({ documents, canShare, emailDeliveryEnab
 }) {
   const t = useCopy();
   return <Card className="documents-card" id={id}>
-    <div className="section-heading"><div><p className="eyebrow">6C3</p><h2>{t("Documents financiers", "Financial documents")}</h2></div><FileText size={22} /></div>
+    <div className="section-heading"><div><p className="eyebrow">{t("Documents", "Documents")}</p><h2>{t("Documents financiers", "Financial documents")}</h2></div><FileText size={22} /></div>
     <p>{t("PDF privés, versionnés et rattachés à leur contexte financier réel.", "Private, versioned PDFs linked to their real financial context.")}</p>
     {documents.length ? <div className="document-list">{documents.map((document) => <DocumentRow canShare={canShare} document={document} emailDeliveryEnabled={emailDeliveryEnabled} key={document.id} />)}</div>
-      : <EmptyState icon={FileText} title={t("Aucun document", "No documents")} description={t("Les documents apparaissent après les événements financiers 6C3, sans rétroactivité automatique.", "Documents appear after 6C3 financial events, without automatic backfill.")} />}
+      : <EmptyState icon={FileText} title={t("Aucun document", "No documents")} description={t("Les documents apparaissent au fil des reçus, quittances et avis émis. Rien n’est généré rétroactivement.", "Documents appear as receipts, rent receipts and notices are issued. Nothing is generated retroactively.")} />}
   </Card>;
 }
 
@@ -138,7 +138,7 @@ export function NotificationsView({ notifications, embedded = false }: { notific
     setBusyId("all"); await mutate({ action: "mark_all_notifications_read" }); setBusyId(null); router.refresh();
   }
   const unreadCount = notifications.filter((notification) => !notification.readAt).length;
-  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">6D</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’Organization active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unreadCount ? <button className="button button--secondary" disabled={busyId === "all"} onClick={markAllRead} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
+  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">{t("Alertes", "Alerts")}</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’Organization active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unreadCount ? <button className="button button--secondary" disabled={busyId === "all"} onClick={markAllRead} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
     <Card className="notifications-card">{notifications.length ? <div className="notification-list">{notifications.map((notification) => { const copy = notificationCopy(notification, t); const href = notificationHref(notification); return <div className={`notification-row${notification.readAt ? " is-read" : ""}`} key={notification.id}><span className="notification-row__icon">{notification.type === "delivery_failed" ? <Mail size={18} /> : <BellRing size={18} />}</span><div><strong>{copy.title}</strong><span>{copy.detail} · {shortDate(notification.createdAt)}</span></div><div className="notification-row__actions"><Link className="button button--secondary" href={href} prefetch={false} target={notification.documentId ? "_blank" : undefined}>{t("Ouvrir", "Open")}<ExternalLink size={14} /></Link><button className="button button--secondary" disabled={busyId === notification.id} onClick={() => setReadState(notification.id, !notification.readAt)} type="button">{notification.readAt ? t("Marquer non lue", "Mark unread") : t("Marquer comme lue", "Mark read")}</button></div></div>; })}</div>
       : <EmptyState icon={BellRing} title={t("Aucune notification", "No notifications")} description={t("Les futurs événements financiers autorisés apparaîtront ici.", "Future authorized financial events will appear here.")} />}</Card>
   </div>;

@@ -9,6 +9,7 @@ import {
   House,
   KeyRound,
   LayoutDashboard,
+  LifeBuoy,
   ReceiptText,
   Settings,
   Users,
@@ -33,9 +34,14 @@ export const internalPrimaryNavigation: NavigationItem[] = [
 ];
 
 export const internalSecondaryNavigation: NavigationItem[] = [
+  // D-142 — Documents est une vue transversale des documents déjà émis par les
+  // modules existants. Aucun stockage ni moteur documentaire parallèle.
+  { href: "/app/documents", label: "Documents", icon: FileCheck2 },
   { href: "/app/equipe", label: "Équipe", icon: Users, requiredCapability: "member.view" },
   { href: "/app/parametres", label: "Paramètres", icon: Settings, requiredCapability: "organization.profile.manage" },
   { href: "/app/profil", label: "Profil", icon: CircleUserRound },
+  // Demander de l'aide ne dépend d'aucun rôle : aucune capability requise.
+  { href: "/app/support", label: "Support", icon: LifeBuoy },
 ];
 
 export const portalNavigation: NavigationItem[] = [

@@ -4563,3 +4563,171 @@ a.portfolio-metric:hover {
     width: 100%;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Bêta Découverte — Aide, Contact, Support, agrégation Documents (D-142)
+   Réutilise les tokens existants : aucune nouvelle palette.
+   --------------------------------------------------------------------------- */
+
+.aide-bloc {
+  border-top: 1px solid var(--border);
+  margin-top: 22px;
+  padding-top: 18px;
+  text-align: left;
+}
+
+.aide-bloc h2 {
+  font-size: 1.02rem;
+  margin: 0 0 8px;
+}
+
+.aide-bloc p,
+.aide-bloc li {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+
+.aide-bloc ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.support-tips {
+  color: var(--text-secondary);
+  display: grid;
+  gap: 12px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.support-ack {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 8px 0;
+}
+
+.support-ack h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.support-ack p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.contract-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.contract-row {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: inherit;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+.contract-row:hover {
+  border-color: var(--brand-gold);
+}
+
+.contract-row__reference {
+  font-weight: 600;
+}
+
+.contract-row__status {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Pages légales publiques et footer
+   --------------------------------------------------------------------------- */
+
+.legal-page {
+  text-align: left;
+}
+
+.legal-banner {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand-gold);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 18px 0 6px;
+  padding: 14px 16px;
+}
+
+.legal-list {
+  display: grid;
+  gap: 14px;
+  margin: 12px 0 0;
+}
+
+.legal-list > div {
+  display: grid;
+  gap: 4px;
+}
+
+.legal-list dt {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.legal-list dd {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.legal-missing {
+  background: var(--surface-muted);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+}
+
+.public-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 28px;
+  padding-top: 16px;
+}
+
+.public-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.public-footer a {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.public-footer a:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.public-footer p {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 12px 0 0;
+}

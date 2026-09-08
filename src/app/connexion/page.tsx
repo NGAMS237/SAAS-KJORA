@@ -3,6 +3,7 @@ import { LoginForm } from "@/core/auth/login-form";
 import { getAuthCallbackMessage } from "@/core/auth/callback-diagnostics";
 import { safeNextPath } from "@/core/auth/safe-next-path";
 import { parsePlanRequested, planLabel } from "@/core/onboarding/plan-intent";
+import { PublicFooter } from "@/core/ui/public-footer";
 
 // ALIGN-02: plan_requested comes from the marketing site CTA.
 // It is non-trustworthy — validated here only for UX messaging.
@@ -67,6 +68,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ) : null}
         <LoginForm nextPath={nextPath} planRequested={planRequested} />
         <p className="auth-footnote">Aucun mot de passe à mémoriser. Les accès expirent et ne donnent aucune autorisation hors de vos Organizations.</p>
+        <p className="auth-footnote">
+          Un problème pour vous connecter ? <Link href="/aide">Consultez l’aide</Link>.
+        </p>
+        <PublicFooter />
       </section>
     </main>
   );

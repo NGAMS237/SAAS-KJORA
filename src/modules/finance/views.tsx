@@ -68,7 +68,7 @@ export function LeaseDuesPanel({ financial, tenantScope = false }: { financial: 
   const t = useCopy();
   const dues = financial.dues.filter((due) => due.kind !== "adjustment" || due.adjustmentXaf > 0);
   return <Card className="dues-card" id="echeances">
-    <div className="section-heading"><div><p className="eyebrow">SCR-DUE-02</p><h2>{tenantScope ? t("Ventilation des échéances", "Due breakdown") : t("Échéances", "Dues")}</h2></div><CalendarClock size={22} /></div>
+    <div className="section-heading"><div><p className="eyebrow">{t("Échéances", "Dues")}</p><h2>{tenantScope ? t("Ventilation des échéances", "Due breakdown") : t("Échéances", "Dues")}</h2></div><CalendarClock size={22} /></div>
     {dues.length ? <div className="financial-table" role="table">
       <div className="financial-table__head" role="row"><span>{t("Période", "Period")}</span><span>{t("Date limite", "Due date")}</span><span>{t("Loyer", "Rent")}</span><span>{t("Charges", "Charges")}</span><span>{t("Total", "Total")}</span><span>{t("Restant", "Remaining")}</span><span>{t("État", "Status")}</span></div>
       {dues.map((due) => { const breakdown = dueBreakdown(due); const deposit = due.kind === "deposit"; return <div className={`financial-table__row${deposit ? " financial-table__row--deposit" : ""}`} role="row" key={due.id}>
@@ -103,7 +103,7 @@ export function LedgerStatementView({ tenantId, tenantName, financial, statement
   const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [type, setType] = useState("all");
   const entries = useMemo(() => financial.ledger.filter((entry) => (!from || entry.occurredOn >= from) && (!to || entry.occurredOn <= to) && (type === "all" || entry.type === type)), [financial.ledger, from, to, type]);
   return <div className="page-stack statement-page">
-    <PageHeader eyebrow="SCR-DUE-02" title={t("État de compte", "Account statement")} description={tenantName} />
+    <PageHeader eyebrow={t("Locataire", "Tenant")} title={t("État de compte", "Account statement")} description={tenantName} />
     <TenantFinancialSummary financial={financial} />
     <StatementPdfAction initialDocuments={statementDocuments} tenantId={tenantId} />
     <Card className="statement-card">
