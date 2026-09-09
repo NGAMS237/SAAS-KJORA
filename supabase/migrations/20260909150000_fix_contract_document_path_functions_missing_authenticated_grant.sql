@@ -1,0 +1,37 @@
+-- KJORA — USER FLOW STABILIZATION — PRODUCTION FINAL CHECK (2026-09-09)
+--
+-- Correctif d'un defaut bloquant decouvert en direct pendant ce check : la
+-- migration Lot 6F (20260902121306_lot_6f_contracts_signatures.sql) a revoque
+-- l'EXECUTE sur private.can_access_contract_document_path et
+-- private.can_write_contract_document_path pour authenticated sans jamais le
+-- regranter, contrairement aux fonctions equivalentes du Lot 6C3
+-- (private.can_access_financial_document_path / can_portal_read_financial_document_path)
+-- qui, elles, sont bien accordees a authenticated.
+--
+-- Consequence reelle observee en Production : ces deux fonctions sont
+-- referencees par les policies RLS "contract_documents_select" et
+-- "contract_documents_insert" sur storage.objects. Postgres verifie le droit
+-- EXECUTE sur une fonction referencee par une policy au moment de la
+-- planification de la requete, y compris pour les policies OR-ees qui ne
+-- s'appliquent pas au bucket concerne : toute lecture ou ecriture sur
+-- storage.objects (donc y compris le bucket financial-documents, sans lien
+-- avec les contrats) echouait avec "permission denied for function
+-- can_write_contract_document_path" (confirme via storage_logs).
+--
+-- Impact : generation de reçu/quittance/etat de compte
+-- (materializeFinancialDocument -> upload storage) et upload/consultation de
+-- contrats PDF bloques en Production depuis le deploiement du Lot 6F, jamais
+-- detecte faute de test end-to-end reel avant ce jour.
+--
+-- Correctif strictement additif : un GRANT EXECUTE, aucune migration de
+-- schema, aucune donnee touchee, aucun changement de logique RLS (les
+-- policies elles-memes restent inchangees et continuent de filtrer par
+-- bucket_id + capacite/role comme prevu).
+--
+-- Cette migration a deja ete appliquee directement en Production via l'outil
+-- de migration Supabase (version distante 20260909154948) le 2026-09-09.
+-- Ce fichier est ajoute au dépôt pour la parité git/Production et pour que
+-- tout environnement de développement local reproduise le même état.
+
+grant execute on function private.can_access_contract_document_path(text) to authenticated;
+grant execute on function private.can_write_contract_document_path(text) to authenticated;
