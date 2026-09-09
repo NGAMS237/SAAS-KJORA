@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getActiveAuthorization } from "@/core/authorization/server";
-import { getBillingOverview, listBillingInvoices } from "@/core/billing/server";
+import { checkoutAffordance, getBillingOverview, listBillingInvoices } from "@/core/billing/server";
+import { priceFor } from "@/core/billing/model";
 import { BillingView } from "@/core/billing/billing-view";
 
 // Abonnement & facturation — réservé à l'Organization Owner (capability billing.view).
@@ -17,5 +18,15 @@ export default async function BillingPage() {
 
   if (!overview) notFound();
 
-  return <BillingView invoices={invoices} overview={overview} />;
+  // Le routage provider est décidé ici, côté serveur, à partir de l'état stocké
+  // et du catalogue de prix. Aucun paramètre de requête n'y participe.
+  const sub = overview.subscription;
+  const affordance = checkoutAffordance({
+    plan: sub.plan,
+    cycle: sub.billingCycle,
+    currency: sub.currency,
+    amountMinor: priceFor(sub.plan, sub.billingCycle, sub.currency) ?? 0,
+  });
+
+  return <BillingView affordance={affordance} invoices={invoices} overview={overview} />;
 }

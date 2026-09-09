@@ -7,6 +7,8 @@ import { INTERNAL_ROLES, ROLE_LABELS, type InternalRole } from "@/core/authoriza
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import type { TeamData } from "@/core/team/types";
 import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
+import { entitlementErrorFromBody, QuotaLimitModal } from "@/core/entitlements/quota-modal";
+import type { EntitlementError } from "@/core/entitlements/model";
 
 type TeamAction = Record<string, unknown> & { action: string };
 const ASSIGNABLE_ROLES = INTERNAL_ROLES.filter((value) => value !== "organization_owner");
@@ -19,12 +21,18 @@ export function TeamManagement({ currentUserId, initialData, organizationName }:
   const [role, setRole] = useState<InternalRole>("manager");
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<EntitlementError | null>(null);
 
   async function run(payload: TeamAction, busy: string) {
     setBusyKey(busy); setMessage(null);
     const response = await fetch("/api/team", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-    const result = await response.json().catch(() => ({})) as { error?: string };
+    const result = await response.json().catch(() => ({})) as Record<string, unknown>;
     if (!response.ok) {
+      const entitlementErr = entitlementErrorFromBody(result);
+      if (entitlementErr) {
+        setQuotaError(entitlementErr);
+        setBusyKey(null); return false;
+      }
       setMessage(result.error === "email_configuration_required"
         ? (english ? "Transactional invitation email is not configured on this environment." : "L’email transactionnel d’invitation n’est pas configuré sur cet environnement.")
         : (english ? "The action was refused. Check the role, invitation or Owner protection." : "L’action a été refusée. Vérifiez le rôle, l’invitation ou la protection Owner."));
@@ -48,11 +56,12 @@ export function TeamManagement({ currentUserId, initialData, organizationName }:
       <form className="team-invite-form" onSubmit={invite}><label className="field"><span>Email</span><input autoComplete="email" inputMode="email" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="membre@exemple.com" /></label><label className="field"><span>{english ? "Role" : "Rôle"}</span><select value={role} onChange={(event) => setRole(event.target.value as InternalRole)}>{ASSIGNABLE_ROLES.map((value) => <option value={value} key={value}>{ROLE_LABELS[value][english ? "en" : "fr"]}</option>)}</select></label><button className="button button--primary" disabled={busyKey !== null} type="submit"><MailPlus aria-hidden="true" size={17}/>{busyKey === "invite" ? (english ? "Sending…" : "Envoi…") : (english ? "Send invitation" : "Envoyer l’invitation")}</button></form>
       <p className="demo-hint">{english ? "The invitation expires after 7 days. A role grants no permission before acceptance." : "L’invitation expire après 7 jours. Le rôle n’accorde aucune permission avant acceptation."}</p>
     </Card>
-    <Card><div className="section-heading"><div><p className="eyebrow">RBAC</p><h2>{english ? "Active members" : "Membres actifs"}</h2></div><Badge tone="success">{initialData.members.filter((member) => member.status === "active").length}</Badge></div><div className="team-list">{initialData.members.map((member) => <MemberRow busyKey={busyKey} currentUserId={currentUserId} english={english} key={member.membershipId} member={member} run={run}/>)}</div></Card>
+    <Card><div className="section-heading"><div><p className="eyebrow">{english ? "Team" : "Équipe"}</p><h2>{english ? "Active members" : "Membres actifs"}</h2></div><Badge tone="success">{initialData.members.filter((member) => member.status === "active").length}</Badge></div><div className="team-list">{initialData.members.map((member) => <MemberRow busyKey={busyKey} currentUserId={currentUserId} english={english} key={member.membershipId} member={member} run={run}/>)}</div></Card>
     <Card><div className="section-heading"><div><p className="eyebrow">7 {english ? "days" : "jours"}</p><h2>{english ? "Invitations" : "Invitations en attente"}</h2></div><RefreshCw aria-hidden="true" size={21}/></div>
       {initialData.invitations.length ? <div className="team-list">{initialData.invitations.map((invitation) => <div className="team-row" key={invitation.invitationId}><div className="team-row__identity"><strong>{invitation.email}</strong><span>{ROLE_LABELS[invitation.role][english ? "en" : "fr"]} · {new Date(invitation.expiresAt).toLocaleDateString(english ? "en-GB" : "fr-FR")}</span></div><Badge tone={invitation.status === "pending" ? "warning" : invitation.status === "accepted" ? "success" : "neutral"}>{invitationStatus(invitation.status, english)}</Badge>{invitation.status === "pending" || invitation.status === "expired" ? <div className="team-row__actions"><button className="button button--secondary button--small" disabled={busyKey !== null} onClick={() => run({ action: "resend_invitation", invitationId: invitation.invitationId, role: invitation.role }, `resend-${invitation.invitationId}`)} type="button">{english ? "Resend" : "Relancer"}</button>{invitation.status === "pending" ? <button className="button button--ghost button--small" disabled={busyKey !== null} onClick={() => run({ action: "revoke_invitation", invitationId: invitation.invitationId }, `revoke-invite-${invitation.invitationId}`)} type="button">{english ? "Cancel" : "Annuler"}</button> : null}</div> : null}</div>)}</div> : <EmptyState icon={MailPlus} title={english ? "No invitation" : "Aucune invitation"} description={english ? "Pending invitations will appear here." : "Les invitations en attente apparaîtront ici."}/>}
     </Card>
     <Card><div className="section-heading"><div><p className="eyebrow">Audit</p><h2>{english ? "Administrative activity" : "Activité administrative"}</h2></div><ShieldCheck aria-hidden="true" size={21}/></div>{initialData.audit.length ? <div className="team-audit-list">{initialData.audit.map((entry) => <div key={entry.auditId}><strong>{auditLabel(entry.action, english)}</strong><span>{entry.actorEmail ?? "—"}{entry.targetEmail ? ` → ${entry.targetEmail}` : ""} · {new Date(entry.createdAt).toLocaleString(english ? "en-GB" : "fr-FR")}</span></div>)}</div> : <EmptyState icon={ShieldCheck} title={english ? "No sensitive action" : "Aucune action sensible"} description={english ? "Invitations, role changes and revocations are audited." : "Les invitations, changements de rôle et révocations sont audités."}/>} </Card>
+    {quotaError ? <QuotaLimitModal error={quotaError} language={language} onClose={() => setQuotaError(null)} /> : null}
   </div>;
 }
 

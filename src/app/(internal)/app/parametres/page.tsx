@@ -7,10 +7,18 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NotificationSoundToggle } from "@/core/notifications/notification-sound";
 import Link from "next/link";
 import { getActiveAuthorization } from "@/core/authorization/server";
+import { requirePlanFeature } from "@/core/entitlements/server";
 
 export default async function SettingsPage() {
   const [{ activeOrganization }, authorization] = await Promise.all([loadOrganizationContext(), getActiveAuthorization()]);
   if (!activeOrganization) redirect("/onboarding/organization");
+  const hasContractRbac = Boolean(authorization?.capabilities.includes("contract.manage"));
+  // ALIGN-01 — plan feature gating: contracts requires Essentiel+. Checked
+  // here too (not just RBAC) so the "Configurer" card never links to a
+  // destination the organization's plan can't actually open.
+  const contractEntitlementError = hasContractRbac && authorization
+    ? await requirePlanFeature(authorization.organizationId, "contracts")
+    : null;
   const supabase = await createSupabaseServerClient();
   const financeChecks = await Promise.all(["leases", "dues", "payments", "ledger_entries"].map((table) =>
     supabase.from(table).select("id", { count: "exact", head: true }).eq("organization_id", activeOrganization.id),
@@ -38,7 +46,7 @@ export default async function SettingsPage() {
       <Card className="settings-card">
         <NotificationSoundToggle />
       </Card>
-      {authorization?.capabilities.includes("contract.manage") ? <Card className="settings-card"><div className="section-heading"><div><p className="eyebrow">Contrats</p><h2>Modèles et cachet</h2><p>Configurer les modèles versionnés et le cachet visuel de cette Organization.</p></div><Link className="button button--secondary" href="/app/parametres/contrats">Configurer</Link></div></Card> : null}
+      {hasContractRbac ? <Card className="settings-card"><div className="section-heading"><div><p className="eyebrow">Contrats</p><h2>Modèles et cachet</h2><p>Configurer les modèles versionnés et le cachet visuel de cette Organization.</p></div>{contractEntitlementError ? <Link className="button button--secondary" href="/app/billing">Voir les offres</Link> : <Link className="button button--secondary" href="/app/parametres/contrats">Configurer</Link>}</div>{contractEntitlementError ? <p className="demo-hint">Les contrats font partie de l’offre Essentiel et supérieures. Votre offre actuelle ne les inclut pas encore.</p> : null}</Card> : null}
     </div>
   );
 }

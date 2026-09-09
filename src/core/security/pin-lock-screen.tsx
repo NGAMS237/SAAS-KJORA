@@ -173,7 +173,7 @@ export function PinLockScreen({ nextPath, userId, scope = "internal", language =
           <Mail aria-hidden="true" size={18} />
           {scope === "portal" ? (language === "en" ? "I forgot my PIN" : "J’ai oublié mon PIN") : (language === "en" ? "Use my email instead" : "Utiliser mon email à la place")}
         </button>
-        <p className="auth-footnote">Le PIN ne crée aucune session et n’est jamais envoyé à Kjora ou Supabase.</p>
+        <p className="auth-footnote">{language === "en" ? "The PIN creates no session and is never sent to any server." : "Le PIN ne crée aucune session et n’est jamais envoyé à un serveur."}</p>
       </section>
     </main>
   );

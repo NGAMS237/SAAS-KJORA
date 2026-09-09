@@ -6,12 +6,15 @@ import { EDITEUR_NOM, MARQUE_NOM, PRODUIT_NOM } from "@/core/legal/legal-facts";
 export function PublicFooter() {
   return (
     <footer className="public-footer">
-      <nav aria-label="Liens légaux et aide">
+      <nav aria-label="Aide et informations légales">
         <Link href="/aide">Aide</Link>
         <Link href="/contact">Contact</Link>
-        <Link href="/securite">Sécurité</Link>
-        <Link href="/confidentialite">Confidentialité</Link>
-        <Link href="/mentions-legales">Mentions légales</Link>
+        <details className="public-footer__legal">
+          <summary>Informations légales</summary>
+          <Link href="/securite">Sécurité</Link>
+          <Link href="/confidentialite">Confidentialité</Link>
+          <Link href="/mentions-legales">Mentions légales</Link>
+        </details>
       </nav>
       <p>
         {PRODUIT_NOM} — {MARQUE_NOM}, activité numérique et SaaS de {EDITEUR_NOM}. Bêta.

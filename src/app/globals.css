@@ -4732,6 +4732,35 @@ a.portfolio-metric:hover {
   margin: 12px 0 0;
 }
 
+.public-footer__legal {
+  font-size: 0.82rem;
+}
+
+.public-footer__legal summary {
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline;
+  list-style: none;
+}
+
+.public-footer__legal summary::-webkit-details-marker {
+  display: none;
+}
+
+.public-footer__legal summary:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.public-footer__legal[open] summary {
+  color: var(--text-secondary);
+}
+
+.public-footer__legal a {
+  display: block;
+  margin-top: 6px;
+}
+
 /* ---------------------------------------------------------------------------
    Abonnement & facturation (ALIGN-03)
    --------------------------------------------------------------------------- */

@@ -22,7 +22,15 @@ import {
   type BillingCycle,
 } from "@/core/billing/model";
 import { PLAN_LABELS, type PlanSlug } from "@/core/entitlements/model";
-import type { BillingOverview, BillingInvoice } from "@/core/billing/server";
+// Types importés depuis `types.ts`, module pur. Le client ne doit jamais
+// importer `server.ts`, marqué `server-only`.
+import {
+  CHECKOUT_UNAVAILABLE_MESSAGES,
+  RECURRENCE_MESSAGES,
+  type BillingCheckoutAffordance,
+  type BillingInvoice,
+  type BillingOverview,
+} from "@/core/billing/types";
 
 const PLAN_ORDER: PlanSlug[] = ["decouverte", "essentiel", "avance", "patrimoine"];
 
@@ -52,9 +60,12 @@ function QuotaLine({ libelle, actuel, limite }: { libelle: string; actuel: numbe
 export function BillingView({
   overview,
   invoices,
+  affordance,
 }: {
   overview: BillingOverview;
   invoices: BillingInvoice[];
+  /** Décidé côté serveur. Le client n'apprend jamais quel provider est retenu. */
+  affordance: BillingCheckoutAffordance;
 }) {
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -244,11 +255,15 @@ export function BillingView({
           <p>{sub.paymentMethodBrand ?? "Carte"} ···· {sub.paymentMethodLast4}
             {sub.paymentMethodExpiresOn ? ` · expire le ${sub.paymentMethodExpiresOn}` : ""}</p>
         ) : (
-          <p>
-            Aucun moyen de paiement enregistré. Le règlement en ligne sera disponible
-            prochainement ; d’ici là, Découverte reste utilisable sans carte.
-          </p>
+          <p>Aucun moyen de paiement enregistré.</p>
         )}
+        <p>
+          {affordance.online && affordance.recurrence
+            ? RECURRENCE_MESSAGES[affordance.recurrence]
+            : affordance.reason
+              ? CHECKOUT_UNAVAILABLE_MESSAGES[affordance.reason]
+              : null}
+        </p>
       </Card>
 
       {/* -------------------------------------------------------- Factures */}

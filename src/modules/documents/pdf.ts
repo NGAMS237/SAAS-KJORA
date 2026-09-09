@@ -124,7 +124,7 @@ function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, docume
   }
 
   if (document.type === "payment_receipt") {
-    row(page, regular, bold, y, fr ? "Référence Payment" : "Payment reference", text(s.payment_reference)); y -= 34;
+    row(page, regular, bold, y, fr ? "Référence du paiement" : "Payment reference", text(s.payment_reference)); y -= 34;
     row(page, regular, bold, y, fr ? "Date de réception" : "Receipt date", date(s.payment_date, document.language)); y -= 34;
     row(page, regular, bold, y, fr ? "Date d’enregistrement" : "Recorded on", date(s.recorded_at, document.language)); y -= 34;
     row(page, regular, bold, y, fr ? "Moyen de paiement" : "Payment method", text(s.method)); y -= 34;

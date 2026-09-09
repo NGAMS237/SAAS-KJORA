@@ -113,7 +113,7 @@ export function LoginForm({
       ) : null}
 
       {!configured ? (
-        <p className="form-feedback form-feedback--error">Supabase Kjora n’est pas encore configuré dans cet environnement.</p>
+        <p className="form-feedback form-feedback--error">La connexion n’est pas encore configurée sur cet environnement.</p>
       ) : message ? <p className="form-feedback" role="status">{message}</p> : null}
     </div>
   );

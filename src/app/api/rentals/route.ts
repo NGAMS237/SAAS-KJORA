@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
 import {
   parsePropertyInput,
   parsePropertyUpdate,
@@ -27,10 +28,17 @@ function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status });
 }
 
-function mutationError(error: { code?: string; message?: string } | null) {
+function mutationError(error: { code?: string; message?: string; details?: string } | null) {
   if (!error) return jsonError("resource_unavailable", 404);
   if (error.code === "23505") return jsonError("duplicate_resource", 409);
   if (error.code === "42501") return jsonError("forbidden", 403);
+  if (error.code === "P0001") {
+    // ALIGN-01 quota triggers (properties/units) raise here — surface as a
+    // structured, friendly entitlement error instead of a fake server crash.
+    const entitlementErr = parseEntitlementError(error.message ?? "", error.details ?? undefined);
+    if (entitlementErr) return entitlementErrorResponse(entitlementErr);
+    return jsonError("business_rule_rejected", 409);
+  }
   if (["23503", "23514", "22023"].includes(error.code ?? "")) {
     if (error.message?.includes("house_requires_whole_house")) return jsonError("house_units_locked", 409);
     return jsonError("business_rule_rejected", 409);

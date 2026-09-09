@@ -52,8 +52,8 @@ export function TenantFinancialSummary({ tenantId, financial }: { tenantId?: str
   const mainLabel = debt ? t("Solde dû", "Amount due") : t("À jour", "Up to date");
   const mainValue = money(debt ? financial.amountDueXaf : 0);
   return <Card className="tenant-financial-preview-v2 financial-truth-card">
-    <div className="section-heading"><div><p className="eyebrow">Ledger 6C1</p><h2>{t("Situation financière réelle", "Live financial position")}</h2></div><WalletCards size={22} /></div>
-    <p>{t("Solde dérivé des échéances, des charges et du crédit d’ouverture validé — sans paiement fabriqué.", "Derived from dues, charges and validated opening credit — without fabricated payments.")}</p>
+    <div className="section-heading"><div><p className="eyebrow">Ledger</p><h2>{t("Situation financière réelle", "Live financial position")}</h2></div><WalletCards size={22} /></div>
+    <p>{t("Solde calculé à partir des échéances, des charges et du crédit d’ouverture validé — aucun paiement n’est enregistré automatiquement.", "Derived from dues, charges and validated opening credit — no payment is recorded automatically.")}</p>
     <div className="financial-state-grid">
       <FinancialStateCard icon={CircleDollarSign} label={mainLabel} value={mainValue} helper={debt ? t("Échéances arrivées à date et restant dues.", "Dues reached and still outstanding.") : t("Aucune dette arrivée à date.", "No debt currently due.")} tone={debt ? "danger" : "positive"} />
       <FinancialStateCard icon={WalletCards} label={t("Crédit disponible", "Available credit")} value={money(financial.availableCreditXaf)} helper={financial.availableCreditXaf > 0 ? t("Crédit d’ouverture et trop-perçus réels après couverture.", "Opening credit and real overpayments remaining after coverage.") : t("Aucun crédit disponible.", "No available credit.")} tone="positive" />

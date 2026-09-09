@@ -14,68 +14,27 @@ import {
   isBillingCycle,
   isBillingCurrency,
   isInvoiceStatus,
-  type SubscriptionStatus,
   type BillingCycle,
-  type BillingCurrency,
-  type InvoiceStatus,
 } from "@/core/billing/model";
 import { isPlanSlug, type PlanSlug } from "@/core/entitlements/model";
+import { configuredProviders } from "@/core/billing/provider-config";
+import { affordanceFor, routeProvider } from "@/core/billing/provider-routing";
+import type {
+  BillingCheckoutAffordance,
+  BillingInvoice,
+  BillingOverview,
+  SubscriptionView,
+} from "@/core/billing/types";
 
-export type SubscriptionView = {
-  exists: boolean;
-  status: SubscriptionStatus;
-  plan: PlanSlug;
-  billingCycle: BillingCycle;
-  currency: BillingCurrency;
-  currentPeriodStart: string | null;
-  currentPeriodEnd: string | null;
-  renewalDate: string | null;
-  graceEndsOn: string | null;
-  cancellationEffectiveOn: string | null;
-  scheduledPlan: PlanSlug | null;
-  scheduledCycle: BillingCycle | null;
-  scheduledEffectiveOn: string | null;
-  pendingPlan: PlanSlug | null;
-  pendingCycle: BillingCycle | null;
-  pendingAmountMinor: number | null;
-  provider: string | null;
-  paymentMethodBrand: string | null;
-  paymentMethodLast4: string | null;
-  paymentMethodExpiresOn: string | null;
-};
-
-export type BillingOverview = {
-  organizationId: string;
-  /** Plan qui gouverne réellement les entitlements (ALIGN-01). */
-  effectivePlan: PlanSlug;
-  subscription: SubscriptionView;
-  usage: {
-    activeProperties: number;
-    activeUnits: number;
-    collaborators: number;
-    organizations: number;
-  };
-  quotas: {
-    maxProperties: number | null;
-    maxActiveUnits: number | null;
-    maxCollaborators: number | null;
-    maxOrganizations: number | null;
-  };
-};
-
-export type BillingInvoice = {
-  id: string;
-  number: string;
-  plan: PlanSlug;
-  billingCycle: BillingCycle;
-  currency: BillingCurrency;
-  amountMinor: number;
-  periodStart: string;
-  periodEnd: string;
-  status: InvoiceStatus;
-  issuedOn: string;
-  paidAt: string | null;
-};
+// Les types de vue vivent dans `types.ts`, qui est pur : le client peut les
+// importer sans franchir la frontière `server-only`. On les ré-exporte ici
+// par commodité pour les appelants serveur déjà en place.
+export type {
+  BillingCheckoutAffordance,
+  BillingInvoice,
+  BillingOverview,
+  SubscriptionView,
+} from "@/core/billing/types";
 
 const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
 const num = (v: unknown): number | null => (typeof v === "number" ? v : null);
@@ -162,6 +121,35 @@ export async function listBillingInvoices(organizationId: string): Promise<Billi
       paidAt: str(row.paid_at),
     }];
   });
+}
+
+// ---------------------------------------------------------------------------
+// Routage provider — le serveur décide, le client ne fait qu'observer
+// ---------------------------------------------------------------------------
+
+/**
+ * Ce que l'interface a le droit de savoir sur le règlement en ligne.
+ * Ne renvoie jamais le nom du provider retenu, ni la liste des configurés :
+ * cette information n'a aucune utilité côté client et en dit trop sur
+ * l'infrastructure.
+ */
+export function checkoutAffordance(args: {
+  plan: PlanSlug;
+  cycle: BillingCycle;
+  currency: "XAF" | "CAD";
+  amountMinor: number;
+  methodHint?: unknown;
+}): BillingCheckoutAffordance {
+  return affordanceFor(
+    routeProvider({
+      plan: args.plan,
+      cycle: args.cycle,
+      currency: args.currency,
+      amountMinor: args.amountMinor,
+      configured: configuredProviders(),
+      methodHint: args.methodHint,
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------

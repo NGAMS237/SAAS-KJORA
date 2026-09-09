@@ -6,6 +6,7 @@ import {
   sendMembershipInvitationEmail,
 } from "@/core/team/invitation-email";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
 
 type TeamAction =
   | "invite"
@@ -51,6 +52,12 @@ export async function POST(request: Request) {
       invited_role: body.role,
     });
     const invitation = data?.[0] as { invitation_id?: string; invitation_token?: string } | undefined;
+    if (error?.code === "P0001") {
+      // ALIGN-01 quota trigger (max_collaborators, e.g. Découverte = 0) —
+      // surface as a structured entitlement error, not a generic rejection.
+      const entitlementErr = parseEntitlementError(error.message ?? "", error.details ?? undefined);
+      if (entitlementErr) return entitlementErrorResponse(entitlementErr);
+    }
     if (error || !invitation?.invitation_id || !invitation.invitation_token) return jsonError("invitation_rejected", 400);
     const invitationUrl = new URL("/invitation", request.url);
     invitationUrl.searchParams.set("token", invitation.invitation_token);

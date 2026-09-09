@@ -28,6 +28,9 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/icon.svg",
   },
+  // Cette app est l'espace applicatif authentifié (app.*), pas le site
+  // commercial (géré séparément). Aucune page ici n'est une cible SEO.
+  robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
 };
 
 export const viewport: Viewport = {

@@ -7,7 +7,13 @@ import { ACTIVE_PORTAL_ACCESS_COOKIE } from "@/tenant-portal/server";
 
 export const runtime = "nodejs";
 
+function sameOrigin(request: Request) {
+  const origin = request.headers.get("origin");
+  return !origin || origin === new URL(request.url).origin;
+}
+
 export async function POST(request: NextRequest) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const accessId = (await cookies()).get(ACTIVE_PORTAL_ACCESS_COOKIE)?.value;
   if (!accessId) return NextResponse.json({ error: "not_found" }, { status: 404 });
   let input: Record<string, unknown>;

@@ -84,17 +84,19 @@ function naturalDueDay(day: number, frequency: BillingFrequency, t: ReturnType<t
 }
 
 function prepaymentLabel(fullPeriods: number, remainderXaf: number, frequency: BillingFrequency, t: ReturnType<typeof useCopy>) {
+  // Estimation indicative uniquement (division simple montant / loyer périodique).
+  // Elle ne présume ni du dépôt de garantie ni du prorata d'entrée : la
+  // répartition réelle (dépôt, échéances, crédit) reste un choix explicite
+  // fait au moment de l'encaissement — jamais une allocation implicite ici.
   const noun = frequency === "monthly"
-    ? (fullPeriods === 1 ? t("mois prépayé", "prepaid month") : t("mois prépayés", "prepaid months"))
+    ? (fullPeriods === 1 ? t("mois de loyer, si intégralement affecté au loyer", "rent month, if fully applied to rent") : t("mois de loyer, si intégralement affecté au loyer", "rent months, if fully applied to rent"))
     : ({
-        quarterly: fullPeriods === 1 ? t("période trimestrielle couverte", "quarterly period covered") : t("périodes trimestrielles couvertes", "quarterly periods covered"),
-        semiannual: fullPeriods === 1 ? t("période semestrielle couverte", "semiannual period covered") : t("périodes semestrielles couvertes", "semiannual periods covered"),
-        annual: fullPeriods === 1 ? t("période annuelle couverte", "annual period covered") : t("périodes annuelles couvertes", "annual periods covered"),
+        quarterly: t("période(s) trimestrielle(s), si intégralement affecté au loyer", "quarterly period(s), if fully applied to rent"),
+        semiannual: t("période(s) semestrielle(s), si intégralement affecté au loyer", "semiannual period(s), if fully applied to rent"),
+        annual: t("période(s) annuelle(s), si intégralement affecté au loyer", "annual period(s), if fully applied to rent"),
       } as const)[frequency];
-  const coverage = `${fullPeriods} ${noun}`;
-  return remainderXaf > 0
-    ? `${coverage} + ${money(remainderXaf)} ${t("de crédit restant", "remaining credit")}`
-    : coverage;
+  const estimate = `${t("Estimation", "Estimate")} : ${fullPeriods} ${noun}${remainderXaf > 0 ? ` + ${money(remainderXaf)} ${t("restant", "remaining")}` : ""}`;
+  return `${estimate} — ${t("la répartition réelle (dépôt, échéances, crédit) sera confirmée lors de l’encaissement.", "the actual split (deposit, dues, credit) will be confirmed when the payment is recorded.")}`;
 }
 
 function statusBadge(status: LeaseStatus, t: ReturnType<typeof useCopy>) {
@@ -437,9 +439,9 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
           {lease.endReason ? <div><dt>{t("Motif de fin", "End reason")}</dt><dd>{lease.endReason}</dd></div> : null}
         </dl>
         <p className="financial-preparation-note">{lease.status === "draft"
-          ? t("Préparation uniquement : les échéances et le crédit d’ouverture seront créés à l’activation. Aucun paiement n’est fabriqué.", "Preparation only: dues and opening credit will be created on activation. No payment is fabricated.")
+          ? t("Préparation uniquement : les échéances et le crédit d’ouverture seront créés à l’activation. Aucun paiement ne sera enregistré automatiquement.", "Preparation only: dues and opening credit will be created on activation. No payment will be recorded automatically.")
           : t("Les échéances, crédits et paiements réels proviennent du Ledger financier.", "Dues, credits and real payments come from the financial Ledger.")}</p>
-        {canManage && lease.status === "draft" ? <div className="tenancy-sensitive-action"><p>{t("L’activation rend l’unité occupée et fige les conditions. Le chevauchement est revérifié par PostgreSQL.", "Activation marks the unit occupied and locks terms. PostgreSQL rechecks overlap.")}</p><button className="button button--primary" disabled={busy} onClick={activate} type="button">{t("Activer la location", "Activate lease")}</button></div> : null}
+        {canManage && lease.status === "draft" ? <div className="tenancy-sensitive-action"><p>{t("L’activation rend l’unité occupée et fige les conditions. KJORA vérifie automatiquement qu’il n’y a pas de conflit avec une autre location.", "Activation marks the unit occupied and locks terms. KJORA automatically checks there's no conflict with another lease.")}</p><button className="button button--primary" disabled={busy} onClick={activate} type="button">{t("Activer la location", "Activate lease")}</button></div> : null}
         {canManage && lease.status === "active" ? <div className="tenancy-sensitive-action"><p>{t("La date de sortie n’est modifiable que dans l’action dédiée avec confirmation explicite.", "The effective end date is only editable in the dedicated action with explicit confirmation.")}</p><button className="button button--secondary" disabled={busy} onClick={() => setEnding(true)} type="button">{t("Terminer la location", "End lease")}</button></div> : null}
       </Card>
 

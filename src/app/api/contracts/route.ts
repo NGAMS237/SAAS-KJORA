@@ -6,7 +6,13 @@ import { getLeaseContract, hashContractContent, preparedContractContent } from "
 
 export const runtime = "nodejs";
 
+function sameOrigin(request: Request) {
+  const origin = request.headers.get("origin");
+  return !origin || origin === new URL(request.url).origin;
+}
+
 export async function POST(request: NextRequest) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const authorization = await getActiveAuthorization();
   if (!authorization) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   if (!authorization.capabilities.includes("contract.manage")) return NextResponse.json({ error: "forbidden" }, { status: 403 });

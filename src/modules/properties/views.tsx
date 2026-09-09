@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
+import { entitlementErrorFromBody, QuotaLimitModal } from "@/core/entitlements/quota-modal";
+import type { EntitlementError } from "@/core/entitlements/model";
 import {
   filterProperties,
   type PropertyDetail,
@@ -75,7 +77,7 @@ async function mutate(payload: Record<string, unknown>) {
     body: JSON.stringify(payload),
   });
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: response.ok, body };
+  return { ok: response.ok, body, entitlementError: response.ok ? null : entitlementErrorFromBody(body) };
 }
 
 export function PropertiesView({
@@ -146,11 +148,13 @@ export function PropertiesView({
 
 export function PropertyCreateForm() {
   const t = useCopy();
+  const { language } = usePreferences();
   const router = useRouter();
   const [type, setType] = useState<PropertyType>("house");
   const [referenceRentXaf, setReferenceRentXaf] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<EntitlementError | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -166,6 +170,10 @@ export function PropertyCreateForm() {
     });
     setBusy(false);
     if (!result.ok || typeof result.body.propertyId !== "string") {
+      if (result.entitlementError) {
+        setQuotaError(result.entitlementError);
+        return;
+      }
       setMessage(friendlyError(result.body.error as string | undefined, t));
       return;
     }
@@ -192,6 +200,7 @@ export function PropertyCreateForm() {
           {message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}
         </form>
       </Card>
+      {quotaError ? <QuotaLimitModal error={quotaError} language={language} onClose={() => setQuotaError(null)} /> : null}
     </div>
   );
 }
@@ -206,11 +215,13 @@ export function PropertyDetailView({
   canManageUnits: boolean;
 }) {
   const t = useCopy();
+  const { language } = usePreferences();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<EntitlementError | null>(null);
 
   async function updateProperty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -230,7 +241,10 @@ export function PropertyDetailView({
     const form = new FormData(event.currentTarget);
     const result = await mutate({ action: "create_unit", propertyId: property.id, label: form.get("label"), type: form.get("type"), areaSqm: form.get("areaSqm"), referenceRentXaf: form.get("referenceRentXaf") });
     setBusy(false);
-    if (!result.ok) return setMessage(friendlyError(result.body.error as string | undefined, t));
+    if (!result.ok) {
+      if (result.entitlementError) return setQuotaError(result.entitlementError);
+      return setMessage(friendlyError(result.body.error as string | undefined, t));
+    }
     setAdding(false);
     setMessage(t("Unité ajoutée.", "Unit added."));
     router.refresh();
@@ -298,6 +312,7 @@ export function PropertyDetailView({
         ) : <EmptyState title={t("Aucune unité", "No units")} description={t("Ajoutez le premier espace louable.", "Add the first rentable space.")} />}
       </Card>
       {canManageProperty ? <div className="resource-danger-zone"><button className="button button--danger" disabled={busy} onClick={archiveProperty} type="button"><Archive size={17} />{t("Archiver le bien", "Archive property")}</button><p>{t("Les unités seront archivées avec le bien. Aucune suppression physique n’est effectuée.", "Units will be archived with the property. Nothing is physically deleted.")}</p></div> : null}
+      {quotaError ? <QuotaLimitModal error={quotaError} language={language} onClose={() => setQuotaError(null)} /> : null}
     </div>
   );
 }

@@ -1,51 +1,65 @@
 // =============================================================================
-// KJORA — Contrat d'adaptateur de provider de paiement SaaS (ALIGN-03)
+// KJORA — Contrat d'adaptateur de provider de paiement SaaS (ALIGN-04A)
 // =============================================================================
-// Ce fichier ne contient QUE des types et un registre vide.
+// Types et registre. Aucune clé, aucun appel réseau, aucun secret ici.
 //
-// Aucune implémentation Stripe, CamPay, Flutterwave, PayUnit, ElyonPay ou autre
-// n'appartient à ce lot. ALIGN-04 fournira les adaptateurs concrets.
+// Dix opérations sont nommées. **Aucun adaptateur n'est tenu de toutes les
+// implémenter** : seules `createCheckout` et `verifyWebhook` sont obligatoires
+// (REQUIRED_OPERATIONS). Le reste est optionnel, et ce que l'adaptateur
+// implémente doit correspondre à ce qu'il déclare dans la matrice de capacités.
+// L'écart entre les deux est un défaut, vérifié par test.
 //
-// Invariants que tout futur adaptateur devra respecter :
+// Invariants imposés à tout adaptateur :
 //   • Aucun secret provider ne franchit la frontière serveur.
-//   • Toute opération est idempotente : un même `idempotencyKey` ne produit
-//     jamais deux débits.
-//   • Un webhook est rejoué sans effet grâce à `providerEventId`.
-//   • Un plan payant n'est activé qu'après `verifyPayment` concluant.
-//   • Aucune référence stockée ne doit être une donnée sensible : on conserve
-//     des identifiants opaques et, au plus, la marque et les 4 derniers
-//     chiffres d'un moyen de paiement.
+//   • Toute opération débitrice est idempotente par `idempotencyKey`.
+//   • Un webhook rejoué est sans effet grâce à `providerEventId`.
+//   • Un plan payant n'est activé qu'après un événement provider vérifié.
+//   • Le prorata n'est jamais recalculé par le provider : KJORA envoie un
+//     montant déjà calculé en base, et refuse tout montant divergent au retour.
+//   • Aucun numéro de moyen de paiement complet n'est jamais stocké.
 // =============================================================================
 
-import type { BillingCycle, BillingCurrency } from "@/core/billing/model";
-import type { PlanSlug } from "@/core/entitlements/model";
+import type { BillingCycle, BillingCurrency } from "./model.ts";
+import type { PlanSlug } from "../entitlements/model.ts";
+import type { RecurrenceMode } from "./types.ts";
+import type {
+  ProviderName,
+  ProviderOperation,
+  PaymentMethodKind,
+} from "./provider-capabilities.ts";
 
-// ---------------------------------------------------------------------------
-// Types d'échange
-// ---------------------------------------------------------------------------
-
-export type ProviderName = "stripe" | "campay" | "flutterwave" | "payunit" | "elyonpay";
+export type { ProviderName, ProviderOperation, PaymentMethodKind };
 
 /** Référence opaque renvoyée par un provider. Jamais un secret. */
 export type ProviderRef = string;
+
+/** Mode d'exécution. `live` n'existe pas encore : ALIGN-04A est sandbox seul. */
+export type ProviderMode = "sandbox" | "live";
+
+// ---------------------------------------------------------------------------
+// Requêtes
+// ---------------------------------------------------------------------------
 
 export type CheckoutRequest = {
   organizationId: string;
   plan: PlanSlug;
   cycle: BillingCycle;
   currency: BillingCurrency;
+  /** Calculé en base. Le client ne le transmet jamais. */
   amountMinor: number;
-  /** Empreinte de la demande : garantit qu'un double envoi ne débite qu'une fois. */
+  method: PaymentMethodKind | null;
+  /** Empreinte de la demande : un double envoi ne débite qu'une fois. */
   idempotencyKey: string;
-  /** URL interne de retour, validée par safeNextPath côté appelant. */
+  /** Chemin interne de retour, déjà validé par safeNextPath côté appelant. */
   returnPath: string;
 };
 
 export type CheckoutSession = {
   providerSessionRef: ProviderRef;
-  /** URL hébergée par le provider vers laquelle rediriger l'utilisateur. */
+  /** URL hébergée par le provider vers laquelle rediriger. */
   redirectUrl: string;
   expiresAt: string;
+  recurrence: RecurrenceMode;
 };
 
 export type SubscriptionRequest = {
@@ -53,6 +67,7 @@ export type SubscriptionRequest = {
   plan: PlanSlug;
   cycle: BillingCycle;
   currency: BillingCurrency;
+  amountMinor: number;
   providerCustomerRef: ProviderRef;
   idempotencyKey: string;
 };
@@ -61,6 +76,7 @@ export type ProviderSubscription = {
   providerSubscriptionRef: ProviderRef;
   currentPeriodStart: string;
   currentPeriodEnd: string;
+  recurrence: RecurrenceMode;
 };
 
 export type PaymentStatus = "pending" | "succeeded" | "failed";
@@ -68,46 +84,80 @@ export type PaymentStatus = "pending" | "succeeded" | "failed";
 export type PaymentOutcome = {
   status: PaymentStatus;
   providerPaymentRef: ProviderRef;
-  /** Code d'échec du provider, à journaliser expurgé. */
+  /** Montant réellement traité, en unité mineure. Rapproché du montant attendu. */
+  amountMinor: number;
+  currency: BillingCurrency;
+  /** Code d'échec du provider, journalisé expurgé. */
   failureCode: string | null;
-  /** Marque et 4 derniers chiffres uniquement — jamais le numéro complet. */
-  paymentMethodBrand: string | null;
-  paymentMethodLast4: string | null;
+};
+
+export type PaymentMethodSummary = {
+  /** Marque et 4 derniers chiffres seulement — jamais le numéro complet. */
+  brand: string | null;
+  last4: string | null;
+  expiresOn: string | null;
+  kind: PaymentMethodKind;
 };
 
 export type WebhookVerification =
-  | { valid: true; providerEventId: string; eventType: string; payload: Record<string, unknown> }
-  | { valid: false; reason: string };
+  | {
+      valid: true;
+      /** Identifiant unique de l'événement chez le provider. Clé d'idempotence. */
+      providerEventId: string;
+      eventType: string;
+      payload: Record<string, unknown>;
+    }
+  | { valid: false; reason: WebhookRejectionReason };
+
+export type WebhookRejectionReason =
+  | "missing_signature"
+  | "invalid_signature"
+  | "malformed_payload"
+  | "missing_event_id"
+  | "unknown_provider"
+  | "provider_not_configured";
 
 // ---------------------------------------------------------------------------
-// Contrat
+// Le contrat
 // ---------------------------------------------------------------------------
 
 export type BillingProviderAdapter = {
   readonly name: ProviderName;
-  /** Devises que ce provider sait traiter. */
-  readonly supportedCurrencies: readonly BillingCurrency[];
-  /** Le provider sait-il rembourser ? Tous ne le permettent pas. */
-  readonly supportsRefund: boolean;
+  readonly mode: ProviderMode;
 
+  // --- Obligatoire ---------------------------------------------------------
   createCheckout(request: CheckoutRequest): Promise<CheckoutSession>;
-  createSubscription(request: SubscriptionRequest): Promise<ProviderSubscription>;
-  cancelSubscription(ref: ProviderRef): Promise<void>;
-  retryPayment(ref: ProviderRef, idempotencyKey: string): Promise<PaymentOutcome>;
-  fetchPaymentStatus(ref: ProviderRef): Promise<PaymentOutcome>;
-  /** Vérifie la signature d'un webhook. Un rejeu doit produire le même id. */
-  verifyWebhook(rawBody: string, signature: string): Promise<WebhookVerification>;
-  /** Optionnel : absent si `supportsRefund` est faux. */
+  /**
+   * Vérifie la signature à partir du **corps brut**, jamais d'un JSON reparsé.
+   * Un rejeu doit produire le même `providerEventId`.
+   */
+  verifyWebhook(rawBody: string, headers: Readonly<Record<string, string>>): Promise<WebhookVerification>;
+
+  // --- Optionnel : présent si, et seulement si, déclaré dans la matrice -----
+  createSubscription?(request: SubscriptionRequest): Promise<ProviderSubscription>;
+  updateSubscription?(ref: ProviderRef, plan: PlanSlug, cycle: BillingCycle, idempotencyKey: string): Promise<ProviderSubscription>;
+  cancelSubscription?(ref: ProviderRef, idempotencyKey: string): Promise<void>;
+  chargeRecurring?(ref: ProviderRef, amountMinor: number, idempotencyKey: string): Promise<PaymentOutcome>;
+  retryPayment?(ref: ProviderRef, idempotencyKey: string): Promise<PaymentOutcome>;
+  fetchPaymentStatus?(ref: ProviderRef): Promise<PaymentOutcome>;
+  fetchPaymentMethod?(ref: ProviderRef): Promise<PaymentMethodSummary>;
   refund?(ref: ProviderRef, amountMinor: number, idempotencyKey: string): Promise<void>;
 };
 
+/** Vérifie qu'un adaptateur expose bien l'opération demandée. */
+export function adapterImplements(
+  adapter: BillingProviderAdapter,
+  operation: ProviderOperation,
+): boolean {
+  return typeof (adapter as unknown as Record<string, unknown>)[operation] === "function";
+}
+
 // ---------------------------------------------------------------------------
-// Registre — volontairement vide dans ce lot
+// Registre
 // ---------------------------------------------------------------------------
 
 const REGISTRY = new Map<ProviderName, BillingProviderAdapter>();
 
-/** ALIGN-04 enregistrera ici les adaptateurs réels. */
 export function registerBillingProvider(adapter: BillingProviderAdapter): void {
   REGISTRY.set(adapter.name, adapter);
 }
@@ -116,7 +166,16 @@ export function getBillingProvider(name: ProviderName): BillingProviderAdapter |
   return REGISTRY.get(name) ?? null;
 }
 
-/** Aucun provider n'est branché tant qu'ALIGN-04 n'a pas été livré. */
+export function registeredProviders(): ProviderName[] {
+  return [...REGISTRY.keys()];
+}
+
+/** Aucun provider n'est branché tant qu'aucun adaptateur n'est enregistré. */
 export function hasConfiguredProvider(): boolean {
   return REGISTRY.size > 0;
+}
+
+/** Réservé aux tests : vide le registre entre deux scénarios. */
+export function resetBillingProviders(): void {
+  REGISTRY.clear();
 }

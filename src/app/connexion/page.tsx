@@ -67,7 +67,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
         <LoginForm nextPath={nextPath} planRequested={planRequested} />
-        <p className="auth-footnote">Aucun mot de passe à mémoriser. Les accès expirent et ne donnent aucune autorisation hors de vos Organizations.</p>
+        <p className="auth-footnote">Aucun mot de passe à mémoriser. Le lien de connexion est temporaire et sécurisé.</p>
         <p className="auth-footnote">
           Un problème pour vous connecter ? <Link href="/aide">Consultez l’aide</Link>.
         </p>
