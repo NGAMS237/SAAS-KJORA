@@ -13,6 +13,7 @@ export default async function SettingsPage() {
   const [{ activeOrganization }, authorization] = await Promise.all([loadOrganizationContext(), getActiveAuthorization()]);
   if (!activeOrganization) redirect("/onboarding/organization");
   const hasContractRbac = Boolean(authorization?.capabilities.includes("contract.manage"));
+  const hasDataImportRbac = Boolean(authorization?.capabilities.includes("data_import.manage"));
   // ALIGN-01 — plan feature gating: contracts requires Essentiel+. Checked
   // here too (not just RBAC) so the "Configurer" card never links to a
   // destination the organization's plan can't actually open.
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
         <NotificationSoundToggle />
       </Card>
       {hasContractRbac ? <Card className="settings-card"><div className="section-heading"><div><p className="eyebrow">Contrats</p><h2>Modèles et cachet</h2><p>Configurer les modèles versionnés et le cachet visuel de cette Organization.</p></div>{contractEntitlementError ? <Link className="button button--secondary" href="/app/billing">Voir les offres</Link> : <Link className="button button--secondary" href="/app/parametres/contrats">Configurer</Link>}</div>{contractEntitlementError ? <p className="demo-hint">Les contrats font partie de l’offre Essentiel et supérieures. Votre offre actuelle ne les inclut pas encore.</p> : null}</Card> : null}
+      {hasDataImportRbac ? <Card className="settings-card"><div className="section-heading"><div><p className="eyebrow">Migration de données</p><h2>Importer mes données</h2><p>Reprendre vos biens, logements, locataires et baux depuis Rentila, un CSV ou un fichier Excel.</p></div><Link className="button button--secondary" href="/app/parametres/import">Importer</Link></div></Card> : null}
     </div>
   );
 }

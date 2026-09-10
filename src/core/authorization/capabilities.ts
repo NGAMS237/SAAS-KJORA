@@ -36,6 +36,10 @@ export const CAPABILITIES = [
   // ALIGN-03 — facturation SaaS, réservée à l'Organization Owner
   "billing.view",
   "billing.manage",
+  // IMPORT-01 — migration de données (Rentila/CSV/Excel), réservée par défaut
+  // à l'Organization Owner (§19 : deny by default, Manager seulement si
+  // explicitement accordé via la gestion des rôles).
+  "data_import.manage",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
