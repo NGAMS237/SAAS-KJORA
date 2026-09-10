@@ -62,6 +62,10 @@ const CAPABILITIES_ALLOWED_WHEN_BLOCKED: readonly Capability[] = [
   "organization.profile.manage",
   "billing.view",
   "billing.manage",
+  // EXPORT-01 — lecture seule, jamais une mutation : un compte bloqué doit
+  // pouvoir récupérer ses propres données (portabilité), comme il peut déjà
+  // consulter son espace en lecture intégrale (ALIGN-03).
+  "data_export.manage",
 ];
 
 /** Une capacité entraîne-t-elle une mutation métier ? */

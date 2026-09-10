@@ -10,6 +10,27 @@ function sameOrigin(request: Request) {
   return !origin || origin === new URL(request.url).origin;
 }
 
+// Traduit les erreurs Postgres brutes de queue_financial_document_email en
+// codes propres pour le client — jamais le texte d'erreur SQL (§12).
+function mapQueueEmailError(error: { code?: string; message: string }): string {
+  if (error.code === "23514" || error.message.includes("tenant_email_required")) return "tenant_email_required";
+  if (error.code === "42501" || error.message.includes("forbidden")) return "forbidden";
+  if (error.message.includes("not_found") || error.message.includes("invalid_document")) return "not_found";
+  if (error.message.includes("rate_limited") || error.code === "P0004") return "rate_limited";
+  return "delivery_preparation_failed";
+}
+
+function queueEmailStatus(error: { code?: string; message: string }): number {
+  const mapped = mapQueueEmailError(error);
+  switch (mapped) {
+    case "tenant_email_required": return 409;
+    case "forbidden": return 403;
+    case "not_found": return 404;
+    case "rate_limited": return 429;
+    default: return 500;
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const authorization = await getActiveAuthorization();
@@ -46,8 +67,15 @@ export async function POST(request: NextRequest) {
     if (!authorization.capabilities.includes("receipt.share")) return applyAuthState(NextResponse.json({ error: "forbidden" }, { status: 403 }));
     const documentId = parseDocumentId(input.documentId);
     if (!documentId) return applyAuthState(NextResponse.json({ error: "invalid_document" }, { status: 400 }));
+    // Garde-fou (§9/§12) : ne jamais mettre en file un envoi que le worker
+    // cron ne traitera jamais silencieusement (KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED
+    // désactivé). Sans cette vérification côté API, une demande resterait
+    // "pending" indéfiniment sans jamais être signalée à l'utilisateur.
+    if (process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED !== "true") {
+      return applyAuthState(NextResponse.json({ error: "email_delivery_disabled" }, { status: 409 }));
+    }
     const result = await supabase.rpc("queue_financial_document_email", { target_document_id: documentId });
-    if (result.error) return applyAuthState(NextResponse.json({ error: result.error.message }, { status: 400 }));
+    if (result.error) return applyAuthState(NextResponse.json({ error: mapQueueEmailError(result.error) }, { status: queueEmailStatus(result.error) }));
     return applyAuthState(NextResponse.json({ deliveryId: result.data }, { status: 202 }));
   }
 

@@ -31,17 +31,19 @@ function documentRecord(row: DocumentRow): FinancialDocumentRecord {
     snapshot: row.snapshot, templateVersion: row.template_version, storagePath: row.storage_path,
     createdBy: row.created_by, createdAt: row.created_at, invalidatedAt: row.invalidated_at,
     invalidationReason: row.invalidation_reason,
+    tenantEmail: null,
     lastDelivery: null,
   };
 }
 
-function summary(row: DocumentRow): FinancialDocumentSummary {
+function summary(row: DocumentRow, tenantEmail: string | null = null): FinancialDocumentSummary {
   return {
     id: row.id, tenantId: row.tenant_id, leaseId: row.lease_id, dueId: row.due_id,
     paymentId: row.payment_id, type: row.document_type, reference: row.reference,
     status: row.status, language: row.language, issuedOn: row.issued_on,
     periodStart: row.period_start, periodEnd: row.period_end, storagePath: row.storage_path,
     createdAt: row.created_at, invalidatedAt: row.invalidated_at, invalidationReason: row.invalidation_reason,
+    tenantEmail,
     lastDelivery: null,
   };
 }
@@ -59,8 +61,16 @@ export async function getFinancialDocuments(
   if (filter.paymentId) query = query.eq("payment_id", filter.paymentId);
   const result = await query;
   if (result.error) throw result.error;
-  const documents = ((result.data ?? []) as DocumentRow[]).map(summary);
-  if (!documents.length) return documents;
+  const rows = (result.data ?? []) as DocumentRow[];
+  if (!rows.length) return [];
+  // Email actuel du locataire — permet à l'UI de détecter l'absence d'email
+  // AVANT même de tenter un envoi (§9), sans dépendre de l'historique de
+  // livraison (qui peut être vide ou pointer vers une adresse obsolète).
+  const tenantEmails = await supabase.from("tenants").select("id, email")
+    .eq("organization_id", organizationId).in("id", Array.from(new Set(rows.map((row) => row.tenant_id))));
+  if (tenantEmails.error) throw tenantEmails.error;
+  const emailByTenant = new Map((tenantEmails.data ?? []).map((tenant) => [tenant.id, tenant.email as string | null]));
+  const documents = rows.map((row) => summary(row, emailByTenant.get(row.tenant_id) ?? null));
   const deliveries = await supabase.from("message_deliveries")
     .select("document_id, status, recipient_email, attempt_count, sent_at, last_error_code, created_at")
     .eq("organization_id", organizationId).in("document_id", documents.map((document) => document.id))

@@ -29,7 +29,7 @@ function record(row: DocumentRow): FinancialDocumentRecord {
     status: row.status, language: row.language, issuedOn: row.issued_on, periodStart: row.period_start,
     periodEnd: row.period_end, snapshot: row.snapshot, templateVersion: row.template_version,
     storagePath: row.storage_path, createdBy: row.created_by, createdAt: row.created_at,
-    invalidatedAt: row.invalidated_at, invalidationReason: row.invalidation_reason, lastDelivery: null };
+    invalidatedAt: row.invalidated_at, invalidationReason: row.invalidation_reason, tenantEmail: null, lastDelivery: null };
 }
 
 function retryAt(attempt: number) {

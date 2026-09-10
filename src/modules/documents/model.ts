@@ -27,6 +27,8 @@ export type FinancialDocumentSummary = {
   createdAt: string;
   invalidatedAt: string | null;
   invalidationReason: string | null;
+  /** Email actuel du locataire (peut différer de lastDelivery.recipientEmail, historique) — utilisé pour détecter côté client l'absence d'email avant même d'appeler le serveur (§9). */
+  tenantEmail: string | null;
   lastDelivery: {
     status: "pending" | "processing" | "sent" | "failed" | "cancelled";
     recipientEmail: string;

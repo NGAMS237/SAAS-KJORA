@@ -40,6 +40,11 @@ export const CAPABILITIES = [
   // à l'Organization Owner (§19 : deny by default, Manager seulement si
   // explicitement accordé via la gestion des rôles).
   "data_import.manage",
+  // EXPORT-01 — export des données KJORA, lecture seule, deny-by-default,
+  // réservée par défaut à l'Organization Owner (même politique que
+  // data_import.manage : un Manager ne l'obtient que si elle lui est
+  // explicitement accordée via la gestion des rôles).
+  "data_export.manage",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Building2, ChevronRight, CircleAlert,
   History, Home, KeyRound, LayoutGrid, List,
@@ -122,13 +122,20 @@ async function mutate(payload: Record<string, unknown>) {
   return { ok: response.ok, body };
 }
 
-function TenantFields({ tenant }: { tenant?: TenantDetail }) {
+function TenantFields({ tenant, autoFocusEmail }: { tenant?: TenantDetail; autoFocusEmail?: boolean }) {
   const t = useCopy();
+  const emailRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    // Lien profond depuis la modal "Adresse email manquante" (§9) : le champ
+    // email doit être visible et prêt à recevoir la saisie sans action
+    // supplémentaire de l'utilisateur.
+    if (autoFocusEmail) emailRef.current?.focus();
+  }, [autoFocusEmail]);
   return <>
     <label className="field"><span>{t("Nom complet", "Full name")}</span><input defaultValue={tenant?.fullName ?? ""} maxLength={160} minLength={2} name="fullName" required /></label>
     <div className="form-grid">
       <label className="field"><span>{t("Téléphone", "Phone")}</span><input defaultValue={tenant?.phone ?? ""} maxLength={32} name="phone" inputMode="tel" placeholder="+237…" /></label>
-      <label className="field"><span>Email</span><input defaultValue={tenant?.email ?? ""} maxLength={320} name="email" type="email" /></label>
+      <label className="field"><span>Email</span><input defaultValue={tenant?.email ?? ""} maxLength={320} name="email" ref={emailRef} type="email" /></label>
       <label className="field"><span>{t("Langue préférée", "Preferred language")}</span><select defaultValue={tenant?.preferredLanguage ?? ""} name="preferredLanguage"><option value="">{t("Non précisée", "Not specified")}</option><option value="fr">Français</option><option value="en">English</option></select></label>
       <label className="field"><span>{t("Profession (facultatif)", "Profession (optional)")}</span><input defaultValue={tenant?.profession ?? ""} maxLength={120} name="profession" /></label>
       <label className="field"><span>{t("Type de pièce", "ID type")}</span><select defaultValue={tenant?.identityDocumentType ?? ""} name="identityDocumentType"><option value="">{t("Aucune", "None")}</option><option value="cni">CNI</option><option value="passport">{t("Passeport", "Passport")}</option><option value="other">{t("Autre", "Other")}</option></select></label>
@@ -171,7 +178,9 @@ export function TenantCreateForm() {
 export function TenantDetailView({ tenant, canManage, financial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled, canManagePortal, portalAccess }: { tenant: TenantDetail; canManage: boolean; financial: TenantFinancialDetail | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean; canManagePortal: boolean; portalAccess: PortalAccessStatus | null }) {
   const t = useCopy();
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const searchParams = useSearchParams();
+  const focusEmail = searchParams.get("focus") === "email";
+  const [editing, setEditing] = useState(focusEmail);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const current = tenant.leases.find((lease) => lease.status === "active") ?? null;
@@ -219,7 +228,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
 
       <LiveDataNotice />
       {message ? <p className="form-feedback" role="status">{message}</p> : null}
-      {editing ? <Card><form className="form-stack" onSubmit={submit}><TenantFields tenant={tenant} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
+      {editing ? <Card><form className="form-stack" onSubmit={submit}><TenantFields autoFocusEmail={focusEmail} tenant={tenant} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
 
       <nav className="record-tabs" aria-label={t("Sections du dossier locataire", "Tenant record sections")}>
         <a aria-current="page" href="#profil">{t("Profil", "Profile")}</a>

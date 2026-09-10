@@ -30,6 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
     createdBy: typeof row.created_by === "string" ? row.created_by : null, createdAt: String(row.created_at),
     invalidatedAt: typeof row.invalidated_at === "string" ? row.invalidated_at : null,
     invalidationReason: typeof row.invalidation_reason === "string" ? row.invalidation_reason : null,
+    tenantEmail: null,
     lastDelivery: null,
   };
   async function recordReceiptView() {

@@ -1365,6 +1365,23 @@ a.portfolio-metric:hover {
   color: var(--danger);
 }
 
+/* FEATURE GATING UX — indicateur premium discret (§17) : un petit cadenas +
+   le nom du plan minimum, jamais une bannière ou une couleur agressive. */
+.premium-badge {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  display: inline-flex;
+  font-size: 0.66rem;
+  font-weight: 720;
+  gap: 4px;
+  line-height: 1.1;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
 .badge--info {
   background: var(--info-soft);
   border-color: color-mix(in srgb, var(--info) 30%, transparent);
@@ -1682,6 +1699,34 @@ a.portfolio-metric:hover {
 .auth-form-stack, .form-stack { display: grid; gap: 16px; }
 .auth-code-form { margin-top: 4px; }
 .form-grid { display: grid; gap: 14px; }
+/* EXPORT-01 — Paramètres → Mes données */
+.export-format-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.export-format-option {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  padding: 14px;
+  text-align: left;
+  transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
+}
+.export-format-option strong { font-size: 0.95rem; }
+.export-format-option span { color: var(--text-muted); font-size: 0.76rem; }
+.export-format-option.is-selected { background: var(--surface-muted); border-color: var(--kjora-terracotta); }
+.export-scope-fieldset { border: 1px solid var(--border); border-radius: var(--radius-control); padding: 13px; }
+.export-scope-fieldset legend { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; padding: 0 6px; }
+.export-scope-grid { display: grid; gap: 9px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.export-scope-checkbox { align-items: center; display: flex; font-size: 0.82rem; gap: 8px; }
+.export-date-range { display: grid; gap: 9px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.export-date-range small { color: var(--text-muted); grid-column: 1 / -1; }
+.export-ready-card, .export-history-card { display: grid; gap: 11px; }
+.export-row-counts { display: grid; gap: 5px; list-style: none; margin: 0; padding: 0; }
+.export-row-counts li { align-items: center; display: flex; font-size: 0.8rem; justify-content: space-between; }
+.export-row-counts li span { color: var(--text-muted); }
+
 .field { display: grid; gap: 7px; }
 .field > span { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; }
 .field input, .field select, .field textarea {

@@ -9,6 +9,73 @@ import { Card, EmptyState } from "@/core/ui/ui";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
 import { notificationHref } from "@/modules/operations/model";
 
+// DOCUMENT DELIVERY — modals explicites (§9, §10) au lieu d'un bouton
+// silencieusement désactivé. Chaque modal reste sur la page, comme
+// FeatureUpgradeModal : "Annuler"/"Fermer" ne fait que fermer, aucune
+// navigation forcée.
+function EmailMissingModal({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
+  const t = useCopy();
+  return (
+    <div className="confirmation-modal" role="presentation">
+      <button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={onClose} type="button" />
+      <section aria-labelledby="email-missing-title" aria-modal="true" className="confirmation-modal__panel" role="dialog">
+        <div className="confirmation-modal__header">
+          <div><h2 id="email-missing-title">{t("Adresse email manquante", "Missing email address")}</h2></div>
+          <button aria-label={t("Fermer", "Close")} className="icon-button" onClick={onClose} type="button"><X size={18} /></button>
+        </div>
+        <p>{t("Aucune adresse email n’est renseignée pour ce locataire.", "No email address is on file for this tenant.")}</p>
+        <div className="demo-form-actions">
+          <button className="button button--secondary" onClick={onClose} type="button">{t("Annuler", "Cancel")}</button>
+          {/* Conserve le contexte (§9) : renvoie vers la fiche locataire déjà connue, avec le champ email à modifier. */}
+          <Link className="button button--primary" href={`/app/locataires/${tenantId}?focus=email`} onClick={onClose}>
+            {t("Ajouter l’email", "Add email")}
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function EmailUnavailableModal({ downloadHref, onClose }: { downloadHref: string; onClose: () => void }) {
+  const t = useCopy();
+  return (
+    <div className="confirmation-modal" role="presentation">
+      <button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={onClose} type="button" />
+      <section aria-labelledby="email-unavailable-title" aria-modal="true" className="confirmation-modal__panel" role="dialog">
+        <div className="confirmation-modal__header">
+          <div><h2 id="email-unavailable-title">{t("Envoi par email indisponible", "Email delivery unavailable")}</h2></div>
+          <button aria-label={t("Fermer", "Close")} className="icon-button" onClick={onClose} type="button"><X size={18} /></button>
+        </div>
+        <p>{t("L’envoi automatique n’est pas encore disponible. Vous pouvez télécharger le PDF et l’envoyer manuellement.", "Automatic delivery isn’t available yet. You can download the PDF and send it yourself.")}</p>
+        <div className="demo-form-actions">
+          <button className="button button--secondary" onClick={onClose} type="button">{t("Fermer", "Close")}</button>
+          <Link className="button button--primary" href={downloadHref} onClick={onClose} rel="noopener noreferrer" target="_blank">
+            <Download size={15} />{t("Télécharger le PDF", "Download PDF")}
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function friendlyDeliveryError(code: string | undefined, t: ReturnType<typeof useCopy>): string {
+  switch (code) {
+    case "tenant_email_required":
+      return t("Aucune adresse email n’est renseignée pour ce locataire.", "No email address is on file for this tenant.");
+    case "email_delivery_disabled":
+      return t("L’envoi automatique n’est pas encore disponible.", "Automatic delivery isn’t available yet.");
+    case "forbidden":
+      return t("Vous n’avez pas les droits nécessaires pour cet envoi.", "You don’t have the rights required for this delivery.");
+    case "invalid_document":
+    case "not_found":
+      return t("Ce document n’est plus disponible.", "This document is no longer available.");
+    case "rate_limited":
+      return t("Trop de tentatives récentes. Réessayez dans quelques instants.", "Too many recent attempts. Try again shortly.");
+    default:
+      return t("Impossible de préparer cet envoi pour le moment.", "Unable to prepare this delivery right now.");
+  }
+}
+
 function useCopy() {
   const { language } = usePreferences();
   return (fr: string, en: string) => language === "FR" ? fr : en;
@@ -42,13 +109,37 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
   const t = useCopy();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [modal, setModal] = useState<"missing_email" | "unavailable" | null>(null);
+  const downloadHref = `/api/financial-documents/${document.id}/download`;
+
   async function queueEmail() {
     setBusy(true); setMessage(null);
     const result = await mutate({ action: "queue_email", documentId: document.id });
     setBusy(false);
-    setMessage(result.ok ? t("Envoi ajouté à la file sécurisée.", "Delivery added to the secure queue.")
-      : t("Impossible de préparer cet envoi.", "Unable to prepare this delivery."));
+    if (result.ok) {
+      // §11 : message de succès distinct entre mise en file (asynchrone) et
+      // confirmation d'envoi effectif — ici l'API ne renvoie que la mise en
+      // file (le worker cron confirme l'envoi réel plus tard).
+      setMessage(document.tenantEmail
+        ? t(`Envoi programmé à ${document.tenantEmail}.`, `Delivery scheduled to ${document.tenantEmail}.`)
+        : t("Envoi ajouté à la file sécurisée.", "Delivery added to the secure queue."));
+      return;
+    }
+    const code = typeof result.body.error === "string" ? result.body.error : undefined;
+    if (code === "tenant_email_required") { setModal("missing_email"); return; }
+    if (code === "email_delivery_disabled") { setModal("unavailable"); return; }
+    setMessage(friendlyDeliveryError(code, t));
   }
+
+  function onSendClick() {
+    // Portes explicites côté client (§9-§10) : on n'appelle le serveur que
+    // lorsque l'envoi a une chance raisonnable d'aboutir. Le serveur revérifie
+    // de toute façon les deux conditions (defense-in-depth).
+    if (!document.tenantEmail) { setModal("missing_email"); return; }
+    if (!emailDeliveryEnabled) { setModal("unavailable"); return; }
+    void queueEmail();
+  }
+
   return <div className={`document-row${document.status === "invalidated" ? " document-row--invalidated" : ""}`}>
     <span className="document-row__icon">{document.status === "invalidated" ? <TriangleAlert size={19} /> : document.status === "ready" ? <FileCheck2 size={19} /> : <FileClock size={19} />}</span>
     <div className="document-row__body">
@@ -64,9 +155,11 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
       {message ? <small role="status">{message}</small> : null}
     </div>
     <div className="document-row__actions">
-      <Link className="button button--secondary" href={`/api/financial-documents/${document.id}/download`} prefetch={false} target="_blank"><Download size={15} />PDF</Link>
-      {canShare ? <button className="button button--secondary" disabled={busy || document.status === "invalidated" || !emailDeliveryEnabled} onClick={queueEmail} title={!emailDeliveryEnabled ? t("L’envoi réel reste désactivé pendant le déploiement sûr.", "Real delivery remains disabled during safe rollout.") : undefined} type="button"><Send size={15} />{busy ? t("File…", "Queueing…") : t("Envoyer", "Send")}</button> : null}
+      <Link className="button button--secondary" href={downloadHref} prefetch={false} target="_blank"><Download size={15} />PDF</Link>
+      {canShare ? <button className="button button--secondary" disabled={busy || document.status === "invalidated"} onClick={onSendClick} type="button"><Send size={15} />{busy ? t("Envoi…", "Sending…") : t("Envoyer par email", "Send by email")}</button> : null}
     </div>
+    {modal === "missing_email" ? <EmailMissingModal onClose={() => setModal(null)} tenantId={document.tenantId} /> : null}
+    {modal === "unavailable" ? <EmailUnavailableModal downloadHref={downloadHref} onClose={() => setModal(null)} /> : null}
   </div>;
 }
 
