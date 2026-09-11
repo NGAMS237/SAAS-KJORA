@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(51);
 
 insert into auth.users (id,aud,role,email,email_confirmed_at,created_at,updated_at) values
 ('f6000000-0000-4000-8000-000000000001','authenticated','authenticated','owner-a-6f@kjora.test',now(),now(),now()),
@@ -15,6 +15,9 @@ insert into public.organizations(id,created_by) values
 insert into public.organization_profiles(organization_id,name,language) values
 ('f6100000-0000-4000-8000-00000000000a','Organization A 6F','fr'),
 ('f6100000-0000-4000-8000-00000000000b','Organization B 6F','en');
+insert into public.organization_plans(organization_id,plan,assigned_by) values
+('f6100000-0000-4000-8000-00000000000a','avance','f6000000-0000-4000-8000-000000000001')
+on conflict (organization_id) do update set plan=excluded.plan,assigned_by=excluded.assigned_by,assigned_at=now();
 insert into public.memberships(organization_id,user_id,role) values
 ('f6100000-0000-4000-8000-00000000000a','f6000000-0000-4000-8000-000000000001','organization_owner'),
 ('f6100000-0000-4000-8000-00000000000a','f6000000-0000-4000-8000-000000000002','manager'),
@@ -52,7 +55,11 @@ select ok((select bool_and(relrowsecurity) from pg_class where oid in ('public.c
 select is((select count(*) from public.role_capabilities where capability='contract.manage'),2::bigint,'seuls Owner et gestionnaire gèrent les contrats');
 select is((select count(*) from public.role_capabilities where capability='contract.manage' and role in ('organization_owner','manager')),2::bigint,'capability portée par les rôles attendus');
 select ok(not has_table_privilege('authenticated','public.lease_contracts','select'),'pas de lecture directe des contrats');
+select ok(not has_table_privilege('anon','public.lease_contracts','select'),'anon ne lit pas directement les contrats');
+select ok(not has_table_privilege('public','public.lease_contracts','select'),'PUBLIC ne lit pas directement les contrats');
 select ok(not has_table_privilege('authenticated','public.contract_signatures','select'),'pas de lecture directe des signatures');
+select ok(not has_function_privilege('anon','public.list_contracts_for_export(uuid)','execute'),'anon ne peut appeler la RPC export contrats');
+select ok(not has_function_privilege('public','public.list_contracts_for_export(uuid)','execute'),'PUBLIC ne peut appeler la RPC export contrats');
 select ok(not has_function_privilege('anon','public.generate_lease_contract(uuid,uuid)','execute'),'anon ne génère pas de contrat');
 select ok(not has_function_privilege('anon','public.sign_lease_contract_tenant(uuid,uuid,text,jsonb,text,text)','execute'),'anon ne signe pas');
 select ok(not exists (select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid='public.send_lease_contract(uuid)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE'),'PUBLIC ne peut envoyer');
@@ -66,12 +73,16 @@ create temporary table pg_temp.template_ids(id uuid primary key) on commit drop;
 insert into pg_temp.template_ids select id from public.contract_templates where is_system and language='fr';
 grant select on pg_temp.template_ids to authenticated;
 set local role authenticated;
+select throws_ok($$select * from public.lease_contracts$$,'42501',null,'authenticated ne peut lire directement la table contrats');
 select set_config('request.jwt.claim.sub','f6000000-0000-4000-8000-000000000003',true);
+select throws_ok($$select * from public.list_contracts_for_export('f6100000-0000-4000-8000-00000000000a')$$,'42501','forbidden','Viewer sans data_export.manage refusé par la RPC export');
 select throws_ok($$select public.generate_lease_contract('f6500000-0000-4000-8000-00000000000a',(select id from pg_temp.template_ids))$$,'42501','not_found','Viewer refusé');
 select set_config('request.jwt.claim.sub','f6000000-0000-4000-8000-000000000004',true);
+select throws_ok($$select * from public.list_contracts_for_export('f6100000-0000-4000-8000-00000000000a')$$,'42501','forbidden','Owner B ne lit pas les contrats de Organization A');
 select throws_ok($$select public.generate_lease_contract('f6500000-0000-4000-8000-00000000000a',(select id from pg_temp.template_ids))$$,'42501','not_found','Owner B refusé sur Lease A');
 select set_config('request.jwt.claim.sub','f6000000-0000-4000-8000-000000000001',true);
 insert into pg_temp.contract_ids select public.generate_lease_contract('f6500000-0000-4000-8000-00000000000a',(select id from pg_temp.template_ids));
+select is((select count(*) from public.list_contracts_for_export('f6100000-0000-4000-8000-00000000000a')),1::bigint,'Owner autorisé exporte le résumé de son Organization');
 select is((select count(*) from public.get_lease_contracts('f6100000-0000-4000-8000-00000000000a','f6500000-0000-4000-8000-00000000000a')),1::bigint,'Owner voit le contrat A');
 select is((select template_version from public.get_lease_contract('f6100000-0000-4000-8000-00000000000a',(select id from pg_temp.contract_ids))),1,'version du modèle figée');
 select is((select count(*) from jsonb_array_elements((select content_snapshot from public.get_lease_contract('f6100000-0000-4000-8000-00000000000a',(select id from pg_temp.contract_ids)))) as section where section->>'key'='deposit'),0::bigint,'clause dépôt masquée pour dépôt nul');

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 import { buildCsvDocument } from "../src/modules/data-export/csv.ts";
@@ -21,6 +21,38 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260909180000_export_01_data_export.sql", import.meta.url),
   "utf8",
 );
+const contractsGrantMigration = readFileSync(
+  new URL("../supabase/migrations/20260910191705_fix_lease_contracts_select_grant.sql", import.meta.url),
+  "utf8",
+);
+const contractsRpcMigration = readFileSync(
+  new URL("../supabase/migrations/20260910195812_export_01_contracts_summary_rpc.sql", import.meta.url),
+  "utf8",
+);
+const contractsDirectAccessClosureMigration = readFileSync(
+  new URL("../supabase/migrations/20260911153254_close_lease_contracts_direct_select.sql", import.meta.url),
+  "utf8",
+);
+const exportServer = readFileSync(
+  new URL("../src/modules/data-export/server.ts", import.meta.url),
+  "utf8",
+);
+const contractsServer = readFileSync(
+  new URL("../src/modules/contracts/server.ts", import.meta.url),
+  "utf8",
+);
+
+function readSourceTree(directory: URL): string {
+  return readdirSync(directory, { withFileTypes: true })
+    .map((entry) => {
+      const target = new URL(entry.isDirectory() ? `${entry.name}/` : entry.name, directory);
+      if (entry.isDirectory()) return readSourceTree(target);
+      return /\.(?:ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name) ? readFileSync(target, "utf8") : "";
+    })
+    .join("\n");
+}
+
+const applicationSource = readSourceTree(new URL("../src/", import.meta.url));
 
 // ---------------------------------------------------------------------------
 // §17/§18/§19 : garanties structurelles de la migration EXPORT-01.
@@ -59,6 +91,61 @@ test("data_exports n'autorise que la lecture directe ; les écritures passent pa
   // écriture directe (insert/update/delete) ne doit lui être accordée.
   assert.match(migration, /grant select on public\.data_exports to authenticated/i);
   assert.doesNotMatch(migration, /grant\s+(?:insert|update|delete|all)[^;]*on public\.data_exports[^;]*to[^;]*authenticated/i);
+});
+
+test("la correction historique lease_contracts SELECT est versionnée sans droit d'écriture", () => {
+  assert.match(contractsGrantMigration, /grant select on public\.lease_contracts to authenticated/i);
+  assert.doesNotMatch(contractsGrantMigration, /grant\s+(?:insert|update|delete|all)/i);
+});
+
+test("la migration corrective ferme la lecture directe lease_contracts pour tous les rôles clients", () => {
+  const sqlStatements = contractsDirectAccessClosureMigration.replace(/^--.*$/gm, "");
+  assert.match(
+    sqlStatements,
+    /revoke select on table public\.lease_contracts from authenticated, anon, public/i,
+  );
+  assert.doesNotMatch(sqlStatements, /revoke[^;]*from service_role/i);
+  assert.doesNotMatch(sqlStatements, /grant\s+/i);
+});
+
+test("la synthèse contrats utilise la RPC EXPORT-01 et non une lecture directe", () => {
+  const start = exportServer.indexOf("async function readContractsSummary");
+  const end = exportServer.indexOf("async function readScope", start);
+  const block = exportServer.slice(start, end);
+  assert.match(block, /supabase\.rpc\("list_contracts_for_export",\s*\{\s*target_organization_id: organizationId/);
+  assert.doesNotMatch(block, /supabase\.from\("lease_contracts"\)/);
+});
+
+test("list_contracts_for_export est minimale, tenant-scoped et explicitement autorisée", () => {
+  assert.match(contractsRpcMigration, /security definer[\s\S]*set search_path to ''/i);
+  assert.match(contractsRpcMigration, /private\.has_capability\(target_organization_id, 'data_export\.manage'\)/);
+  assert.match(contractsRpcMigration, /private\.check_plan_feature\(target_organization_id, 'exports_advanced'\)/);
+  assert.match(contractsRpcMigration, /where c\.organization_id = target_organization_id/);
+  assert.match(contractsRpcMigration, /grant execute[\s\S]*to authenticated/);
+  assert.match(contractsRpcMigration, /revoke execute[\s\S]*from anon, public/);
+  assert.match(
+    contractsRpcMigration,
+    /returns table \(\s*id uuid,\s*lease_id uuid,\s*tenant_id uuid,\s*reference text,\s*status text,\s*final_storage_path text,\s*created_at timestamptz\s*\)/i,
+  );
+  assert.doesNotMatch(contractsRpcMigration, /content_snapshot|data_snapshot|template_snapshot|stamp_snapshot/i);
+});
+
+test("les autres parcours contrats restent sur leurs RPC après fermeture du SELECT direct", () => {
+  assert.doesNotMatch(contractsServer, /\.from\(["']lease_contracts["']\)/);
+  for (const rpc of [
+    "get_lease_contracts",
+    "get_lease_contract",
+    "list_my_tenant_portal_contracts",
+    "get_my_tenant_portal_contract",
+    "get_lease_contract_signatures",
+    "finalize_lease_contract",
+  ]) {
+    assert.match(contractsServer, new RegExp(`\\.rpc\\("${rpc}"`));
+  }
+});
+
+test("aucun module applicatif ne réintroduit un accès Supabase direct à lease_contracts", () => {
+  assert.doesNotMatch(applicationSource, /\.from\(\s*["']lease_contracts["']\s*\)/);
 });
 
 // ---------------------------------------------------------------------------
