@@ -6,6 +6,16 @@
 // =============================================================================
 
 import { isPlanSlug, type PlanSlug } from "../entitlements/model.ts";
+import { isBillingCycle, type BillingCycle } from "../billing/model.ts";
+import {
+  BILLING_COUNTRIES,
+  SITE_APP_LOCALES,
+  SITE_APP_SOURCES,
+  type BillingCountry,
+  type SiteAppIntent,
+  type SiteAppLocale,
+  type SiteAppSource,
+} from "./plan-intent.ts";
 
 export const ONBOARDING_STEPS = [
   "plan_intent",
@@ -58,6 +68,11 @@ export type OnboardingState = {
   exists: boolean;
   step: OnboardingStep;
   planIntent: PlanSlug | null;
+  billingCycleIntent: BillingCycle | null;
+  billingCountryIntent: BillingCountry | null;
+  localeIntent: SiteAppLocale | null;
+  sourceIntent: SiteAppSource | null;
+  intentStatus: "active" | "prepared";
   rentCollectionMethod: RentCollectionMethod | null;
   organizationId: string | null;
   firstPropertyId: string | null;
@@ -70,6 +85,11 @@ export function emptyOnboardingState(): OnboardingState {
     exists: false,
     step: "plan_intent",
     planIntent: null,
+    billingCycleIntent: null,
+    billingCountryIntent: null,
+    localeIntent: null,
+    sourceIntent: null,
+    intentStatus: "active",
     rentCollectionMethod: null,
     organizationId: null,
     firstPropertyId: null,
@@ -89,6 +109,20 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
     exists: r.exists === true,
     step,
     planIntent,
+    billingCycleIntent: isBillingCycle(r.billing_cycle_intent) ? r.billing_cycle_intent : null,
+    billingCountryIntent: typeof r.billing_country_intent === "string"
+      && (BILLING_COUNTRIES as readonly string[]).includes(r.billing_country_intent)
+      ? r.billing_country_intent as BillingCountry
+      : null,
+    localeIntent: typeof r.locale_intent === "string"
+      && (SITE_APP_LOCALES as readonly string[]).includes(r.locale_intent)
+      ? r.locale_intent as SiteAppLocale
+      : null,
+    sourceIntent: typeof r.source_intent === "string"
+      && (SITE_APP_SOURCES as readonly string[]).includes(r.source_intent)
+      ? r.source_intent as SiteAppSource
+      : null,
+    intentStatus: r.intent_status === "prepared" ? "prepared" : "active",
     rentCollectionMethod: isRentCollectionMethod(r.rent_collection_method)
       ? r.rent_collection_method
       : null,
@@ -96,6 +130,17 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
     firstPropertyId: typeof r.first_property_id === "string" ? r.first_property_id : null,
     firstUnitId: typeof r.first_unit_id === "string" ? r.first_unit_id : null,
     completedAt: typeof r.completed_at === "string" ? r.completed_at : null,
+  };
+}
+
+export function siteAppIntentFromOnboardingState(state: OnboardingState): SiteAppIntent | null {
+  if (!state.planIntent) return null;
+  return {
+    plan: state.planIntent,
+    billingCycle: state.billingCycleIntent,
+    billingCountry: state.billingCountryIntent,
+    locale: state.localeIntent ?? "fr",
+    source: state.sourceIntent,
   };
 }
 

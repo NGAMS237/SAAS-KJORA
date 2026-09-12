@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPlanSlug } from "@/core/entitlements/model";
 import {
+  BILLING_COUNTRIES,
+  SITE_APP_LOCALES,
+  SITE_APP_SOURCES,
+} from "@/core/onboarding/plan-intent";
+import { isBillingCycle } from "@/core/billing/model";
+import {
   isOnboardingStep,
   isRentCollectionMethod,
   parseOnboardingState,
@@ -51,6 +57,37 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+
+  // A valid plan+cycle replaces the previous intent atomically. Country may be
+  // null only while the explicit in-app choice is pending; invalid countries
+  // are rejected and never erase a resumable intent.
+  if (body.intent_mode === "replace") {
+    const validPlan = typeof body.plan_intent === "string" && isPlanSlug(body.plan_intent);
+    const validCycle = isBillingCycle(body.billing_cycle_intent);
+    const validCountry = body.billing_country_intent == null || (
+      typeof body.billing_country_intent === "string"
+      && (BILLING_COUNTRIES as readonly string[]).includes(body.billing_country_intent)
+    );
+    const validLocale = typeof body.locale_intent === "string"
+      && (SITE_APP_LOCALES as readonly string[]).includes(body.locale_intent);
+    const validSource = body.source_intent == null || (
+      typeof body.source_intent === "string"
+      && (SITE_APP_SOURCES as readonly string[]).includes(body.source_intent)
+    );
+    if (!validPlan || !validCycle || !validCountry || !validLocale || !validSource) {
+      return NextResponse.json({ error: "invalid_site_app_intent" }, { status: 400 });
+    }
+
+    const { data, error } = await supabase.rpc("replace_site_app_intent", {
+      target_plan: body.plan_intent,
+      target_cycle: body.billing_cycle_intent,
+      target_billing_country: body.billing_country_intent,
+      target_locale: body.locale_intent,
+      target_source: body.source_intent ?? null,
+    });
+    if (error) return NextResponse.json({ error: "onboarding_update_failed" }, { status: 400 });
+    return NextResponse.json({ state: parseOnboardingState(data) });
+  }
 
   // Normalisation défensive : toute valeur non reconnue devient null et est
   // ignorée par le RPC. Aucun paramètre client n'est propagé tel quel.

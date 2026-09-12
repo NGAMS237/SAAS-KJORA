@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { isBillingCycle } from "@/core/billing/model";
 import { isPlanSlug } from "@/core/entitlements/model";
+import { isBillingCountry } from "@/core/onboarding/plan-intent";
 import {
   requestPlanChange,
   cancelSubscription,
@@ -52,10 +53,11 @@ export async function POST(request: Request) {
   const organizationId = authorization.organizationId;
 
   if (body.action === "change_plan") {
-    if (typeof body.plan !== "string" || !isPlanSlug(body.plan) || !isBillingCycle(body.cycle)) {
+    if (typeof body.plan !== "string" || !isPlanSlug(body.plan) || !isBillingCycle(body.cycle)
+      || !isBillingCountry(body.billing_country)) {
       return NextResponse.json({ error: "invalid_plan" }, { status: 400 });
     }
-    const result = await requestPlanChange(organizationId, body.plan, body.cycle);
+    const result = await requestPlanChange(organizationId, body.plan, body.cycle, body.billing_country);
     if (!result) return NextResponse.json({ error: "plan_change_failed" }, { status: 400 });
     return NextResponse.json({ result });
   }

@@ -30,13 +30,17 @@ export function hasPkceVerifierCookie(cookieNames: string[]) {
   return cookieNames.some((name) => name.includes("code-verifier"));
 }
 
-export function getAuthCallbackMessage(reason?: string) {
+export function getAuthCallbackMessage(reason?: string, locale: "fr" | "en" = "fr") {
   if (reason === "invalid-or-expired-link") {
-    return "Ce lien est invalide, expiré ou a déjà été utilisé. Demandez un nouvel email d’accès.";
+    return locale === "en"
+      ? "This link is invalid, expired, or has already been used. Request a new access email."
+      : "Ce lien est invalide, expiré ou a déjà été utilisé. Demandez un nouvel email d’accès.";
   }
 
   if (reason === "session-exchange-failed") {
-    return "Le lien a été vérifié, mais Kjora n’a pas pu créer la session. Ouvrez le nouvel email dans le même navigateur et sur le même appareil, ou utilisez le code reçu.";
+    return locale === "en"
+      ? "The link was verified, but Kjora could not create the session. Open the new email in the same browser and on the same device, or use the code you received."
+      : "Le lien a été vérifié, mais Kjora n’a pas pu créer la session. Ouvrez le nouvel email dans le même navigateur et sur le même appareil, ou utilisez le code reçu.";
   }
 
   return null;

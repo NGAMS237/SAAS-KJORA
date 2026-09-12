@@ -7,13 +7,16 @@ import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { safeNextPath } from "@/core/auth/safe-next-path";
 import { trackEvent } from "@/core/analytics/events";
 import type { PlanSlug } from "@/core/entitlements/model";
+import type { SiteAppLocale } from "@/core/onboarding/plan-intent";
 
 export function LoginForm({
   nextPath = "/app",
   planRequested = null,
+  locale = "fr",
 }: {
   nextPath?: string;
   planRequested?: PlanSlug | null;
+  locale?: SiteAppLocale;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -22,6 +25,7 @@ export function LoginForm({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const configured = Boolean(getSupabasePublicConfig());
+  const t = (fr: string, en: string) => locale === "en" ? en : fr;
 
   // ALIGN-02 §16 — début du parcours d'authentification
   useEffect(() => {
@@ -46,9 +50,11 @@ export function LoginForm({
       if (error) throw error;
       trackEvent("magic_link_sent", { plan_requested: planRequested });
       setSent(true);
-      setMessage("Email envoyé. Ouvrez le lien dans ce même navigateur et sur cet appareil, ou saisissez le code reçu.");
+      setMessage(locale === "en"
+        ? "Email sent. Open the link in this browser and on this device, or enter the code you received."
+        : "Email envoyé. Ouvrez le lien dans ce même navigateur et sur cet appareil, ou saisissez le code reçu.");
     } catch {
-      setMessage("Impossible d’envoyer l’accès. Vérifiez l’adresse et réessayez.");
+      setMessage(locale === "en" ? "Unable to send access. Check the address and try again." : "Impossible d’envoyer l’accès. Vérifiez l’adresse et réessayez.");
     } finally {
       setBusy(false);
     }
@@ -65,7 +71,7 @@ export function LoginForm({
       router.replace(safeNextPath(nextPath));
       router.refresh();
     } catch {
-      setMessage("Code invalide ou expiré. Demandez un nouvel email d’accès.");
+      setMessage(locale === "en" ? "Invalid or expired code. Request a new access email." : "Code invalide ou expiré. Demandez un nouvel email d’accès.");
     } finally {
       setBusy(false);
     }
@@ -81,39 +87,39 @@ export function LoginForm({
             disabled={!configured || busy}
             inputMode="email"
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="vous@exemple.com"
+            placeholder={locale === "en" ? "you@example.com" : "vous@exemple.com"}
             required
             type="email"
             value={email}
           />
         </label>
         <button className="button button--primary" disabled={!configured || busy} type="submit">
-          {busy ? "Envoi…" : sent ? "Renvoyer l’email" : "Recevoir mon accès"}
+          {busy ? t("Envoi…", "Sending…") : sent ? t("Renvoyer l’email", "Send email again") : t("Recevoir mon accès", "Send my access link")}
         </button>
       </form>
 
       {sent ? (
         <form className="form-stack auth-code-form" onSubmit={verifyCode}>
-          <div className="form-separator"><span>Alternative</span></div>
+          <div className="form-separator"><span>{t("Alternative", "Alternative")}</span></div>
           <label className="field">
-            <span>Code reçu par email</span>
+            <span>{t("Code reçu par email", "Code received by email")}</span>
             <input
               autoComplete="one-time-code"
               inputMode="numeric"
               onChange={(event) => setToken(event.target.value)}
-              placeholder="Code à usage unique"
+              placeholder={t("Code à usage unique", "One-time code")}
               required
               value={token}
             />
           </label>
           <button className="button button--secondary" disabled={busy} type="submit">
-            Vérifier le code
+            {t("Vérifier le code", "Verify code")}
           </button>
         </form>
       ) : null}
 
       {!configured ? (
-        <p className="form-feedback form-feedback--error">La connexion n’est pas encore configurée sur cet environnement.</p>
+        <p className="form-feedback form-feedback--error">{t("La connexion n’est pas encore configurée sur cet environnement.", "Sign-in is not configured in this environment yet.")}</p>
       ) : message ? <p className="form-feedback" role="status">{message}</p> : null}
     </div>
   );

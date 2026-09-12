@@ -1,0 +1,53 @@
+name: SITE-APP-FLOW ephemeral SQL
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/site-app-flow-01
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-supabase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Hold back the migration under test
+        run: mv supabase/migrations/20260911210927_site_app_flow_canada_intent.sql "$RUNNER_TEMP/site-app-flow.sql"
+
+      - name: Start a clean local Supabase stack
+        run: npx --yes supabase@2.117.0 start
+
+      - name: Create pre-migration fixtures
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/ci/site-app-flow-pre-migration.sql
+
+      - name: Apply only the Canada intent migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/site-app-flow.sql"
+
+      - name: Run Canada SQL and access-control tests
+        run: npx --yes supabase@2.117.0 test db supabase/tests/database/site_app_flow_canada_intent.test.sql
+
+      - name: Verify concurrent subscription preparation
+        run: bash .github/ci/site-app-flow-concurrency.sh "$DATABASE_URL"
+
+      - name: Remove pre-migration fixtures
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/ci/site-app-flow-cleanup.sql
+
+      - name: Run the existing database regression suite
+        shell: bash
+        run: |
+          mapfile -t tests < <(find supabase/tests/database -name '*.test.sql' ! -name 'site_app_flow_canada_intent.test.sql' -print | sort)
+          for test_file in "${tests[@]}"; do
+            npx --yes supabase@2.117.0 test db "$test_file"
+          done
+
+      - name: Stop the isolated stack
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup
