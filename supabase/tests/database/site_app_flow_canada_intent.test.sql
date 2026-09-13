@@ -29,12 +29,12 @@ select ok(not has_function_privilege('anon',
 select ok(not has_function_privilege('anon',
   'public.prepare_plan_change_for_market(uuid,text,text,text)', 'execute'),
   'anon cannot prepare billing');
-select is((select proconfig::text from pg_proc where oid=
+select ok((select 'search_path=""' = any(proconfig) from pg_proc where oid=
   'public.replace_site_app_intent(text,text,text,text,text)'::regprocedure),
-  '{search_path=""}', 'intent RPC uses an empty search_path');
-select is((select proconfig::text from pg_proc where oid=
+  'intent RPC uses an empty search_path');
+select ok((select 'search_path=""' = any(proconfig) from pg_proc where oid=
   'public.prepare_plan_change_for_market(uuid,text,text,text)'::regprocedure),
-  '{search_path=""}', 'billing RPC uses an empty search_path');
+  'billing RPC uses an empty search_path');
 
 set local role authenticated;
 set local request.jwt.claims to

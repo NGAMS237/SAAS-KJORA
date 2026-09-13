@@ -120,9 +120,15 @@ inchangée. Il s’agit uniquement d’une réparation de rejouabilité historiq
 sans modification du projet Supabase distant. Le test pgTAP ajouté vérifie
 qu’une reconstruction laisse exactement une politique avec le refus et la RLS.
 
-La CI initiale 34756668352 reste FAIL. Les résultats de la nouvelle exécution
-seront consignés après le push de la réparation; ni les fixtures ni la migration
-Canada ni pgTAP ni la concurrence ne sont déclarés exécutés à ce stade.
+La CI initiale 34756668352 reste FAIL avant la reconstruction.
+La première nouvelle CI [34757570666](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34757570666)
+sur `9ffb7d2829dbd5520452f1b497aa44d75f77e893` a validé la reconstruction
+complète, les fixtures et l'application de la migration Canada. Son test pgTAP
+Canada a échoué à 2/31, uniquement sur les assertions 9 et 10 qui comparaient
+la sérialisation textuelle PostgreSQL de `proconfig` plutôt que sa valeur
+`search_path=""`. Les assertions sont corrigées pour inspecter directement
+les éléments du tableau de configuration, sans changer les fonctions. Le test
+de concurrence et la suite pgTAP historique n'ont pas encore été lancés.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
@@ -207,11 +213,11 @@ HISTORICAL POLICY DEFINITIONS : IDENTIQUES
 
 MIGRATION REPLAYABILITY FIX : PASS — garde PostgreSQL et comparaison statique; CI en attente
 
-EPHEMERAL FULL REBUILD : FAIL — run initial 34756668352; nouvelle CI en attente
+EPHEMERAL FULL REBUILD : PASS — run 34757570666, toutes les migrations historiques
 
-CANADA MIGRATION IN CI : NON EXÉCUTÉ
+CANADA MIGRATION IN CI : PASS — run 34757570666 après fixtures
 
-PGTAP : NON EXÉCUTÉ
+PGTAP : FAIL — Canada 29/31; suite historique NON EXÉCUTÉE; assertion corrigée, nouvelle CI en attente
 
 CONCURRENCY TEST : NON EXÉCUTÉ
 
