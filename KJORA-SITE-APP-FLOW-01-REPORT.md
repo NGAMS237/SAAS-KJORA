@@ -93,10 +93,42 @@ fixtures pré-migration, applique uniquement la migration Canada, puis vérifie 
 - présence et sécurité de la RPC EXPORT-01;
 - suite pgTAP historique complète.
 
-Résultat distant de cette CI : **NON EXÉCUTÉ AU MOMENT DE CETTE RÉVISION**.
-Les deux documents de contexte sont conservés tels qu’au SHA de base dans le
-commit du lot; seuls les 28 autres fichiers sont candidats au push.
+Résultat distant de cette CI : **FAIL** — [run 34756668352](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34756668352),
+sur le commit `89257789871b9f0363312ed4918e7242a3def367`. Le démarrage de la
+pile locale a appliqué les premières migrations, puis s’est arrêté sur
+`20260826200000_lot_6a_domain_events_deny_policy.sql` avec SQLSTATE `42710` :
+la politique `domain events are internal only` existe déjà, car la migration
+historique `20260826190000_lot_6a_properties_units.sql` la crée aussi. Les
+fixtures, la migration Canada, les tests pgTAP et le test de concurrence
+n’ont pas été exécutés. Les erreurs temporaires de quota d’images Docker
+observées au début ont été surmontées; elles ne sont pas la cause finale.
+Les deux documents de contexte sont inchangés par rapport au SHA de base;
+seuls les 28 autres fichiers ont été poussés.
 Le projet KJORA n’est pas utilisé par cette CI.
+
+## Réparation ciblée 01.3.1 — politique historique Lot 6A
+
+Les définitions dans `20260826190000_lot_6a_properties_units.sql` et
+`20260826200000_lot_6a_domain_events_deny_policy.sql` sont identiques :
+table `private.domain_events`, politique permissive `FOR SELECT TO authenticated`,
+`USING (false)`, sans `WITH CHECK` (non applicable au SELECT). Elles interdisent
+la lecture directe des événements internes, en défense supplémentaire du schéma
+privé non exposé et de l’absence de grant de table. La seconde migration ajoute
+seulement un commentaire descriptif. Sa création est désormais gardée par une
+vérification explicite dans `pg_catalog.pg_policy`; la première création reste
+inchangée. Il s’agit uniquement d’une réparation de rejouabilité historique,
+sans modification du projet Supabase distant. Le test pgTAP ajouté vérifie
+qu’une reconstruction laisse exactement une politique avec le refus et la RLS.
+
+La CI initiale 34756668352 reste FAIL. Les résultats de la nouvelle exécution
+seront consignés après le push de la réparation; ni les fixtures ni la migration
+Canada ni pgTAP ni la concurrence ne sont déclarés exécutés à ce stade.
+Validation locale de la réparation : comparaison statique des deux instructions
+de création et de la garde PASS (une création initiale, seconde conditionnelle);
+TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
+PASS; build Webpack PASS, 69/69 pages statiques générées; `git diff --check`
+PASS; scan anti-secrets du lot PASS. Le nouveau test pgTAP doit encore être
+exécuté dans la CI SQL éphémère.
 
 ## Validations locales
 
@@ -155,10 +187,11 @@ Le projet KJORA n’est pas utilisé par cette CI.
 
 - Premier commit local `306a20154f75a68fc4965b032b94677cca2b7fc5`
   remplacé par un amendement excluant les deux documents de contexte.
-- Le SHA exact du commit corrigé et le résultat du push sont communiqués
-  séparément après l’opération Git. Le jeton OAuth initial n’avait pas le
-  scope `workflow` exigé pour ajouter la CI; aucune CI n’est déclarée PASS
-  avant une exécution effectivement réussie.
+- Commit corrigé et poussé sans force :
+  `89257789871b9f0363312ed4918e7242a3def367` sur
+  `origin/codex/site-app-flow-01`. Aucun merge vers `main`.
+- CI SQL éphémère : FAIL avant les fixtures et avant la migration Canada;
+  aucune CI n’est déclarée PASS.
 - Le contrôle du commit local confirme qu'aucun fichier AppData, snapshot,
   script de restauration, rollback ou `RESTORE.md` n'y figure.
 - Migration KJORA : non exécutée.
@@ -170,15 +203,29 @@ Le projet KJORA n’est pas utilisé par cette CI.
 
 ## Gates
 
+HISTORICAL POLICY DEFINITIONS : IDENTIQUES
+
+MIGRATION REPLAYABILITY FIX : PASS — garde PostgreSQL et comparaison statique; CI en attente
+
+EPHEMERAL FULL REBUILD : FAIL — run initial 34756668352; nouvelle CI en attente
+
+CANADA MIGRATION IN CI : NON EXÉCUTÉ
+
+PGTAP : NON EXÉCUTÉ
+
+CONCURRENCY TEST : NON EXÉCUTÉ
+
+READY FOR KJORA DEV MIGRATION : NON
+
 BACKUP : PASS
 
-EPHEMERAL SQL TESTS : NON EXÉCUTÉ
+EPHEMERAL SQL TESTS : FAIL — pile bloquée par migration historique; assertions non exécutées
 
 LOCAL VALIDATIONS : PASS
 
-COMMIT : SHA communiqué après amendement
+COMMIT : 89257789871b9f0363312ed4918e7242a3def367
 
-PUSH : EN ATTENTE — scope GitHub `workflow` à vérifier
+PUSH : PASS — branche dédiée, sans force
 
 KJORA SUPABASE MIGRATION : NON EXÉCUTÉ
 
