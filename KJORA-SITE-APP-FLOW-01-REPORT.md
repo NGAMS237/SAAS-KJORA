@@ -144,6 +144,14 @@ Contrôles locaux de ce correctif CI : syntaxe Bash PASS via Git Bash;
 `git diff --check` PASS; scan anti-secrets des seules lignes ajoutées PASS.
 Le DSN `postgres/postgres` du script est une valeur factice locale préexistante,
 pas une connexion au projet KJORA. La sauvegarde DPAPI reste présente hors Git.
+La CI [34838042746](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34838042746)
+sur `af5aca24e05e2c2a2e1499cd55001fd69eed7356` valide reconstruction,
+fixtures, migration Canada, pgTAP Canada 31/31, huit appels concurrents et
+nettoyage des fixtures. Le premier test de la suite historique échoue avant
+assertions car il suppose qu'`auth.users` possède déjà une ligne; la base
+éphémère propre n'en a aucune. Ce test historique crée désormais un utilisateur
+fictif dans sa transaction uniquement si nécessaire; son `ROLLBACK` final
+retire cette donnée. Aucune donnée métier réelle ni migration n'est modifiée.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
@@ -232,9 +240,9 @@ EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
 
 CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
 
-PGTAP : PASS Canada 31/31; suite historique NON EXÉCUTÉE
+PGTAP : PASS Canada 31/31; suite historique FAIL au premier test (fixture absente), correctif en attente de CI
 
-CONCURRENCY TEST : FAIL — fixture bloquée avant requêtes parallèles; correctif CI en attente
+CONCURRENCY TEST : PASS — run 34838042746, huit appels concurrents
 
 READY FOR KJORA DEV MIGRATION : NON
 

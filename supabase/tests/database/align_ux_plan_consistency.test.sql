@@ -29,7 +29,11 @@ declare
 begin
   select id into test_user_id from auth.users limit 1;
   if test_user_id is null then
-    raise exception 'FIXTURE_ERROR: no auth.users row available to own the test organization';
+    -- Keep this rolled-back regression test independent of seeded accounts.
+    test_user_id := gen_random_uuid();
+    insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at)
+      values (test_user_id, 'authenticated', 'authenticated',
+        'plan-consistency-fixture@kjora.test', now(), now(), now());
   end if;
 
   insert into public.organizations (id, created_by) values (test_org_id, test_user_id);
