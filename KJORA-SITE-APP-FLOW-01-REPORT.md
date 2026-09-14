@@ -161,6 +161,13 @@ politique historique unique 6/6, import 57/57, onboarding 35/35, Billing
 unités sous Découverte, qui en autorise trois. Son Organization fictive reçoit
 Avancé (quota 30) dans la transaction de test, afin que les assertions Ledger
 s'exécutent sans modifier le contrôle de quotas; le `ROLLBACK` retire ce plan.
+La CI [34839202513](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34839202513)
+sur `39976cc6ba0db1cf8cabffa004541ce4d8243702` confirme les mêmes gates
+et le test Ledger 49/49. Le test des entitlements passe 17 assertions puis sa
+fixture tente de créer plusieurs `whole_house` pour une maison, déjà dotée
+automatiquement de son unité unique. La fixture utilise désormais un immeuble
+et des appartements; cela conserve l'objet du test (quotas et entitlements),
+sans changer la règle métier d'unicité des maisons entières.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
@@ -249,7 +256,7 @@ EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
 
 CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
 
-PGTAP : PASS Canada 31/31 et premiers tests historiques; suite complète FAIL sur fixture Ledger, correctif en attente de CI
+PGTAP : PASS Canada 31/31 et tests historiques jusqu'au Ledger 49/49; suite complète FAIL sur fixture entitlements, correctif en attente de CI
 
 CONCURRENCY TEST : PASS — run 34838042746, huit appels concurrents
 

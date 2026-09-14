@@ -39,7 +39,7 @@ insert into public.properties (id, organization_id, name, locality, type, status
   values ('e3000000-0000-4000-8000-000000000001', 'e2000000-0000-4000-8000-000000000001', 'OrgA-P1', 'Douala', 'building', 'active', 'e1000000-0000-4000-8000-000000000001');
 
 insert into public.properties (id, organization_id, name, locality, type, status, created_by)
-  values ('e3000000-0000-4000-8000-000000000002', 'e2000000-0000-4000-8000-000000000002', 'OrgB-P1', 'Douala', 'house', 'active', 'e1000000-0000-4000-8000-000000000002');
+  values ('e3000000-0000-4000-8000-000000000002', 'e2000000-0000-4000-8000-000000000002', 'OrgB-P1', 'Douala', 'building', 'active', 'e1000000-0000-4000-8000-000000000002');
 
 -- ---------------------------------------------------------------------------
 -- 1. Auto-trigger plan assignment
@@ -115,16 +115,16 @@ select throws_like(
 -- Insert units one by one (multi-row INSERT fails atomically if any row violates quota)
 -- U1 active (1/3)
 insert into public.units (id, organization_id, property_id, label, type, status, created_by)
-  values ('e4000000-0000-4000-8000-000000000001', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U1', 'whole_house', 'active', 'e1000000-0000-4000-8000-000000000002');
+  values ('e4000000-0000-4000-8000-000000000001', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U1', 'apartment', 'active', 'e1000000-0000-4000-8000-000000000002');
 -- U2 archived (archived, does not count) — archived_at required by constraint
 insert into public.units (id, organization_id, property_id, label, type, status, archived_at, created_by)
-  values ('e4000000-0000-4000-8000-000000000002', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U2', 'whole_house', 'archived', now(), 'e1000000-0000-4000-8000-000000000002');
+  values ('e4000000-0000-4000-8000-000000000002', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U2', 'apartment', 'archived', now(), 'e1000000-0000-4000-8000-000000000002');
 -- U3 active (2/3)
 insert into public.units (id, organization_id, property_id, label, type, status, created_by)
-  values ('e4000000-0000-4000-8000-000000000003', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U3', 'whole_house', 'active', 'e1000000-0000-4000-8000-000000000002');
+  values ('e4000000-0000-4000-8000-000000000003', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U3', 'apartment', 'active', 'e1000000-0000-4000-8000-000000000002');
 -- U4 active (3/3)
 insert into public.units (id, organization_id, property_id, label, type, status, created_by)
-  values ('e4000000-0000-4000-8000-000000000004', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U4', 'whole_house', 'active', 'e1000000-0000-4000-8000-000000000002');
+  values ('e4000000-0000-4000-8000-000000000004', 'e2000000-0000-4000-8000-000000000002', 'e3000000-0000-4000-8000-000000000002', 'U4', 'apartment', 'active', 'e1000000-0000-4000-8000-000000000002');
 
 -- U1 + U3 + U4 = 3 active, U2 archived
 select is(
@@ -136,7 +136,7 @@ select is(
 select throws_like(
   $$insert into public.units (id, organization_id, property_id, label, type, status, created_by)
       values ('e4000000-0000-4000-8000-000000000005', 'e2000000-0000-4000-8000-000000000002',
-              'e3000000-0000-4000-8000-000000000002', 'U5', 'whole_house', 'active', 'e1000000-0000-4000-8000-000000000002')$$,
+              'e3000000-0000-4000-8000-000000000002', 'U5', 'apartment', 'active', 'e1000000-0000-4000-8000-000000000002')$$,
   '%PLAN_ACTIVE_UNIT_LIMIT_REACHED%',
   '19. decouverte refuse la 4e Unit active'
 );
@@ -147,7 +147,7 @@ update public.units set status = 'archived', archived_at = now()
 
 insert into public.units (id, organization_id, property_id, label, type, status, created_by)
   values ('e4000000-0000-4000-8000-000000000005', 'e2000000-0000-4000-8000-000000000002',
-          'e3000000-0000-4000-8000-000000000002', 'U5', 'whole_house', 'active', 'e1000000-0000-4000-8000-000000000002');
+          'e3000000-0000-4000-8000-000000000002', 'U5', 'apartment', 'active', 'e1000000-0000-4000-8000-000000000002');
 
 select ok(
   exists(select 1 from public.units where id = 'e4000000-0000-4000-8000-000000000005' and status = 'active'),
