@@ -183,12 +183,26 @@ par un quota avant sa vérification RLS. Les deux Organizations de cette fixture
 RLS reçoivent `sur_mesure` dans leur transaction, tandis que les quotas gardent
 leur test dédié entitlements 42/42 PASS. Aucune politique ni migration n'est
 assouplie.
+La CI [34840751922](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34840751922)
+sur `3e93c1c1ad58b36b5237db9cbbdff745a67eeda5` valide la reconstruction
+historique complète, les fixtures pré-migration, l'application isolée Canada,
+pgTAP Canada 31/31, la concurrence et le nettoyage. Le test de politique
+historique confirme exactement une politique 6/6. La suite pgTAP existante
+avance jusqu'à `rls_tenants_leases.test.sql` mais échoue à 2/51 sur deux
+assertions de confidentialité : des champs privés de contact et d'identité
+restent lisibles directement par un rôle client, contrairement au contrat du
+test. Une migration historique ultérieure accorde un privilège SELECT global
+après les grants limités aux colonnes non sensibles de Lot 6B. Ce n'est pas
+une erreur de fixture :
+réduire ce grant exige un audit des lecteurs directs et une correction de
+sécurité distincte. Aucun test n'est affaibli pour masquer cet échec. La suite
+complète reste FAIL et la migration KJORA distante est interdite à ce gate.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
 PASS; build Webpack PASS, 69/69 pages statiques générées; `git diff --check`
-PASS; scan anti-secrets du lot PASS. Le nouveau test pgTAP doit encore être
-exécuté dans la CI SQL éphémère.
+PASS; scan anti-secrets du lot PASS. Le nouveau test pgTAP a été exécuté et
+passe 6/6 dans la CI éphémère.
 
 ## Validations locales
 
@@ -250,8 +264,9 @@ exécuté dans la CI SQL éphémère.
 - Commit corrigé et poussé sans force :
   `89257789871b9f0363312ed4918e7242a3def367` sur
   `origin/codex/site-app-flow-01`. Aucun merge vers `main`.
-- CI SQL éphémère : FAIL avant les fixtures et avant la migration Canada;
-  aucune CI n’est déclarée PASS.
+- La première CI SQL éphémère échouait avant les fixtures; les dernières CI
+  franchissent reconstruction, fixtures et migration Canada, mais la suite
+  pgTAP complète reste FAIL sur l'accès direct à `public.tenants`.
 - Le contrôle du commit local confirme qu'aucun fichier AppData, snapshot,
   script de restauration, rollback ou `RESTORE.md` n'y figure.
 - Migration KJORA : non exécutée.
@@ -271,7 +286,7 @@ EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
 
 CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
 
-PGTAP : PASS Canada 31/31 et tests historiques jusqu'à RBAC 47/47; suite complète FAIL sur fixture Properties/Units, correctif en attente de CI
+PGTAP : FAIL — Canada 31/31 PASS, politique historique 6/6 PASS; suite complète interrompue sur confidentialité Tenants 2/51 FAIL
 
 CONCURRENCY TEST : PASS — run 34838042746, huit appels concurrents
 
@@ -279,11 +294,11 @@ READY FOR KJORA DEV MIGRATION : NON
 
 BACKUP : PASS
 
-EPHEMERAL SQL TESTS : FAIL — pile bloquée par migration historique; assertions non exécutées
+EPHEMERAL SQL TESTS : FAIL — accès direct aux colonnes privées Tenants; réparation historique PASS
 
 LOCAL VALIDATIONS : PASS
 
-COMMIT : 89257789871b9f0363312ed4918e7242a3def367
+COMMIT : 3e93c1c1ad58b36b5237db9cbbdff745a67eeda5 (dernier commit poussé)
 
 PUSH : PASS — branche dédiée, sans force
 
