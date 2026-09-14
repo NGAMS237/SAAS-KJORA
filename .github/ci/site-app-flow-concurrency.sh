@@ -6,8 +6,13 @@ org_id="caf40000-0000-4000-8000-0000000000ca"
 user_id="caf30000-0000-4000-8000-000000000001"
 cleanup() {
   psql "$db_url" -v ON_ERROR_STOP=1 -q <<SQL
+begin;
+-- Fixture-only teardown: the final Owner is normally protected.
+alter table public.memberships disable trigger memberships_protect_last_owner;
 delete from public.organizations where id = '$org_id';
+alter table public.memberships enable trigger memberships_protect_last_owner;
 delete from auth.users where id = '$user_id';
+commit;
 SQL
 }
 trap cleanup EXIT
@@ -20,8 +25,6 @@ insert into public.organization_profiles (organization_id,name,country_code,curr
 values ('$org_id','Concurrency flow','CM','XAF');
 insert into public.memberships (organization_id,user_id,role)
 values ('$org_id','$user_id','organization_owner');
-insert into public.organization_plans (organization_id,plan)
-values ('$org_id','decouverte');
 SQL
 
 pids=()

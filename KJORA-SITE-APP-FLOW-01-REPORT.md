@@ -129,6 +129,21 @@ la sérialisation textuelle PostgreSQL de `proconfig` plutôt que sa valeur
 `search_path=""`. Les assertions sont corrigées pour inspecter directement
 les éléments du tableau de configuration, sans changer les fonctions. Le test
 de concurrence et la suite pgTAP historique n'ont pas encore été lancés.
+La CI suivante [34757838934](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34757838934)
+sur `7406ccc03c2550aa81c7462dbc78c54063629765` confirme à nouveau
+reconstruction, fixtures et migration Canada PASS, puis **31/31 pgTAP Canada
+PASS**. Elle échoue au démarrage du script de concurrence : la fixture réinsère
+`organization_plans`, déjà créé par le trigger de création d'Organization
+(`organization_plans_pkey`), puis le teardown tente de supprimer le dernier
+Owner (`last_owner_protected`). Le test n'a donc pas atteint ses huit requêtes
+concurrentes. La fixture ne réinsère plus le forfait; les deux teardowns CI
+désactivent ce trigger précis seulement durant une transaction locale de
+suppression des données de test, puis le réactivent avant `COMMIT`. La protection
+reste inchangée dans les migrations et dans toute base réelle.
+Contrôles locaux de ce correctif CI : syntaxe Bash PASS via Git Bash;
+`git diff --check` PASS; scan anti-secrets des seules lignes ajoutées PASS.
+Le DSN `postgres/postgres` du script est une valeur factice locale préexistante,
+pas une connexion au projet KJORA. La sauvegarde DPAPI reste présente hors Git.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
@@ -211,15 +226,15 @@ exécuté dans la CI SQL éphémère.
 
 HISTORICAL POLICY DEFINITIONS : IDENTIQUES
 
-MIGRATION REPLAYABILITY FIX : PASS — garde PostgreSQL et comparaison statique; CI en attente
+MIGRATION REPLAYABILITY FIX : PASS — garde PostgreSQL et CI de reconstruction
 
-EPHEMERAL FULL REBUILD : PASS — run 34757570666, toutes les migrations historiques
+EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
 
-CANADA MIGRATION IN CI : PASS — run 34757570666 après fixtures
+CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
 
-PGTAP : FAIL — Canada 29/31; suite historique NON EXÉCUTÉE; assertion corrigée, nouvelle CI en attente
+PGTAP : PASS Canada 31/31; suite historique NON EXÉCUTÉE
 
-CONCURRENCY TEST : NON EXÉCUTÉ
+CONCURRENCY TEST : FAIL — fixture bloquée avant requêtes parallèles; correctif CI en attente
 
 READY FOR KJORA DEV MIGRATION : NON
 
