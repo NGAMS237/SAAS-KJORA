@@ -23,6 +23,11 @@ insert into public.memberships (organization_id, user_id, role) values
   ('27000000-0000-4000-8000-00000000000a', '17000000-0000-4000-8000-000000000004', 'caretaker'),
   ('27000000-0000-4000-8000-00000000000a', '17000000-0000-4000-8000-000000000005', 'viewer');
 
+-- Ledger fixture needs six units; Decouverte's three-unit quota is unrelated
+-- to this regression test. The transaction rolls this entitlement back.
+update public.organization_plans set plan = 'avance'
+ where organization_id = '27000000-0000-4000-8000-00000000000a';
+
 insert into public.properties (id, organization_id, name, locality, type, created_by) values
   ('37000000-0000-4000-8000-00000000000a', '27000000-0000-4000-8000-00000000000a', 'Immeuble A 6C1', 'Douala', 'building', '17000000-0000-4000-8000-000000000001'),
   ('37000000-0000-4000-8000-00000000000b', '27000000-0000-4000-8000-00000000000b', 'Immeuble B 6C1', 'Yaoundé', 'building', '17000000-0000-4000-8000-000000000002');

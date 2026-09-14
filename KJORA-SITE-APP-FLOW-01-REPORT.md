@@ -152,6 +152,15 @@ assertions car il suppose qu'`auth.users` possède déjà une ligne; la base
 éphémère propre n'en a aucune. Ce test historique crée désormais un utilisateur
 fictif dans sa transaction uniquement si nécessaire; son `ROLLBACK` final
 retire cette donnée. Aucune donnée métier réelle ni migration n'est modifiée.
+La CI [34838559285](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34838559285)
+sur `fd63a28f64b12567dfa7180ccf457c96686b9444` confirme les gates
+précédents et exécute les premiers tests historiques : cohérence du plan 6/6,
+politique historique unique 6/6, import 57/57, onboarding 35/35, Billing
+39/39, webhook 21/21, contrats 51/51, tableau de bord 35/35 et documents
+68/68. Le test des échéances s'arrête avant assertions : sa fixture crée six
+unités sous Découverte, qui en autorise trois. Son Organization fictive reçoit
+Avancé (quota 30) dans la transaction de test, afin que les assertions Ledger
+s'exécutent sans modifier le contrôle de quotas; le `ROLLBACK` retire ce plan.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
@@ -240,7 +249,7 @@ EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
 
 CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
 
-PGTAP : PASS Canada 31/31; suite historique FAIL au premier test (fixture absente), correctif en attente de CI
+PGTAP : PASS Canada 31/31 et premiers tests historiques; suite complète FAIL sur fixture Ledger, correctif en attente de CI
 
 CONCURRENCY TEST : PASS — run 34838042746, huit appels concurrents
 
