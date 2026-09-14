@@ -32,6 +32,11 @@ insert into public.memberships (id, organization_id, user_id, role) values
   ('31000000-0000-4000-8000-000000000007', '21000000-0000-4000-8000-00000000000a', '11000000-0000-4000-8000-000000000007', 'viewer'),
   ('31000000-0000-4000-8000-000000000008', '21000000-0000-4000-8000-00000000000b', '11000000-0000-4000-8000-000000000008', 'manager');
 
+-- This RBAC fixture exercises several collaborators and invitations, not
+-- subscription limits. The test transaction rolls this plan back.
+update public.organization_plans set plan = 'sur_mesure'
+ where organization_id = '21000000-0000-4000-8000-00000000000a';
+
 create temp table test_invite (invitation_id uuid, invitation_token text, expires_at timestamptz);
 create temp table test_expired (invitation_id uuid, invitation_token text, expires_at timestamptz);
 create temp table test_revoked (invitation_id uuid, invitation_token text, expires_at timestamptz);
