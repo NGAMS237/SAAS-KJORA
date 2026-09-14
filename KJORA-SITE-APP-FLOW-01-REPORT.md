@@ -174,6 +174,15 @@ entitlements 42/42. Le test RBAC s'arrête à 15/47 : sa fixture contient déjà
 cinq collaborateurs et crée des invitations sous Découverte (quota zéro).
 L'Organization fictive RBAC reçoit `sur_mesure` dans la transaction du test,
 sans changement aux règles d'accès ni aux limites de forfait réelles.
+La CI [34840215606](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34840215606)
+sur `06fcca85db612a2ec1e428924215128a7f6bafbb` valide RBAC 47/47 et
+atteint le test historique Properties/Units. Celui-ci échoue 19/54 à cause
+d'un premier refus de quota Découverte sur la seconde Property, puis de
+conséquences en cascade; le contrôle cross-tenant est lui aussi intercepté
+par un quota avant sa vérification RLS. Les deux Organizations de cette fixture
+RLS reçoivent `sur_mesure` dans leur transaction, tandis que les quotas gardent
+leur test dédié entitlements 42/42 PASS. Aucune politique ni migration n'est
+assouplie.
 Validation locale de la réparation : comparaison statique des deux instructions
 de création et de la garde PASS (une création initiale, seconde conditionnelle);
 TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
@@ -262,7 +271,7 @@ EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
 
 CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
 
-PGTAP : PASS Canada 31/31 et tests historiques jusqu'aux entitlements 42/42; suite complète FAIL sur fixture RBAC, correctif en attente de CI
+PGTAP : PASS Canada 31/31 et tests historiques jusqu'à RBAC 47/47; suite complète FAIL sur fixture Properties/Units, correctif en attente de CI
 
 CONCURRENCY TEST : PASS — run 34838042746, huit appels concurrents
 
