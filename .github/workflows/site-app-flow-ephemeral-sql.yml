@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - codex/site-app-flow-01
+      - codex/security-tenants-access-01
 
 permissions:
   contents: read
@@ -18,6 +19,17 @@ jobs:
     steps:
       - name: Check out the branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Run application validation
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+          npx next build --webpack
+          git diff --check
 
       - name: Hold back the migration under test
         run: mv supabase/migrations/20260911210927_site_app_flow_canada_intent.sql "$RUNNER_TEMP/site-app-flow.sql"

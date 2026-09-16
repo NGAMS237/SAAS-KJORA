@@ -19,6 +19,7 @@ type DocumentRow = {
   template_version: string; storage_path: string | null; created_by: string | null;
   created_at: string; invalidated_at: string | null; invalidation_reason: string | null;
 };
+type TenantDocumentContactRow = { tenant_id: string; email: string | null };
 
 const DOCUMENT_COLUMNS = "id, organization_id, tenant_id, lease_id, due_id, payment_id, document_type, reference, status, language, issued_on, period_start, period_end, snapshot, template_version, storage_path, created_by, created_at, invalidated_at, invalidation_reason";
 
@@ -66,10 +67,16 @@ export async function getFinancialDocuments(
   // Email actuel du locataire — permet à l'UI de détecter l'absence d'email
   // AVANT même de tenter un envoi (§9), sans dépendre de l'historique de
   // livraison (qui peut être vide ou pointer vers une adresse obsolète).
-  const tenantEmails = await supabase.from("tenants").select("id, email")
-    .eq("organization_id", organizationId).in("id", Array.from(new Set(rows.map((row) => row.tenant_id))));
+  const requestedTenantIds = Array.from(new Set(rows.map((row) => row.tenant_id)));
+  const tenantEmails = await supabase.rpc("list_tenant_document_contacts", {
+    target_organization_id: organizationId,
+    target_tenant_ids: requestedTenantIds,
+  });
   if (tenantEmails.error) throw tenantEmails.error;
-  const emailByTenant = new Map((tenantEmails.data ?? []).map((tenant) => [tenant.id, tenant.email as string | null]));
+  const requestedTenantIdSet = new Set(requestedTenantIds);
+  const emailByTenant = new Map(((tenantEmails.data ?? []) as TenantDocumentContactRow[])
+    .filter((tenant) => requestedTenantIdSet.has(tenant.tenant_id))
+    .map((tenant) => [tenant.tenant_id, tenant.email]));
   const documents = rows.map((row) => summary(row, emailByTenant.get(row.tenant_id) ?? null));
   const deliveries = await supabase.from("message_deliveries")
     .select("document_id, status, recipient_email, attempt_count, sent_at, last_error_code, created_at")
