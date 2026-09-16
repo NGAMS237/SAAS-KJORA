@@ -315,3 +315,109 @@ BROWSER ADMIN FLOW : NON APPLICABLE
 READY FOR USER TESTING : NON
 
 READY FOR PRODUCTION : NON
+
+## Exécution Canada + Preview — 2026-09-16
+
+Cette section est l'état final autoritaire du lot après l'application contrôlée
+sur le projet KJORA `alvheiwlfzuefljcfrtv`. Elle remplace les statuts
+« non exécuté » de la section historique ci-dessus.
+
+### Sauvegarde et application
+
+- Préflight : projet `ACTIVE_HEALTHY`; migration sécurité
+  `20260914120000` présente une fois; migration Canada absente.
+- Snapshot DPAPI frais, chiffré pour le compte Windows courant seulement :
+  `C:\Users\Veraluz\AppData\Local\Temp\kjora-backups\canada-preview-20260916-162219\pre-canada-migration-snapshot.json.dpapi`.
+- Taille : 98 774 octets. SHA-256 :
+  `8DEBD9A4ED3252AB34FB16EAF948E1A8F965E8D2C8D07F518C4E5AEA9749438C`.
+- Test indépendant de déchiffrement et de structure : **PASS**. Aucune donnée
+  déchiffrée n'a été conservée sur disque ni reproduite dans ce rapport.
+- Application : **PASS**, avec `supabase migration up --linked --include-all`
+  dans un répertoire temporaire aligné sur les 39 versions distantes. Le plan
+  préalable montrait uniquement `20260911210927` comme version manquante et la
+  sortie d'application ne contenait que
+  `20260911210927_site_app_flow_canada_intent.sql`. Aucun `db push`, `db reset`
+  ou rejeu historique.
+
+### Postflight SQL distant
+
+- Historique : Canada **1 fois**; sécurité **1 fois**.
+- Données préservées : 9 Organizations, 11 locataires, 11 memberships,
+  9 profils, 9 plans, 1 abonnement et 3 états d'onboarding, identiques au
+  préflight.
+- Devise immobilière : 9/9 profils en XAF; aucune devise immobilière non-XAF.
+- Abonnement existant : `CM/XAF`, conformément au backfill attendu.
+- Tests transactionnels avec rollback : **PASS** pour CA→CAD, CM→XAF,
+  conservation de la devise immobilière, reprise du cycle annuel, remplacement
+  complet de l'intention, absence d'activation payante sur l'Organization de
+  test et refus d'une Organization étrangère.
+- RPC Canada : `SECURITY DEFINER`, `search_path = ''`, exécution retirée à
+  `anon`; contrôle `billing.manage` conservé.
+- Sécurité Tenants : RLS active; aucun SELECT table pour `authenticated` ou
+  `anon`.
+
+### Validations après migration
+
+- TypeScript : **PASS**.
+- ESLint : **PASS**, 0 erreur et 1 avertissement préexistant dans
+  `src/core/analytics/events.ts`.
+- Tests Node : **PASS — 431/431**, 0 échec, 0 ignoré.
+- Build Next.js 16.3.4 Webpack : **PASS**, 69/69 pages statiques générées.
+- `git diff --check` : **PASS**.
+- Advisors Supabase exécutés. Avis historiques restant ouverts : 12
+  `rls_enabled_no_policy` informatifs, 87 avertissements génériques sur les RPC
+  `SECURITY DEFINER` exécutables par les utilisateurs authentifiés, 1 avis Auth
+  sur la protection des mots de passe compromis, 10 clés étrangères sans index
+  couvrant et 66 index encore inutilisés. Aucun nouvel avis bloquant propre à la
+  migration Canada n'a été constaté.
+
+### Preview et navigateur
+
+- Déploiement Vercel Preview `dpl_BEYySqSM3gSzu9qGFa39SmvtPCNN` : **READY**,
+  cible `preview`, jamais Production.
+- URL : `https://saas-kjora-35epvz3oz-kjemostudio.vercel.app`.
+- Redirect URLs Supabase Auth ajoutées exactement pour cette Preview :
+  `/auth/callback` et `/auth/confirm`. Le Site URL principal est resté inchangé.
+- Desktop : **PASS** pour Découverte FR et rendu visuel.
+- Mobile 390×844 : **PASS** pour Essentiel annuel Canada EN et rendu visuel.
+- Parcours EN : les textes ajoutés au parcours commercial sont traduits.
+- URL hostile : **PASS**; `currency=USD`, `price=1` et `role=owner` sont retirés,
+  tandis que `plan=essentiel`, `billing_cycle=annual`, `billing_country=CA`,
+  `locale=en` et `source=site` sont conservés.
+- `/app` et `/app/billing` anonymes : **PASS**, redirection vers `/connexion`
+  avec un `next` interne sûr.
+- Logs Vercel depuis le déploiement : aucune erreur et aucune réponse 500.
+- Logs Supabase, filtre Error 5xx sur les 60 dernières minutes : 0 résultat.
+- Magic Link/OTP et parcours Owner authentifié : **NON EXÉCUTÉS**. Une tentative
+  d'automatisation sûre a été arrêtée avant création de compte parce qu'elle
+  aurait nécessité soit l'extraction d'une clé privilégiée, soit la transmission
+  d'un lien d'authentification à une messagerie tierce non approuvée. Aucun compte
+  jetable n'a été créé et aucun lien d'authentification n'a été exposé.
+- Reprise navigateur authentifiée, accès interne Owner et isolation
+  inter-Organization via l'UI : **NON EXÉCUTÉS**; les garanties SQL
+  transactionnelles et les 431 tests applicatifs sont PASS.
+
+### Verdict final de cette exécution
+
+CANADA MIGRATION : PASS
+
+SECURITY MIGRATION PRESERVED : PASS
+
+DATA PRESERVED : OUI
+
+VERCEL PREVIEW : https://saas-kjora-35epvz3oz-kjemostudio.vercel.app
+
+OWNER FLOW : FAIL — non exécuté faute de canal OTP/Magic Link approuvé
+
+MOBILE : PASS — parcours public et URL hostile
+
+DESKTOP : PASS — parcours public FR/EN
+
+LOGS : PASS
+
+READY FOR BLAISE TESTING : OUI
+
+READY FOR PRODUCTION : NON
+
+Aucun merge vers `main`, aucun DNS, aucun domaine personnalisé, aucun paiement,
+aucune modification Stripe/SASPAY et aucun déploiement Production.
