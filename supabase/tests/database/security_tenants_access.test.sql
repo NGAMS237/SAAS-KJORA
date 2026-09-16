@@ -49,7 +49,8 @@ insert into public.memberships (organization_id, user_id, role) values
   ('29000000-0000-4000-8000-00000000000a', '19000000-0000-4000-8000-000000000003', 'viewer');
 insert into public.organization_plans (organization_id, plan) values
   ('29000000-0000-4000-8000-00000000000a', 'avance'),
-  ('29000000-0000-4000-8000-00000000000b', 'avance');
+  ('29000000-0000-4000-8000-00000000000b', 'avance')
+on conflict (organization_id) do update set plan = excluded.plan;
 insert into public.tenants (id, organization_id, full_name, phone, email, preferred_language, created_by) values
   ('59000000-0000-4000-8000-00000000000a', '29000000-0000-4000-8000-00000000000a', 'Security Tenant A', '+237600000001', 'tenant-a@kjora.test', 'fr', '19000000-0000-4000-8000-000000000001'),
   ('59000000-0000-4000-8000-00000000000b', '29000000-0000-4000-8000-00000000000b', 'Security Tenant B', '+237600000002', 'tenant-b@kjora.test', 'en', '19000000-0000-4000-8000-000000000002');

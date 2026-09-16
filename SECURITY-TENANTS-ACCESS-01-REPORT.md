@@ -99,6 +99,21 @@ KJORA.
 | Test de concurrence | NON EXÉCUTÉ sur ce correctif |
 | Régression EXPORT-01 SQL | NON EXÉCUTÉE sur ce correctif |
 
+### CI éphémère
+
+- Run `35091461329` : FAIL.
+- Validations applicatives : PASS.
+- Reconstruction complète, fixtures pré-migration et migration Canada : PASS.
+- Tests Canada et contrôle d'accès : PASS.
+- Test de concurrence : PASS.
+- Suite historique exécutée jusqu'au nouveau test : 711 assertions historiques
+  PASS avant l'arrêt.
+- Test sécurité : arrêt après 7/24 assertions, sans assertion en échec. La fixture
+  tentait d'insérer un plan déjà initialisé automatiquement par le parcours
+  Canada. Correction : rendre cette préparation compatible avec le plan existant
+  au moyen d'un upsert explicite. Il s'agit d'une correction de fixture ; la
+  migration de sécurité n'a pas échoué.
+
 La machine ne dispose ni de Docker, ni de PostgreSQL/`psql`, ni d'une copie
 locale du CLI Supabase. Le téléchargement du CLI n'apporterait pas le moteur
 Docker requis. Blaise a donc autorisé le 2026-09-16 un commit et un push de
