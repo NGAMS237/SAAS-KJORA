@@ -89,15 +89,16 @@ KJORA.
 | --- | --- |
 | TypeScript | PASS |
 | ESLint | PASS, 0 erreur ; 1 avertissement antérieur hors lot |
-| Tests Node | PASS, 430/430 |
+| Tests Node | PASS, 431/431 |
 | Build Next.js Webpack | PASS, 69/69 pages générées |
 | `git diff --check` | PASS |
 | Test statique du plan pgTAP | PASS, 24 assertions déclarées / 24 présentes |
-| Tests pgTAP du nouveau lot | NON EXÉCUTÉS |
-| Reconstruction Supabase éphémère | NON EXÉCUTÉE |
-| Régression Canada 31/31 | NON EXÉCUTÉE sur ce correctif |
-| Test de concurrence | NON EXÉCUTÉ sur ce correctif |
-| Régression EXPORT-01 SQL | NON EXÉCUTÉE sur ce correctif |
+| Tests pgTAP du nouveau lot | PASS, 24/24 |
+| Suite pgTAP hors Canada | PASS, 735/735 |
+| Reconstruction Supabase éphémère | PASS |
+| Régression Canada | PASS, 31/31 |
+| Test de concurrence | PASS |
+| Régression EXPORT-01 | PASS |
 
 ### CI éphémère
 
@@ -114,19 +115,32 @@ KJORA.
   au moyen d'un upsert explicite. Il s'agit d'une correction de fixture ; la
   migration de sécurité n'a pas échoué.
 
+- Run `35092385349` : PASS. Cette exécution a validé 430/430 tests Node,
+  la reconstruction complète, Canada 31/31, la concurrence, 711 assertions
+  historiques et les 24/24 assertions du lot de sécurité.
+- Run final `35093246107` : PASS sur le SHA
+  `1cb48077c6fc1c66bcb52a6378dbcf129638a21c`.
+- Le run final ajoute une preuve applicative explicite : aucun chemin direct
+  `platform_admin` n'existe dans la base ou le navigateur, et les deux usages de
+  clé privilégiée existants restent confinés à des routes serveur. Il valide
+  431/431 tests Node, Canada 31/31 et 735/735 assertions pgTAP hors Canada,
+  dont SECURITY-TENANTS-ACCESS-01 24/24.
+- Total final exécuté : 1 197 tests/assertions (431 Node + 766 pgTAP), plus le
+  test de concurrence séparé. Aucun test ignoré, annulé ou interrompu.
+- Lien : `https://github.com/NGAMS237/SAAS-KJORA/actions/runs/35093246107`.
+
 La machine ne dispose ni de Docker, ni de PostgreSQL/`psql`, ni d'une copie
 locale du CLI Supabase. Le téléchargement du CLI n'apporterait pas le moteur
 Docker requis. Blaise a donc autorisé le 2026-09-16 un commit et un push de
 validation strictement limités à cette branche, afin de déclencher la pile
-Supabase éphémère. Les verdicts SQL restent négatifs tant que cette CI n'est pas
-réellement terminée avec succès.
+Supabase éphémère. Le run final s'est terminé avec succès.
 
-Le test SQL préparé couvre le refus `anon`, l'absence de grant global, le refus
+Le test SQL exécuté couvre le refus `anon`, l'absence de grant global, le refus
 des colonnes privées, les projections Owner/collaborateur, l'isolation entre
-Organizations, le portail, les RPC historiques et `service_role`. Le workflow
-est prêt à exécuter la reconstruction complète, les tests Canada, la concurrence
-et la suite historique dès qu'un mécanisme de validation éphémère autorisé peut
-recevoir la branche.
+Organizations, le portail, les RPC historiques et `service_role`. Il confirme
+aussi les contrôles `auth.uid()`, Organization et capability, les limites SQL,
+les entitlements applicables, le `search_path` vide et l'absence d'EXECUTE pour
+`PUBLIC` et `anon` sur les nouvelles RPC.
 
 ## Contrôles de périmètre
 
@@ -142,28 +156,28 @@ recevoir la branche.
 
 ROOT CAUSE : IDENTIFIÉE
 
-DIRECT PRIVATE COLUMN ACCESS : NON BLOQUÉ — correction écrite mais SQL non exécuté
+DIRECT PRIVATE COLUMN ACCESS : BLOQUÉ
 
-LEGITIMATE APP FLOWS : FAIL — validation SQL éphémère manquante
+LEGITIMATE APP FLOWS : PASS
 
-CROSS-TENANT ISOLATION : FAIL — nouveau test préparé mais non exécuté
+CROSS-TENANT ISOLATION : PASS
 
-FULL EPHEMERAL REBUILD : FAIL
+FULL EPHEMERAL REBUILD : PASS
 
-PGTAP : FAIL
+PGTAP : PASS
 
-CANADA FLOW REGRESSION : FAIL
+CANADA FLOW REGRESSION : PASS
 
 LOCAL VALIDATIONS : PASS
 
 READY FOR CODEX REVIEW : OUI
 
-READY FOR REMOTE SECURITY MIGRATION : NON
+READY FOR REMOTE SECURITY MIGRATION : OUI
 
 READY FOR KJORA DEV MIGRATION : NON
 
 ## Prochain gate réel
 
-Committer et pousser sans force les huit fichiers autorisés, attendre la CI
-complète, puis consigner ses résultats exacts. Aucun merge et aucune migration
-distante ne sont autorisés.
+Soumettre séparément une autorisation de migration Supabase KJORA avec procédure
+de sauvegarde et retour arrière. Ce rapport ne constitue pas cette autorisation.
+Aucun merge et aucune migration distante ne sont autorisés dans ce lot.
