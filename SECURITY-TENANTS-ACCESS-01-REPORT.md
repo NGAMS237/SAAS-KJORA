@@ -60,17 +60,85 @@ d'identité et notes internes. Aucune valeur privée n'est reproduite ici.
 - `service_role` reste réservé aux traitements serveur explicitement autorisés ;
   aucun jeton de service n'est présent dans le code navigateur ou dans ce lot.
 
-## Correction préparée
+## Correction appliquée au projet de développement
 
-Une migration additive, sans modification des migrations historiques, retire le
+La migration additive, sans modification des migrations historiques, retire le
 grant de table et restaure la projection directe non privée. Trois RPC
 spécialisées remplacent les lecteurs légitimes. Elles utilisent des références
 qualifiées, `SECURITY DEFINER`, `search_path = ''`, des contrôles de capability
 et d'Organization, et retirent l'exécution à `PUBLIC` et `anon`.
 
 La politique RLS existante n'est ni supprimée ni élargie. Aucun droit n'est
-accordé au portail locataire. Aucune migration n'a été appliquée à Supabase
-KJORA.
+accordé au portail locataire.
+
+Le 2026-09-16, Blaise a autorisé séparément l'application de la seule migration
+`20260914120000_security_tenants_access_01.sql` au projet Supabase KJORA de
+développement `alvheiwlfzuefljcfrtv`. Elle a été appliquée une fois avec la CLI
+Supabase 2.117.0 et la commande documentée `migration up --linked`, depuis un
+workdir temporaire hors Git et hors OneDrive. Ce workdir alignait les 38 versions
+déjà présentes à distance et exposait une seule version en attente. Aucun
+`db push`, `--include-all`, rejeu historique ou migration Canada n'a été utilisé.
+
+Le HEAD a été placé temporairement, sans reset, sur le SHA validé exact
+`1cb48077c6fc1c66bcb52a6378dbcf129638a21c`. Le hash SHA-256 de la migration
+validée et de sa copie temporaire était identique :
+`3A4A8A3ADD68FD97EC12D76BF47EF6219A98083E5A16D10CEDA59E5DB9781C57`.
+Après les contrôles, le worktree est revenu sur la branche de rapport.
+
+### Sauvegardes et retour arrière
+
+- Sauvegarde DPAPI existante revalidée sous le compte Windows de Blaise : PASS.
+  Chemin :
+  `C:\Users\Veraluz\AppData\Local\Temp\kjora-backups\site-app-flow-01-3-20260912\pre-migration-snapshot.json.dpapi` ;
+  taille : 98 774 octets ; SHA-256 :
+  `B90F5FDBF3218561095A0452CF4115D764FF3FD526DA9EA4EEC8C9E834F538A9`.
+- Snapshot DPAPI ciblé des métadonnées pré-migration créé et testé en mémoire :
+  `C:\Users\Veraluz\AppData\Local\Temp\kjora-backups\security-tenants-access-01-20260916\pre-security-migration-metadata.json.dpapi` ;
+  taille : 1 238 octets ; SHA-256 :
+  `1DA03522ED5C8B1268A84DB0FAC388E87157F2496111C2532C5889DA822D9EBF`.
+- Rollback ciblé préparé hors Git :
+  `C:\Users\Veraluz\AppData\Local\Temp\kjora-backups\security-tenants-access-01-20260916\rollback-security-tenants-access-01.sql` ;
+  SHA-256 :
+  `23A42242F7E7D3F5CDC332A67F348904ADDFAB3B18CC5B6E4FA70565ED6D5FE0`.
+- Aucun contenu déchiffré n'a été conservé sur disque. Aucune ligne privée n'a
+  été imprimée. L'ancienne sauvegarde n'a pas été supprimée. Le rollback n'a pas
+  été utilisé.
+
+### État distant vérifié
+
+Avant migration, `authenticated` disposait encore du SELECT global sur les 15
+colonnes de `public.tenants`; `anon` et `PUBLIC` n'avaient aucun SELECT, RLS
+était active et les trois RPC cibles étaient absentes. Le projet comptait 9
+Organizations et 11 locataires.
+
+Après migration :
+
+- la version `20260914120000` apparaît exactement une fois dans l'historique,
+  sous le nom `security_tenants_access_01`;
+- `authenticated` n'a plus de SELECT au niveau table et ne peut lire directement
+  que `id`, `organization_id`, `full_name`, `created_at`, `updated_at`;
+- `anon` et `PUBLIC` ne disposent d'aucun SELECT et ne peuvent exécuter aucune
+  des trois RPC;
+- les trois signatures attendues existent, sont `SECURITY DEFINER`, ont
+  `search_path = ''`, vérifient `auth.uid()`, Organization et capability;
+- la projection Documents borne les identifiants à 200, Import est borné à
+  5 000, et Export revérifie `exports_standard`;
+- le parcours Owner autorisé a lu 1 bien, 4 logements et 4 locataires dans sa
+  seule Organization; les projections Documents, Import et Export ont chacune
+  retourné les 4 lignes autorisées;
+- un tableau de 201 identifiants a été refusé logiquement, une Organization
+  étrangère a retourné zéro ligne dans les quatre chemins, un collaborateur sans
+  capability a obtenu zéro ligne Import/Export, et un Owner sans entitlement a
+  obtenu zéro ligne Export;
+- un compte portail actif a obtenu zéro ligne via les nouvelles RPC et aucun
+  nouveau droit administratif;
+- `service_role` conserve son accès serveur existant; aucun droit navigateur ni
+  chemin `platform_admin` n'a été ajouté;
+- les comptes restent à 9 Organizations et 11 locataires. La migration ne
+  contient aucune écriture de données métier;
+- les colonnes Canada `billing_country` et `billing_country_intent` étaient
+  absentes avant et après : la migration Canada n'a pas été appliquée et aucune
+  devise, souscription ou intention n'a été modifiée.
 
 ## Fichiers du lot
 
@@ -99,6 +167,14 @@ KJORA.
 | Régression Canada | PASS, 31/31 |
 | Test de concurrence | PASS |
 | Régression EXPORT-01 | PASS |
+| Préflight distant | PASS |
+| Sauvegarde DPAPI existante | PASS, déchiffrement en mémoire |
+| Migration distante sécurité | PASS, une application |
+| Historique distant | PASS, version présente exactement une fois |
+| Tests distants Owner et capability | PASS |
+| Isolation inter-Organization distante | PASS |
+| Données distantes préservées | PASS, 9 Organizations / 11 locataires avant et après |
+| Advisors Supabase | AVERTISSEMENTS, analysés ci-dessous |
 
 ### CI éphémère
 
@@ -142,13 +218,41 @@ aussi les contrôles `auth.uid()`, Organization et capability, les limites SQL,
 les entitlements applicables, le `search_path` vide et l'absence d'EXECUTE pour
 `PUBLIC` et `anon` sur les nouvelles RPC.
 
+### Validation distante et advisors
+
+Les contrôles distants ont été exécutés dans des transactions sans mutation de
+données métier. Le refus réel d'`anon` a produit l'erreur PostgreSQL attendue
+`42501 permission denied`. Les parcours autorisés et refusés ont été vérifiés
+uniquement par des nombres et booléens; aucun identifiant utilisateur, contenu
+locataire ou valeur privée n'a été journalisé.
+
+Les advisors Supabase ont retourné :
+
+- sécurité : 12 informations `rls_enabled_no_policy`, 85 avertissements
+  `authenticated_security_definer_function_executable` et 1 avertissement de
+  protection des mots de passe compromis;
+- performance : 10 informations de clés étrangères non indexées et 66 index
+  signalés comme inutilisés;
+- trois des 85 avertissements `SECURITY DEFINER` correspondent aux trois nouvelles
+  RPC. Ils sont attendus parce que l'appel par `authenticated` est intentionnel;
+  leur `search_path`, leurs grants et leurs contrôles d'identité, Organization,
+  capability, limite et entitlement ont été vérifiés en base et par pgTAP;
+- aucune alerte de performance ne cible les nouveaux objets. Les autres alertes
+  concernent des objets ou réglages qui existaient avant ce lot et ne sont pas
+  attribuables à cette migration.
+
+Le connecteur disponible n'exposait pas les journaux Postgres/API. La sortie CLI
+de migration ne contient aucune erreur et tous les contrôles SQL post-migration
+ont réussi, hormis le refus `anon` volontaire. Cette limite d'observabilité est
+consignée sans transformer un contrôle non disponible en PASS.
+
 ## Contrôles de périmètre
 
 - Aucun fichier Stripe ou SASPAY modifié.
 - Aucun fichier `.env*`, `.next`, `.vercel`, archive, journal, snapshot ou script
   de restauration ajouté au lot.
-- La sauvegarde DPAPI reste hors Git, hors OneDrive et n'a pas été lue, déplacée
-  ou supprimée.
+- Les sauvegardes DPAPI et le rollback ciblé restent hors Git et hors OneDrive.
+  Leur déchiffrement a été vérifié en mémoire; aucun fichier n'a été supprimé.
 - Aucun secret ou motif de clé détecté dans le diff du lot.
 - Aucun merge, aucune Preview, aucun DNS et aucune Production.
 
@@ -174,10 +278,36 @@ READY FOR CODEX REVIEW : OUI
 
 READY FOR REMOTE SECURITY MIGRATION : OUI
 
-READY FOR KJORA DEV MIGRATION : NON
+REMOTE PREFLIGHT : PASS
+
+DPAPI BACKUP REVALIDATED : PASS
+
+REMOTE SECURITY MIGRATION : PASS
+
+MIGRATION HISTORY : PASS
+
+DIRECT PRIVATE ACCESS : BLOQUÉ
+
+CROSS-TENANT TEST : PASS
+
+LEGITIMATE FLOWS : PASS
+
+SUPABASE ADVISORS : AVERTISSEMENTS
+
+ROLLBACK USED : NON
+
+REMOTE DATA PRESERVED : OUI
+
+READY FOR KJORA DEV MIGRATION : OUI
+
+READY FOR CANADA MIGRATION : OUI
+
+READY FOR PREVIEW : NON
+
+READY FOR PRODUCTION : NON
 
 ## Prochain gate réel
 
-Soumettre séparément une autorisation de migration Supabase KJORA avec procédure
-de sauvegarde et retour arrière. Ce rapport ne constitue pas cette autorisation.
-Aucun merge et aucune migration distante ne sont autorisés dans ce lot.
+La migration de sécurité autorisée est terminée. La migration Canada, tout merge,
+Preview, DNS et Production restent hors périmètre et nécessitent une autorisation
+séparée. Aucune sauvegarde ne doit être supprimée sans confirmation de Blaise.
