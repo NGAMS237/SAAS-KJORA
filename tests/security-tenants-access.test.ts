@@ -9,6 +9,9 @@ const migration = readFileSync(
 const documents = readFileSync(new URL("../src/modules/documents/server.ts", import.meta.url), "utf8");
 const dataImport = readFileSync(new URL("../src/modules/data-import/server.ts", import.meta.url), "utf8");
 const dataExport = readFileSync(new URL("../src/modules/data-export/server.ts", import.meta.url), "utf8");
+const contextResolver = readFileSync(new URL("../src/core/routing/context-resolver.ts", import.meta.url), "utf8");
+const billingWebhook = readFileSync(new URL("../src/app/api/billing/webhooks/[provider]/route.ts", import.meta.url), "utf8");
+const financialCron = readFileSync(new URL("../src/app/api/financial-communications/cron/route.ts", import.meta.url), "utf8");
 
 test("la migration retire le SELECT global et restaure uniquement la projection minimale", () => {
   assert.match(migration, /revoke select on table public\.tenants from public, anon, authenticated/i);
@@ -48,4 +51,13 @@ test("documents, import et export n'effectuent plus de lecture privée directe",
 
 test("les erreurs des nouveaux accès ne concatènent aucune donnée locataire", () => {
   assert.doesNotMatch(migration, /raise exception[\s\S]{0,100}(?:t\.email|t\.phone|identity_document)/i);
+});
+
+test("platform_admin n'a aucun chemin direct et service_role reste confiné au serveur", () => {
+  assert.match(contextResolver, /platform_admin[\s\S]{0,180}ne sont pas implémentés/i);
+  assert.doesNotMatch(migration, /platform_admin/i);
+  for (const serverRoute of [billingWebhook, financialCron]) {
+    assert.match(serverRoute, /SUPABASE_(?:SECRET_KEY|SERVICE_ROLE_KEY)/);
+    assert.doesNotMatch(serverRoute, /["']use client["']/);
+  }
 });

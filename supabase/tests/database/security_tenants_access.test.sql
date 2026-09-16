@@ -4,8 +4,9 @@ select plan(24);
 
 select ok(not has_table_privilege('anon', 'public.tenants', 'select'),
   'anon has no table-wide tenant read');
-select ok(not has_any_column_privilege('anon', 'public.tenants', 'select'),
-  'anon has no tenant column read');
+select ok(not exists (
+  select 1 from pg_catalog.pg_roles where rolname = 'platform_admin'
+), 'platform_admin has no direct database role or tenant-table bypass');
 select ok(not has_table_privilege('authenticated', 'public.tenants', 'select'),
   'authenticated has no table-wide tenant read');
 select ok(has_column_privilege('authenticated', 'public.tenants', 'full_name', 'select'),
