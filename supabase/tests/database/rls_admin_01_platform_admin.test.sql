@@ -199,6 +199,20 @@ reset role;
 -- 5. Platform admin — accès accordé, mais TOUJOURS lecture seule
 -- ---------------------------------------------------------------------------
 
+-- Capturer les totaux globaux avant le changement de rôle. Sous `authenticated`,
+-- un count(*) direct est filtré par RLS alors que les RPC SECURITY DEFINER
+-- renvoient, par conception, les totaux de la plateforme.
+select set_config(
+  'admin_01.expected_organizations_total',
+  (select count(*)::text from public.organizations),
+  true
+);
+select set_config(
+  'admin_01.expected_subscriptions_total',
+  (select count(*)::text from public.organization_subscriptions),
+  true
+);
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'ad000000-0000-4000-8000-000000000001', true);
 
@@ -239,7 +253,7 @@ select lives_ok(
 );
 select results_eq(
   $$select (public.admin_platform_counters() ->> 'organizations_total')::bigint$$,
-  $$select count(*) from public.organizations$$,
+  $$select current_setting('admin_01.expected_organizations_total')::bigint$$,
   'admin : organizations_total correspond au compte réel'
 );
 
@@ -249,7 +263,7 @@ select lives_ok(
 );
 select results_eq(
   $$select (public.admin_list_organizations(10, 0) ->> 'total_count')::bigint$$,
-  $$select count(*) from public.organizations$$,
+  $$select current_setting('admin_01.expected_organizations_total')::bigint$$,
   'admin : total_count (organizations) correspond au compte réel'
 );
 
@@ -263,7 +277,7 @@ select results_eq(
 );
 select results_eq(
   $$select (public.admin_list_organizations(5, 999999) ->> 'total_count')::bigint$$,
-  $$select count(*) from public.organizations$$,
+  $$select current_setting('admin_01.expected_organizations_total')::bigint$$,
   'admin : total_count reste exact malgré un offset hors limites (organizations)'
 );
 select results_eq(
@@ -273,7 +287,7 @@ select results_eq(
 );
 select results_eq(
   $$select (public.admin_list_subscriptions(5, 999999) ->> 'total_count')::bigint$$,
-  $$select count(*) from public.organization_subscriptions$$,
+  $$select current_setting('admin_01.expected_subscriptions_total')::bigint$$,
   'admin : total_count reste exact malgré un offset hors limites (abonnements)'
 );
 
