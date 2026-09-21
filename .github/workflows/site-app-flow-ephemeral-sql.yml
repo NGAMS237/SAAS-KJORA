@@ -6,6 +6,7 @@ on:
     branches:
       - codex/site-app-flow-01
       - codex/security-tenants-access-01
+      - claude/admin-01-secure-base
 
 permissions:
   contents: read
