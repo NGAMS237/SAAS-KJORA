@@ -40,7 +40,9 @@ insert into public.organization_plans (organization_id, plan) values
   ('ae100000-0000-4000-8000-00000000000a', 'decouverte'),
   ('ae100000-0000-4000-8000-00000000000b', 'essentiel'),
   ('ae100000-0000-4000-8000-00000000000c', 'avance'),
-  ('ae100000-0000-4000-8000-00000000000d', 'essentiel');
+  ('ae100000-0000-4000-8000-00000000000d', 'essentiel')
+on conflict (organization_id) do update
+set plan = excluded.plan;
 
 -- Org B : abonnement enregistré cohérent avec son forfait effectif (essentiel/payant).
 -- Org D : reproduit EXACTEMENT la divergence constatée sur KJORA Dev — forfait
