@@ -10,18 +10,30 @@ function parseOffset(value: string | string[] | undefined): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function single(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw?.trim() ? raw.trim() : undefined;
+}
+
 export default async function AdministrationOrganizationsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const result = await listOrganizations(DEFAULT_PAGE_SIZE, parseOffset(params.offset));
+  const search = single(params.q);
+  const status = single(params.status);
+  const result = await listOrganizations(DEFAULT_PAGE_SIZE, parseOffset(params.offset), {
+    search,
+    status,
+  });
 
   return (
     <OrganizationsView
       page={result.ok ? result.data : null}
       error={result.ok ? null : result.reason}
+      search={search ?? ""}
+      status={status ?? ""}
     />
   );
 }

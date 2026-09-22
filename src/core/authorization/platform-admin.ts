@@ -28,8 +28,15 @@ export type PlatformAdminDecision =
   | { allowed: false; reason: "not_platform_admin" }
   /** La vérification n'a pas abouti (base injoignable, RPC absente…). */
   | { allowed: false; reason: "check_failed" }
-  /** Administrateur plateforme confirmé. */
-  | { allowed: true; userId: string };
+  /**
+   * Administrateur plateforme confirmé.
+   *
+   * `userEmail` vient du même claim JWT déjà lu ailleurs dans l'application
+   * (voir src/core/auth/require-user.ts) — aucun appel réseau supplémentaire.
+   * Null si le claim est absent : l'en-tête de la console l'affiche alors sans
+   * planter, jamais avec une valeur inventée.
+   */
+  | { allowed: true; userId: string; userEmail: string | null };
 
 /**
  * Évalue l'autorisation plateforme de l'utilisateur courant.
@@ -50,6 +57,8 @@ export async function resolvePlatformAdmin(): Promise<PlatformAdminDecision> {
   if (claimsError || typeof userId !== "string") {
     return { allowed: false, reason: "unauthenticated" };
   }
+  const claimedEmail = claimsData?.claims?.email;
+  const userEmail = typeof claimedEmail === "string" ? claimedEmail : null;
 
   // La RPC est SECURITY DEFINER et lit platform_admins, dont la RLS interdit la
   // lecture aux non-admins. Sans SECURITY DEFINER, le prédicat renverrait faux
@@ -65,7 +74,7 @@ export async function resolvePlatformAdmin(): Promise<PlatformAdminDecision> {
     return { allowed: false, reason: "not_platform_admin" };
   }
 
-  return { allowed: true, userId };
+  return { allowed: true, userId, userEmail };
 }
 
 /**

@@ -96,6 +96,13 @@ export const UNMONITORED_SERVICES: readonly { key: string; source: string }[] = 
   { key: "vercel", source: "aucune source intégrée" },
   { key: "resend", source: "aucune source intégrée" },
   { key: "payments", source: "aucun fournisseur raccordé (ALIGN-04)" },
+  // ADMIN-01.1 : ajoutés à la demande de la vue d'ensemble. Même règle que les
+  // quatre services ci-dessus — aucun fournisseur Stripe/paiement n'est
+  // raccordé, et aucune source fiable de demandes de support n'existe encore
+  // (le formulaire support envoie un email, sans persistance interrogeable —
+  // voir src/core/support/support-email.ts). « Non connecté », jamais déduit.
+  { key: "revenue", source: "aucun fournisseur de paiement raccordé (ALIGN-04)" },
+  { key: "support_requests", source: "aucune persistance interrogeable (email sortant uniquement)" },
 ] as const;
 
 /**
@@ -108,12 +115,20 @@ export function assertsHealthy(state: MonitoringState): boolean {
   return state === "normal";
 }
 
-/** Libellés bilingues des états. */
+/**
+ * Libellés bilingues des états.
+ *
+ * ADMIN-01.1 : cinq libellés harmonisés dans toute la console (en-tête compris) —
+ * Normal / Attention / Données anciennes / Non connecté / Erreur. Les clés
+ * internes (`incident`, `unavailable`…) et la logique de dérivation dans
+ * `deriveState` ne changent pas : seul l'habillage textuel est aligné sur le
+ * vocabulaire demandé pour ADMIN-01.1.
+ */
 export const STATE_LABELS: Record<MonitoringState, { fr: string; en: string }> = {
   normal: { fr: "Normal", en: "Normal" },
-  incident: { fr: "Incident", en: "Incident" },
+  incident: { fr: "Attention", en: "Attention" },
   stale: { fr: "Données anciennes", en: "Stale data" },
-  unavailable: { fr: "Indisponible", en: "Unavailable" },
+  unavailable: { fr: "Erreur", en: "Error" },
   not_connected: { fr: "Non connecté", en: "Not connected" },
 };
 
@@ -126,4 +141,7 @@ export const INDICATOR_LABELS: Record<string, { fr: string; en: string }> = {
   vercel: { fr: "Vercel", en: "Vercel" },
   resend: { fr: "Resend", en: "Resend" },
   payments: { fr: "Paiements", en: "Payments" },
+  revenue: { fr: "Revenus", en: "Revenue" },
+  support_requests: { fr: "Demandes de support", en: "Support requests" },
+  plan_billing_mismatch: { fr: "Incohérences forfait/facturation", en: "Plan/billing mismatches" },
 };

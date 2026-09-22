@@ -22,7 +22,33 @@ const NAV = [
   { href: "/administration/abonnements", key: "navSubscriptions" as const },
 ];
 
-export function AdminShell({ children }: { children: ReactNode }) {
+/** ADMIN-01.1 : jamais déduit du hostname — reçu tel quel de `VERCEL_ENV`. */
+export type AdminEnvironment = "production" | "preview" | "development";
+
+const ENV_BADGE_KEY: Record<AdminEnvironment, "envProduction" | "envPreview" | "envDev"> = {
+  production: "envProduction",
+  preview: "envPreview",
+  development: "envDev",
+};
+
+export function AdminShell({
+  children,
+  environment,
+  userEmail,
+  commercialSiteUrl,
+}: {
+  children: ReactNode;
+  environment: AdminEnvironment;
+  userEmail: string | null;
+  /**
+   * ADMIN-01.1 (correctif) : URL déjà validée côté serveur (voir
+   * `resolveCommercialSiteUrl` dans layout.tsx), jamais une valeur codée en
+   * dur ici. `null` quand `KJORA_COMMERCIAL_SITE_URL` est absente ou
+   * invalide — dans ce cas, aucun lien cliquable n'est produit et le domaine
+   * hors service ne doit jamais servir de repli automatique.
+   */
+  commercialSiteUrl: string | null;
+}) {
   const { language, toggleLanguage, theme, toggleTheme } = usePreferences();
   const pathname = usePathname();
   const t = ADMIN_COPY[language === "EN" ? "en" : "fr"];
@@ -38,9 +64,37 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <p className="admin-shell__title">{t.consoleTitle}</p>
             <p className="admin-shell__subtitle">{t.consoleSubtitle}</p>
           </div>
+          <span
+            className={`admin-shell__env-badge admin-shell__env-badge--${environment}`}
+            title={t.envBadgeHint}
+          >
+            {t[ENV_BADGE_KEY[environment]]}
+          </span>
         </div>
 
         <div className="admin-shell__actions">
+          <Link href="/app" className="admin-shell__toggle admin-shell__nav-link">
+            {t.backToApp}
+          </Link>
+          {commercialSiteUrl ? (
+            <a
+              href={commercialSiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-shell__toggle admin-shell__nav-link admin-shell__nav-link--external"
+            >
+              {t.commercialSiteLink}
+              <span className="admin-shell__sr-only"> {t.opensInNewTab}</span>
+            </a>
+          ) : (
+            <span
+              className="admin-shell__toggle admin-shell__nav-link admin-shell__nav-link--disabled"
+              title={t.commercialSiteNotConnected}
+              aria-disabled="true"
+            >
+              {t.commercialSiteNotConnected}
+            </span>
+          )}
           <button
             type="button"
             className="admin-shell__toggle"
@@ -57,6 +111,16 @@ export function AdminShell({ children }: { children: ReactNode }) {
           >
             {theme === "light" ? "☾" : "☀"}
           </button>
+          {userEmail ? (
+            <span className="admin-shell__identity-email" title={t.loggedInAs}>
+              {userEmail}
+            </span>
+          ) : null}
+          <form action="/auth/signout" method="post">
+            <button type="submit" className="admin-shell__toggle admin-shell__signout">
+              {t.signOut}
+            </button>
+          </form>
         </div>
       </header>
 

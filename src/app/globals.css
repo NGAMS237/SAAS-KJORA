@@ -4884,7 +4884,17 @@ a.portfolio-metric:hover {
   flex-wrap: wrap;
 }
 
-.admin-shell__identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.admin-shell__identity { display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap; }
+
+/* ADMIN-01.1 — badge d'environnement : jamais déduit du hostname, reçu du serveur. */
+.admin-shell__env-badge {
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.admin-shell__env-badge--production { background: var(--danger); color: #fff; border-color: var(--danger); }
+.admin-shell__env-badge--preview { background: var(--warning); color: #1a1a1a; border-color: var(--warning); }
+.admin-shell__env-badge--development { background: rgba(255, 255, 255, 0.16); color: #fff; }
 
 .admin-shell__mark {
   width: 34px; height: 34px; flex-shrink: 0;
@@ -4908,6 +4918,19 @@ a.portfolio-metric:hover {
   cursor: pointer;
 }
 .admin-shell__toggle:hover { background: rgba(255, 255, 255, 0.16); }
+
+.admin-shell__nav-link { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.admin-shell__nav-link--external::after { content: "↗"; font-size: 0.8em; }
+.admin-shell__nav-link--disabled { opacity: 0.55; cursor: default; font-style: italic; }
+.admin-shell__sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.admin-shell__identity-email {
+  font-size: 0.78rem; color: rgba(255, 255, 255, 0.85);
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-shell__signout { background: rgba(255, 255, 255, 0.08); }
 
 .admin-shell__nav {
   display: flex; gap: 4px; padding: 8px 20px;
@@ -4982,9 +5005,12 @@ a.portfolio-metric:hover {
   font-size: 0.72rem; font-weight: 700; border: 1px solid transparent;
 }
 .admin-state--normal { background: var(--success-soft); color: var(--success); }
-.admin-state--incident { background: var(--danger-soft); color: var(--danger); }
+/* ADMIN-01.1 : libellé "Attention" (incident) et "Erreur" (unavailable) — les
+   deux restent visuellement distincts du "Non connecté" neutre, la couleur
+   n'étant qu'un appui au libellé textuel qui, lui, change réellement. */
+.admin-state--incident { background: var(--warning-soft); color: var(--warning); }
 .admin-state--stale { background: var(--warning-soft); color: var(--warning); }
-.admin-state--unavailable { background: var(--surface-muted); color: var(--text-secondary); border-color: var(--border-strong); }
+.admin-state--unavailable { background: var(--danger-soft); color: var(--danger); }
 .admin-state--not-connected { background: transparent; color: var(--text-muted); border-color: var(--border-strong); }
 
 .admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -5001,8 +5027,49 @@ a.portfolio-metric:hover {
   background: var(--danger-soft); color: var(--danger); font-size: 0.85rem; margin: 0;
 }
 
+/* ADMIN-01.1 — Actualiser */
+.admin-refresh {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);
+}
+.admin-refresh__button {
+  padding: 6px 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+}
+.admin-refresh__button:hover { background: var(--surface-muted); }
+
+/* ADMIN-01.1 — recherche et filtres, toujours résolus côté serveur (RPC) */
+.admin-filters {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: var(--radius-surface); background: var(--surface);
+}
+.admin-filters__field { display: flex; flex-direction: column; gap: 4px; min-width: 160px; flex: 1 1 160px; }
+.admin-filters__label { font-size: 0.72rem; color: var(--text-secondary); font-weight: 600; }
+.admin-filters__input, .admin-filters__select {
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--background); color: var(--text); font: inherit;
+}
+.admin-filters__submit {
+  padding: 9px 16px; border-radius: var(--radius-pill); border: none;
+  background: var(--brand-ink); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+}
+.admin-filters__submit:hover { opacity: 0.9; }
+.admin-filters__clear {
+  font-size: 0.8rem; color: var(--text-secondary); text-decoration: underline;
+  align-self: center;
+}
+
+.admin-results-count { margin: 0; font-size: 0.82rem; color: var(--text-secondary); }
+.admin-free-paid-summary { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
 @media (max-width: 640px) {
   .admin-shell__main { padding: 18px 14px 32px; }
   .admin-shell__bar, .admin-shell__nav { padding-left: 14px; padding-right: 14px; }
   .admin-shell__subtitle { display: none; }
+  .admin-shell__identity-email { max-width: 140px; }
+  .admin-filters { flex-direction: column; align-items: stretch; }
+  .admin-filters__field { min-width: 0; }
+  .admin-filters__clear { align-self: flex-start; }
 }

@@ -41,5 +41,45 @@ export default async function AdministrationLayout({ children }: { children: Rea
     notFound();
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  // ADMIN-01.1 : `VERCEL_ENV` est fourni automatiquement par la plateforme
+  // Vercel ("production" | "preview" | "development") — aucune variable
+  // nouvelle à créer, aucune déduction depuis le nom d'hôte. Lu côté serveur
+  // uniquement ; jamais transmis tel quel si absent (repli explicite "dev"
+  // pour tout environnement hors Vercel, jamais confondu avec Production).
+  const vercelEnv = process.env.VERCEL_ENV === "production" || process.env.VERCEL_ENV === "preview"
+    ? process.env.VERCEL_ENV
+    : "development";
+
+  return (
+    <AdminShell environment={vercelEnv} userEmail={decision.userEmail} commercialSiteUrl={resolveCommercialSiteUrl()}>
+      {children}
+    </AdminShell>
+  );
+}
+
+/**
+ * ADMIN-01.1 (correctif) : l'URL du site commercial vient exclusivement de la
+ * variable serveur `KJORA_COMMERCIAL_SITE_URL`, jamais d'une valeur codée en
+ * dur dans le composant. `https://kjora-commercial-site.vercel.app/` a été
+ * constaté hors service (DEPLOYMENT_NOT_FOUND) : il ne doit plus jamais
+ * apparaître comme repli automatique.
+ *
+ * Absente ou invalide → `null`, et AdminShell affiche un état
+ * "non connecté" sans aucun lien cliquable. Seule une URL http(s) bien
+ * formée est acceptée.
+ */
+function resolveCommercialSiteUrl(): string | null {
+  const raw = process.env.KJORA_COMMERCIAL_SITE_URL;
+  if (!raw || !raw.trim()) {
+    return null;
+  }
+  try {
+    const parsed = new URL(raw.trim());
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }

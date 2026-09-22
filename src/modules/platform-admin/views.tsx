@@ -1,6 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { ADMIN_COPY } from "./copy";
 import {
@@ -58,6 +60,29 @@ function formatDate(value: string | null, lang: "fr" | "en"): string {
 }
 
 // ---------------------------------------------------------------------------
+// Actualiser
+// ---------------------------------------------------------------------------
+// Redemande les données au serveur (RSC refetch) sans navigation complète —
+// jamais de cache client silencieux sur des données d'administration.
+
+function RefreshControl({ generatedAt }: { generatedAt: string | null }) {
+  const { t, lang } = useCopy();
+  const router = useRouter();
+  const observed = formatDateTime(generatedAt, lang);
+
+  return (
+    <div className="admin-refresh">
+      <span className="admin-refresh__label">
+        {t.lastRefreshed} : {observed ?? t.neverObserved}
+      </span>
+      <button type="button" className="admin-refresh__button" onClick={() => router.refresh()}>
+        {t.refreshButton}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Vue d'ensemble
 // ---------------------------------------------------------------------------
 
@@ -77,6 +102,7 @@ export function OverviewView({
       <header className="admin-page__header">
         <h1>{t.overviewTitle}</h1>
         <p>{t.overviewLead}</p>
+        <RefreshControl generatedAt={counters?.generatedAt ?? null} />
       </header>
 
       {error ? (
@@ -92,6 +118,9 @@ export function OverviewView({
             <Counter label={t.organizationsTotal} value={counters.organizationsTotal} />
             <Counter label={t.organizationsActive} value={counters.organizationsActive} />
             <Counter label={t.organizationsSuspended} value={counters.organizationsSuspended} />
+            <Counter label={t.subscriptionsFreeRegistered} value={counters.subscriptionsFree} />
+            <Counter label={t.subscriptionsPaidRegistered} value={counters.subscriptionsPaid} />
+            <Counter label={t.organizationsWithoutSubscription} value={counters.organizationsWithoutSubscription} />
           </div>
 
           <div className="admin-breakdowns">
@@ -185,7 +214,22 @@ function Breakdown({
 // Pagination
 // ---------------------------------------------------------------------------
 
-function Pagination({ page, basePath }: { page: Paginated<unknown>; basePath: string }) {
+/** `extraParams` : filtres actifs à préserver d'une page à l'autre (recherche, statut…). */
+function buildQuery(offset: number, extraParams: Record<string, string>): string {
+  const search = new URLSearchParams(extraParams);
+  search.set("offset", String(offset));
+  return search.toString();
+}
+
+function Pagination({
+  page,
+  basePath,
+  extraParams = {},
+}: {
+  page: Paginated<unknown>;
+  basePath: string;
+  extraParams?: Record<string, string>;
+}) {
   const { t } = useCopy();
   const from = page.total === 0 ? 0 : page.offset + 1;
   const to = Math.min(page.offset + page.rows.length, page.total);
@@ -197,7 +241,7 @@ function Pagination({ page, basePath }: { page: Paginated<unknown>; basePath: st
       {hasPrev ? (
         <Link
           className="admin-pagination__link"
-          href={`${basePath}?offset=${Math.max(page.offset - page.limit, 0)}`}
+          href={`${basePath}?${buildQuery(Math.max(page.offset - page.limit, 0), extraParams)}`}
         >
           ← {t.previous}
         </Link>
@@ -212,7 +256,7 @@ function Pagination({ page, basePath }: { page: Paginated<unknown>; basePath: st
       {hasNext ? (
         <Link
           className="admin-pagination__link"
-          href={`${basePath}?offset=${page.offset + page.limit}`}
+          href={`${basePath}?${buildQuery(page.offset + page.limit, extraParams)}`}
         >
           {t.next} →
         </Link>
@@ -225,6 +269,20 @@ function Pagination({ page, basePath }: { page: Paginated<unknown>; basePath: st
   );
 }
 
+/**
+ * Formulaire de filtre commun (GET, sans JavaScript requis pour fonctionner) :
+ * soumettre relance toujours la page à `offset=0` — un filtre change le jeu
+ * de résultats, la pagination précédente n'a plus de sens.
+ */
+function FilterBar({ children, action }: { children: ReactNode; action: string }) {
+  return (
+    <form className="admin-filters" action={action} method="get">
+      <input type="hidden" name="offset" value="0" />
+      {children}
+    </form>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Organizations
 // ---------------------------------------------------------------------------
@@ -232,11 +290,19 @@ function Pagination({ page, basePath }: { page: Paginated<unknown>; basePath: st
 export function OrganizationsView({
   page,
   error,
+  search,
+  status,
 }: {
   page: Paginated<AdminOrganizationRow> | null;
   error: "denied" | "failed" | null;
+  search: string;
+  status: string;
 }) {
   const { t, lang } = useCopy();
+  const hasFilters = search !== "" || status !== "";
+  const extraParams: Record<string, string> = {};
+  if (search) extraParams.q = search;
+  if (status) extraParams.status = status;
 
   return (
     <div className="admin-page">
@@ -244,6 +310,27 @@ export function OrganizationsView({
         <h1>{t.organizationsTitle}</h1>
         <p>{t.organizationsLead}</p>
       </header>
+
+      <FilterBar action="/administration/organizations">
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.searchByName}</span>
+          <input type="text" name="q" defaultValue={search} className="admin-filters__input" />
+        </label>
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.colStatus}</span>
+          <select name="status" defaultValue={status} className="admin-filters__select">
+            <option value="">{t.filterStatusAll}</option>
+            <option value="active">{t.filterStatusActive}</option>
+            <option value="suspended">{t.filterStatusSuspended}</option>
+          </select>
+        </label>
+        <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
+        {hasFilters ? (
+          <Link href="/administration/organizations" className="admin-filters__clear">
+            {t.clearFilters}
+          </Link>
+        ) : null}
+      </FilterBar>
 
       {error ? (
         <p className="admin-error" role="alert">
@@ -253,6 +340,7 @@ export function OrganizationsView({
 
       {page ? (
         <>
+          <p className="admin-results-count">{t.resultsCount(page.total)}</p>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
@@ -287,7 +375,7 @@ export function OrganizationsView({
               </tbody>
             </table>
           </div>
-          <Pagination page={page} basePath="/administration/organizations" />
+          <Pagination page={page} basePath="/administration/organizations" extraParams={extraParams} />
         </>
       ) : null}
     </div>
@@ -301,18 +389,82 @@ export function OrganizationsView({
 export function SubscriptionsView({
   page,
   error,
+  search,
+  plan,
+  status,
+  currency,
+  freeCount,
+  paidCount,
 }: {
   page: Paginated<AdminSubscriptionRow> | null;
   error: "denied" | "failed" | null;
+  search: string;
+  plan: string;
+  status: string;
+  currency: string;
+  freeCount: number | null;
+  paidCount: number | null;
 }) {
   const { t, lang } = useCopy();
+  const hasFilters = search !== "" || plan !== "" || status !== "" || currency !== "";
+  const extraParams: Record<string, string> = {};
+  if (search) extraParams.q = search;
+  if (plan) extraParams.plan = plan;
+  if (status) extraParams.status = status;
+  if (currency) extraParams.currency = currency;
 
   return (
     <div className="admin-page">
       <header className="admin-page__header">
         <h1>{t.subscriptionsTitle}</h1>
         <p>{t.subscriptionsLead}</p>
+        {freeCount !== null && paidCount !== null ? (
+          <p className="admin-free-paid-summary">{t.freePaidSummary(freeCount, paidCount)}</p>
+        ) : null}
       </header>
+
+      <FilterBar action="/administration/abonnements">
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.searchByOrganization}</span>
+          <input type="text" name="q" defaultValue={search} className="admin-filters__input" />
+        </label>
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.colPlan}</span>
+          <input
+            type="text"
+            name="plan"
+            defaultValue={plan}
+            placeholder={t.filterPlanAll}
+            className="admin-filters__input"
+          />
+        </label>
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.colStatus}</span>
+          <input
+            type="text"
+            name="status"
+            defaultValue={status}
+            placeholder={t.filterStatusAll}
+            className="admin-filters__input"
+          />
+        </label>
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.colCurrency}</span>
+          <input
+            type="text"
+            name="currency"
+            defaultValue={currency}
+            placeholder={t.filterCurrencyAll}
+            className="admin-filters__input"
+          />
+        </label>
+        <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
+        {hasFilters ? (
+          <Link href="/administration/abonnements" className="admin-filters__clear">
+            {t.clearFilters}
+          </Link>
+        ) : null}
+      </FilterBar>
 
       {error ? (
         <p className="admin-error" role="alert">
@@ -322,6 +474,7 @@ export function SubscriptionsView({
 
       {page ? (
         <>
+          <p className="admin-results-count">{t.resultsCount(page.total)}</p>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
@@ -362,7 +515,7 @@ export function SubscriptionsView({
               </tbody>
             </table>
           </div>
-          <Pagination page={page} basePath="/administration/abonnements" />
+          <Pagination page={page} basePath="/administration/abonnements" extraParams={extraParams} />
         </>
       ) : null}
     </div>

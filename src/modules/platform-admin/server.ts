@@ -28,9 +28,32 @@ export type PlatformCounters = {
   organizationsTotal: number;
   organizationsActive: number;
   organizationsSuspended: number;
+  /**
+   * ADMIN-01.1 — abonnements RÉELLEMENT enregistrés (organization_subscriptions)
+   * uniquement. Une Organization sans ligne de facturation n'est comptée ni
+   * gratuite ni payante : voir `organizationsWithoutSubscription`.
+   */
+  subscriptionsFree: number;
+  subscriptionsPaid: number;
+  organizationsWithoutSubscription: number;
+  /** Forfait effectif (organization_plans) en désaccord avec la facturation enregistrée. */
+  planBillingMismatches: number;
   subscriptionsByStatus: Record<string, number>;
   subscriptionsByPlan: Record<string, number>;
   generatedAt: string | null;
+};
+
+/** ADMIN-01.1 — paramètres de recherche/filtre, tous optionnels. */
+export type OrganizationFilters = {
+  search?: string;
+  status?: string;
+};
+
+export type SubscriptionFilters = {
+  search?: string;
+  plan?: string;
+  status?: string;
+  currency?: string;
 };
 
 export type AdminOrganizationRow = {
@@ -94,6 +117,10 @@ export async function getPlatformCounters(): Promise<ReadResult<PlatformCounters
       organizationsTotal: toNumber(payload.organizations_total),
       organizationsActive: toNumber(payload.organizations_active),
       organizationsSuspended: toNumber(payload.organizations_suspended),
+      subscriptionsFree: toNumber(payload.subscriptions_free),
+      subscriptionsPaid: toNumber(payload.subscriptions_paid),
+      organizationsWithoutSubscription: toNumber(payload.organizations_without_subscription),
+      planBillingMismatches: toNumber(payload.plan_billing_mismatches),
       subscriptionsByStatus: toCountRecord(payload.subscriptions_by_status),
       subscriptionsByPlan: toCountRecord(payload.subscriptions_by_plan),
       generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
@@ -132,11 +159,14 @@ function mapSubscriptionRow(r: Record<string, unknown>): AdminSubscriptionRow {
 export async function listOrganizations(
   limit = DEFAULT_PAGE_SIZE,
   offset = 0,
+  filters: OrganizationFilters = {},
 ): Promise<ReadResult<Paginated<AdminOrganizationRow>>> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("admin_list_organizations", {
     page_limit: limit,
     page_offset: offset,
+    search_term: filters.search?.trim() || null,
+    status_filter: filters.status?.trim() || null,
   });
   // La RPC renvoie désormais un objet jsonb (jamais un jeu de lignes vide sans
   // porteur pour le total) — voir pagination.ts. `!data` reste un échec : un
@@ -152,11 +182,16 @@ export async function listOrganizations(
 export async function listSubscriptions(
   limit = DEFAULT_PAGE_SIZE,
   offset = 0,
+  filters: SubscriptionFilters = {},
 ): Promise<ReadResult<Paginated<AdminSubscriptionRow>>> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("admin_list_subscriptions", {
     page_limit: limit,
     page_offset: offset,
+    search_term: filters.search?.trim() || null,
+    plan_filter: filters.plan?.trim() || null,
+    status_filter: filters.status?.trim() || null,
+    currency_filter: filters.currency?.trim() || null,
   });
   if (error || !data) return { ok: false, reason: classify(error) };
 
@@ -256,6 +291,24 @@ export async function getMonitoringIndicators(now = new Date()): Promise<Monitor
         failing > 0
           ? `${failing} en échec ou bloqué(s) / ${totalSubs}`
           : `${totalSubs} au total`,
+    });
+
+    // --- Incohérence forfait/facturation : anomalie réellement mesurée -------
+    // Jamais « not_connected » : la comparaison organization_plans ×
+    // organization_subscriptions est une source intégrée, toujours calculée,
+    // même quand son résultat est zéro. La console signale, ne corrige rien.
+    indicators.push({
+      key: "plan_billing_mismatch",
+      state: deriveState(
+        { ok: true, latest: observedAt ? new Date(observedAt) : now, anomalies: c.planBillingMismatches },
+        now,
+      ),
+      observedAt,
+      source: "organization_plans × organization_subscriptions",
+      detail:
+        c.planBillingMismatches > 0
+          ? `${c.planBillingMismatches} Organization(s) : forfait effectif et abonnement enregistré en désaccord`
+          : "aucune incohérence détectée",
     });
   }
 

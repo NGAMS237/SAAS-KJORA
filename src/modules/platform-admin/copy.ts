@@ -19,12 +19,31 @@ export type AdminCopy = {
   switchTheme: string;
   readOnlyNotice: string;
 
+  // ADMIN-01.1 — en-tête
+  envProduction: string;
+  envPreview: string;
+  envDev: string;
+  envBadgeHint: string;
+  backToApp: string;
+  commercialSiteLink: string;
+  commercialSiteNotConnected: string;
+  opensInNewTab: string;
+  loggedInAs: string;
+  signOut: string;
+
   overviewTitle: string;
   overviewLead: string;
   countersTitle: string;
   organizationsTotal: string;
   organizationsActive: string;
   organizationsSuspended: string;
+  subscriptionsFreeRegistered: string;
+  subscriptionsPaidRegistered: string;
+  organizationsWithoutSubscription: string;
+  revenueTitle: string;
+  supportRequestsTitle: string;
+  lastRefreshed: string;
+  refreshButton: string;
   byPlan: string;
   byStatus: string;
 
@@ -45,6 +64,13 @@ export type AdminCopy = {
   colMembers: string;
   colPlan: string;
   colBilling: string;
+  searchByName: string;
+  filterStatusAll: string;
+  filterStatusActive: string;
+  filterStatusSuspended: string;
+  resultsCount: (count: number) => string;
+  clearFilters: string;
+  applyFilters: string;
 
   subscriptionsTitle: string;
   subscriptionsLead: string;
@@ -56,6 +82,10 @@ export type AdminCopy = {
   colProvider: string;
   providerYes: string;
   providerNo: string;
+  searchByOrganization: string;
+  filterPlanAll: string;
+  filterCurrencyAll: string;
+  freePaidSummary: (free: number, paid: number) => string;
 
   previous: string;
   next: string;
@@ -78,6 +108,17 @@ const fr: AdminCopy = {
   readOnlyNotice:
     "Console en lecture seule. Aucune opération d'écriture n'est disponible dans cette version.",
 
+  envProduction: "PRODUCTION",
+  envPreview: "PREVIEW",
+  envDev: "DEV",
+  envBadgeHint: "Environnement d'exécution actuel, fourni par la plateforme d'hébergement.",
+  backToApp: "Application KJORA",
+  commercialSiteLink: "Site commercial",
+  commercialSiteNotConnected: "Site commercial — non connecté",
+  opensInNewTab: "(nouvel onglet)",
+  loggedInAs: "Connecté en tant que",
+  signOut: "Déconnexion",
+
   overviewTitle: "Vue d'ensemble",
   overviewLead:
     "Compteurs et état de la plateforme, calculés à partir des données réellement enregistrées.",
@@ -85,6 +126,13 @@ const fr: AdminCopy = {
   organizationsTotal: "Organizations au total",
   organizationsActive: "Actives",
   organizationsSuspended: "Suspendues",
+  subscriptionsFreeRegistered: "Abonnements gratuits enregistrés",
+  subscriptionsPaidRegistered: "Abonnements payants enregistrés",
+  organizationsWithoutSubscription: "Sans abonnement enregistré",
+  revenueTitle: "Revenus",
+  supportRequestsTitle: "Demandes de support",
+  lastRefreshed: "Dernière actualisation",
+  refreshButton: "Actualiser",
   byPlan: "Abonnements par forfait",
   byStatus: "Abonnements par statut",
 
@@ -106,6 +154,13 @@ const fr: AdminCopy = {
   colMembers: "Membres actifs",
   colPlan: "Forfait",
   colBilling: "Facturation",
+  searchByName: "Rechercher par nom",
+  filterStatusAll: "Tous les statuts",
+  filterStatusActive: "Actif",
+  filterStatusSuspended: "Suspendu",
+  resultsCount: (count) => `${count} résultat${count === 1 ? "" : "s"}`,
+  clearFilters: "Réinitialiser",
+  applyFilters: "Filtrer",
 
   subscriptionsTitle: "Abonnements",
   subscriptionsLead:
@@ -118,6 +173,10 @@ const fr: AdminCopy = {
   colProvider: "Fournisseur",
   providerYes: "Raccordé",
   providerNo: "Aucun",
+  searchByOrganization: "Rechercher par Organization",
+  filterPlanAll: "Tous les forfaits",
+  filterCurrencyAll: "Toutes les devises",
+  freePaidSummary: (free, paid) => `${free} gratuit${free === 1 ? "" : "s"} — ${paid} payant${paid === 1 ? "" : "s"}`,
 
   previous: "Précédent",
   next: "Suivant",
@@ -140,6 +199,17 @@ const en: AdminCopy = {
   readOnlyNotice:
     "Read-only console. No write operation is available in this version.",
 
+  envProduction: "PRODUCTION",
+  envPreview: "PREVIEW",
+  envDev: "DEV",
+  envBadgeHint: "Current runtime environment, provided by the hosting platform.",
+  backToApp: "KJORA Application",
+  commercialSiteLink: "Commercial site",
+  commercialSiteNotConnected: "Commercial site — not connected",
+  opensInNewTab: "(new tab)",
+  loggedInAs: "Signed in as",
+  signOut: "Sign out",
+
   overviewTitle: "Overview",
   overviewLead:
     "Platform counters and status, computed from data actually recorded.",
@@ -147,6 +217,13 @@ const en: AdminCopy = {
   organizationsTotal: "Organizations total",
   organizationsActive: "Active",
   organizationsSuspended: "Suspended",
+  subscriptionsFreeRegistered: "Registered free subscriptions",
+  subscriptionsPaidRegistered: "Registered paid subscriptions",
+  organizationsWithoutSubscription: "Without a registered subscription",
+  revenueTitle: "Revenue",
+  supportRequestsTitle: "Support requests",
+  lastRefreshed: "Last refreshed",
+  refreshButton: "Refresh",
   byPlan: "Subscriptions by plan",
   byStatus: "Subscriptions by status",
 
@@ -168,6 +245,13 @@ const en: AdminCopy = {
   colMembers: "Active members",
   colPlan: "Plan",
   colBilling: "Billing",
+  searchByName: "Search by name",
+  filterStatusAll: "All statuses",
+  filterStatusActive: "Active",
+  filterStatusSuspended: "Suspended",
+  resultsCount: (count) => `${count} result${count === 1 ? "" : "s"}`,
+  clearFilters: "Clear filters",
+  applyFilters: "Filter",
 
   subscriptionsTitle: "Subscriptions",
   subscriptionsLead:
@@ -180,6 +264,10 @@ const en: AdminCopy = {
   colProvider: "Provider",
   providerYes: "Connected",
   providerNo: "None",
+  searchByOrganization: "Search by Organization",
+  filterPlanAll: "All plans",
+  filterCurrencyAll: "All currencies",
+  freePaidSummary: (free, paid) => `${free} free — ${paid} paid`,
 
   previous: "Previous",
   next: "Next",

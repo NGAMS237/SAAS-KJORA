@@ -95,9 +95,11 @@ test("l'incident prime sur l'ancienneté", () => {
 // 2. Services non intégrés — jamais présentés comme sains
 // ---------------------------------------------------------------------------
 
-test("Supabase, Vercel, Resend et les paiements sont tous non connectés", () => {
+test("Supabase, Vercel, Resend, les paiements, les revenus et le support sont tous non connectés", () => {
+  // ADMIN-01.1 : "revenue" et "support_requests" ajoutés à la vue d'ensemble —
+  // même garde que les quatre services ADMIN-01 d'origine.
   const keys = UNMONITORED_SERVICES.map((s) => s.key).sort();
-  assert.deepEqual(keys, ["payments", "resend", "supabase", "vercel"]);
+  assert.deepEqual(keys, ["payments", "resend", "revenue", "supabase", "support_requests", "vercel"]);
 });
 
 test("aucun service non intégré ne peut produire un état affirmatif", () => {
