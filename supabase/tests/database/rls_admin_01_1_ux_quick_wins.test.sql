@@ -50,11 +50,13 @@ set plan = excluded.plan;
 -- (decouverte/free). Doit compter comme abonnement gratuit ET incohérence,
 -- jamais comme abonnement payant.
 -- Org A et C : aucune ligne — "sans abonnement enregistré", ni gratuites ni payantes.
--- Org D en EUR (et non XAF) : ne doit jamais fausser le test de filtre par
--- devise plus bas, qui vise spécifiquement l'abonnement payant de l'Org B.
-insert into public.organization_subscriptions (organization_id, status, plan, billing_cycle, currency) values
-  ('ae100000-0000-4000-8000-00000000000b', 'active', 'essentiel', 'monthly', 'XAF'),
-  ('ae100000-0000-4000-8000-00000000000d', 'free', 'decouverte', 'monthly', 'EUR');
+-- Org D sur le marché CA/CAD (et non CM/XAF) : la fixture respecte la
+-- contrainte pays/devise et ne fausse pas le filtre XAF visant l'Org B.
+insert into public.organization_subscriptions (
+  organization_id, status, plan, billing_cycle, billing_country, currency
+) values
+  ('ae100000-0000-4000-8000-00000000000b', 'active', 'essentiel', 'monthly', 'CM', 'XAF'),
+  ('ae100000-0000-4000-8000-00000000000d', 'free', 'decouverte', 'monthly', 'CA', 'CAD');
 
 insert into public.platform_admins (user_id, note) values
   ('ae000000-0000-4000-8000-000000000001', 'ADMIN-01.1 — fixture de test pgTAP');
