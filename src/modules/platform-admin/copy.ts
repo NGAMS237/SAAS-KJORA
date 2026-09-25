@@ -94,6 +94,39 @@ export type AdminCopy = {
 
   errorDenied: string;
   errorFailed: string;
+
+  // ADMIN-02 — détail abonnement et actions contrôlées
+  colActions: string;
+  viewDetail: string;
+  archivedBadge: string;
+  archivedFilterLabel: string;
+  archivedFilterActive: string;
+  archivedFilterArchived: string;
+  archivedFilterAll: string;
+  subscriptionDetailTitle: string;
+  subscriptionNotFound: string;
+  periodStart: string;
+  cancellationEffectiveOn: string;
+  actionsTitle: string;
+  actionChangePlan: string;
+  actionSuspend: string;
+  actionReactivate: string;
+  actionScheduleCancellation: string;
+  actionRevokeCancellation: string;
+  actionArchive: string;
+  confirmChangePlan: (from: string, to: string) => string;
+  confirmSuspend: string;
+  confirmReactivate: string;
+  confirmScheduleCancellation: string;
+  confirmRevokeCancellation: string;
+  confirmArchive: string;
+  confirm: string;
+  cancel: string;
+  reasonLabel: string;
+  auditTitle: string;
+  auditEvent: string;
+  auditTransition: string;
+  subscriptionOutcomeLabels: Record<string, string>;
 };
 
 const fr: AdminCopy = {
@@ -185,6 +218,58 @@ const fr: AdminCopy = {
 
   errorDenied: "Accès refusé par le serveur.",
   errorFailed: "Lecture impossible. Réessayez plus tard.",
+
+  colActions: "Actions",
+  viewDetail: "Voir",
+  archivedBadge: "Archivé",
+  archivedFilterLabel: "Archivage",
+  archivedFilterActive: "Actifs",
+  archivedFilterArchived: "Archivés",
+  archivedFilterAll: "Tous",
+  subscriptionDetailTitle: "Détail de l'abonnement",
+  subscriptionNotFound: "Abonnement introuvable.",
+  periodStart: "Début de période",
+  cancellationEffectiveOn: "Résiliation effective le",
+  actionsTitle: "Actions administratives",
+  actionChangePlan: "Changer de forfait",
+  actionSuspend: "Suspendre",
+  actionReactivate: "Réactiver",
+  actionScheduleCancellation: "Résilier à la fin de la période",
+  actionRevokeCancellation: "Annuler la résiliation",
+  actionArchive: "Archiver",
+  confirmChangePlan: (from, to) =>
+    `Vous allez modifier le forfait de cette organisation : ${from} → ${to}.`,
+  confirmSuspend: "Cette action suspendra l'abonnement. Les données seront conservées.",
+  confirmReactivate: "Cette action réactivera l'abonnement selon son état actuel.",
+  confirmScheduleCancellation: "L'abonnement restera actif jusqu'à la fin de la période actuelle.",
+  confirmRevokeCancellation: "La résiliation programmée sera annulée et l'abonnement restera actif.",
+  confirmArchive:
+    "L'abonnement restera dans l'historique mais sera masqué des listes actives.",
+  confirm: "Confirmer",
+  cancel: "Annuler",
+  reasonLabel: "Raison (optionnel)",
+  auditTitle: "Historique d'audit",
+  auditEvent: "Événement",
+  auditTransition: "Transition",
+  subscriptionOutcomeLabels: {
+    plan_changed: "Forfait modifié.",
+    unchanged: "Aucun changement : ce forfait est déjà actif.",
+    invalid_plan: "Forfait ou cycle invalide.",
+    plan_change_refused: "Changement refusé : quotas dépassés pour le nouveau forfait.",
+    suspended: "Abonnement suspendu.",
+    already_suspended: "Cet abonnement est déjà suspendu.",
+    reactivated: "Abonnement réactivé.",
+    not_suspended: "Cet abonnement n'est pas suspendu.",
+    cancellation_scheduled: "Résiliation programmée.",
+    nothing_to_cancel: "Aucun abonnement payant à résilier.",
+    already_cancelled: "Une résiliation est déjà programmée.",
+    cancellation_revoked: "Résiliation annulée.",
+    not_scheduled: "Aucune résiliation programmée à annuler.",
+    archived: "Abonnement archivé.",
+    already_archived: "Cet abonnement est déjà archivé.",
+    archive_refused: "Archivage refusé : résiliez ou suspendez l'abonnement avant de l'archiver.",
+    not_found: "Abonnement introuvable.",
+  },
 };
 
 const en: AdminCopy = {
@@ -276,6 +361,58 @@ const en: AdminCopy = {
 
   errorDenied: "Access denied by the server.",
   errorFailed: "Unable to read. Try again later.",
+
+  colActions: "Actions",
+  viewDetail: "View",
+  archivedBadge: "Archived",
+  archivedFilterLabel: "Archive status",
+  archivedFilterActive: "Active",
+  archivedFilterArchived: "Archived",
+  archivedFilterAll: "All",
+  subscriptionDetailTitle: "Subscription detail",
+  subscriptionNotFound: "Subscription not found.",
+  periodStart: "Period start",
+  cancellationEffectiveOn: "Cancellation effective on",
+  actionsTitle: "Administrative actions",
+  actionChangePlan: "Change plan",
+  actionSuspend: "Suspend",
+  actionReactivate: "Reactivate",
+  actionScheduleCancellation: "Cancel at period end",
+  actionRevokeCancellation: "Revoke cancellation",
+  actionArchive: "Archive",
+  confirmChangePlan: (from, to) =>
+    `You are about to change this organization's plan: ${from} → ${to}.`,
+  confirmSuspend: "This will suspend the subscription. Data will be preserved.",
+  confirmReactivate: "This will reactivate the subscription based on its current state.",
+  confirmScheduleCancellation: "The subscription will remain active until the end of the current period.",
+  confirmRevokeCancellation: "The scheduled cancellation will be revoked and the subscription will remain active.",
+  confirmArchive:
+    "The subscription will remain in history but will be hidden from active lists.",
+  confirm: "Confirm",
+  cancel: "Cancel",
+  reasonLabel: "Reason (optional)",
+  auditTitle: "Audit history",
+  auditEvent: "Event",
+  auditTransition: "Transition",
+  subscriptionOutcomeLabels: {
+    plan_changed: "Plan changed.",
+    unchanged: "No change: this plan is already active.",
+    invalid_plan: "Invalid plan or cycle.",
+    plan_change_refused: "Change refused: quotas exceeded for the new plan.",
+    suspended: "Subscription suspended.",
+    already_suspended: "This subscription is already suspended.",
+    reactivated: "Subscription reactivated.",
+    not_suspended: "This subscription is not suspended.",
+    cancellation_scheduled: "Cancellation scheduled.",
+    nothing_to_cancel: "No paid subscription to cancel.",
+    already_cancelled: "A cancellation is already scheduled.",
+    cancellation_revoked: "Cancellation revoked.",
+    not_scheduled: "No scheduled cancellation to revoke.",
+    archived: "Subscription archived.",
+    already_archived: "This subscription is already archived.",
+    archive_refused: "Archive refused: cancel or suspend the subscription before archiving it.",
+    not_found: "Subscription not found.",
+  },
 };
 
 export const ADMIN_COPY = { fr, en } as const;
