@@ -58,7 +58,6 @@ export function trackEvent<E extends AnalyticsEvent>(
 ): void {
   if (typeof window === "undefined") return;
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
     console.info("[kjora:analytics]", event, payload);
   }
   // Branchement d'un fournisseur réel ici — le contrat de payload reste identique.
