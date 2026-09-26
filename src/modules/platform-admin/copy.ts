@@ -182,7 +182,7 @@ const fr: AdminCopy = {
   switchLanguage: "Changer de langue",
   switchTheme: "Changer de thème",
   readOnlyNotice:
-    "Console en lecture seule. Aucune opération d'écriture n'est disponible dans cette version.",
+    "Les opérations commerciales sont réservées aux administrateurs et consignées dans l'historique.",
 
   envProduction: "PRODUCTION",
   envPreview: "PREVIEW",
@@ -384,7 +384,7 @@ const en: AdminCopy = {
   switchLanguage: "Switch language",
   switchTheme: "Switch theme",
   readOnlyNotice:
-    "Read-only console. No write operation is available in this version.",
+    "Commercial operations are restricted to administrators and recorded in the audit history.",
 
   envProduction: "PRODUCTION",
   envPreview: "PREVIEW",
