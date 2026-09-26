@@ -393,14 +393,18 @@ select is(
 );
 
 -- --- 5.9 Aucune ligne parasite créée par les tentatives refusées ci-dessus --
+-- Lecture directe hors RLS : repasser au rôle privilégié du harness AVANT
+-- cette vérification. La migration révoque volontairement tout accès direct
+-- à commercial_interventions pour authenticated — ce refus est correct et
+-- ne doit jamais être contourné (aucun GRANT ajouté ici).
+reset role;
+
 select is(
   (select count(*)::int from public.commercial_interventions
     where organization_id = current_setting('cb01.org_a')::uuid),
   0,
   'admin : aucune des tentatives refusées ci-dessus n''a créé de ligne'
 );
-
-reset role;
 
 -- ---------------------------------------------------------------------------
 -- 6. Cycle de vie complet sur Org A — octroi, audit, idempotence, doublon,
