@@ -56,10 +56,12 @@ insert into public.memberships (organization_id, user_id, role) values
 insert into public.tenants (id, organization_id, full_name, email, created_by) values
   ('fa200000-0000-4000-8000-00000000000a', 'fa100000-0000-4000-8000-00000000000a', 'FINANCE-ADMIN-01 Locataire Test', 'tenant-fa01@kjora.test', 'fa000000-0000-4000-8000-000000000002');
 
-insert into public.organization_subscriptions (organization_id, status, plan, billing_cycle, currency) values
-  ('fa100000-0000-4000-8000-00000000000a', 'active', 'essentiel', 'monthly', 'XAF'),
-  ('fa100000-0000-4000-8000-00000000000b', 'active', 'avance',    'monthly', 'CAD'),
-  ('fa100000-0000-4000-8000-00000000000c', 'active', 'sur_mesure','monthly', 'XAF');
+insert into public.organization_subscriptions
+  (organization_id, status, plan, billing_cycle, currency, billing_country)
+values
+  ('fa100000-0000-4000-8000-00000000000a', 'active', 'essentiel',  'monthly', 'XAF', 'CM'),
+  ('fa100000-0000-4000-8000-00000000000b', 'active', 'avance',     'monthly', 'CAD', 'CA'),
+  ('fa100000-0000-4000-8000-00000000000c', 'active', 'sur_mesure', 'monthly', 'XAF', 'CM');
 -- Org D : aucune ligne organization_subscriptions (repli 'organizations_without_subscription').
 
 insert into public.billing_events (organization_id, event_type, from_status, to_status) values
