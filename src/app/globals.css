@@ -5067,6 +5067,22 @@ a.portfolio-metric:hover {
 /* ADMIN-BILLING-OPS-01 — lien de la liste vers la fiche Organization */
 .admin-table__view-link { color: var(--brand-ink); font-weight: 700; text-decoration: none; }
 .admin-table__view-link:hover { text-decoration: underline; }
+.admin-table__view-link:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 2px; }
+
+/* Correctif UX urgent : le nom seul n'offrait aucune affordance visuelle
+   (pas de curseur ni de zone cliquable perceptible en dehors du texte) —
+   la ligne entière est mise en évidence au survol, et une action "Voir /
+   Gérer" explicite, en colonne dédiée, reste le contrôle obligatoire. */
+.admin-table__row:hover { background: var(--surface-muted); }
+.admin-table__actions-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong); background: var(--surface);
+  color: var(--text); font: inherit; font-size: 0.78rem; font-weight: 700;
+  text-decoration: none; white-space: nowrap;
+}
+.admin-table__actions-link:hover { background: var(--brand-ink); color: #fff; border-color: var(--brand-ink); }
+.admin-table__actions-link:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 2px; }
 
 /* ADMIN-BILLING-OPS-01 — fil d'Ariane vers la liste des Organizations */
 .admin-breadcrumb {

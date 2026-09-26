@@ -70,6 +70,11 @@ export type AdminCopy = {
   colMembers: string;
   colPlan: string;
   colBilling: string;
+  // ADMIN-BILLING-OPS-01 — correctif UX : colonne d'action explicite, en plus
+  // du nom cliquable, pour ouvrir la fiche Organization sans ambiguïté.
+  colActions: string;
+  viewManageLabel: string;
+  viewManageAriaLabel: (name: string) => string;
   searchByName: string;
   filterStatusAll: string;
   filterStatusActive: string;
@@ -231,6 +236,9 @@ const fr: AdminCopy = {
   colMembers: "Membres actifs",
   colPlan: "Forfait",
   colBilling: "Facturation",
+  colActions: "Actions",
+  viewManageLabel: "Voir / Gérer",
+  viewManageAriaLabel: (name) => `Voir ou gérer ${name || "cette Organization"}`,
   searchByName: "Rechercher par nom",
   filterStatusAll: "Tous les statuts",
   filterStatusActive: "Actif",
@@ -430,6 +438,9 @@ const en: AdminCopy = {
   colMembers: "Active members",
   colPlan: "Plan",
   colBilling: "Billing",
+  colActions: "Actions",
+  viewManageLabel: "View / Manage",
+  viewManageAriaLabel: (name) => `View or manage ${name || "this organization"}`,
   searchByName: "Search by name",
   filterStatusAll: "All statuses",
   filterStatusActive: "Active",

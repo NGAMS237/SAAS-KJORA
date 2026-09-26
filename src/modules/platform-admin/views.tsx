@@ -373,18 +373,19 @@ export function OrganizationsView({
                   <th scope="col">{t.colPlan}</th>
                   <th scope="col">{t.colBilling}</th>
                   <th scope="col">{t.colCreated}</th>
+                  <th scope="col">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="admin-table__muted">
+                    <td colSpan={7} className="admin-table__muted">
                       {t.emptyRows}
                     </td>
                   </tr>
                 ) : (
                   page.rows.map((row) => (
-                    <tr key={row.organizationId}>
+                    <tr key={row.organizationId} className="admin-table__row">
                       <th scope="row">
                         <Link
                           href={`/administration/organizations/${row.organizationId}`}
@@ -398,6 +399,19 @@ export function OrganizationsView({
                       <td>{row.plan}</td>
                       <td>{row.billingStatus}</td>
                       <td className="admin-table__muted">{formatDate(row.createdAt, lang)}</td>
+                      <td>
+                        {/* ADMIN-BILLING-OPS-01 — correctif UX : action explicite,
+                            en plus du nom cliquable ci-dessus (redondance volontaire,
+                            un <Link> natif suffit — pas de navigation impérative côté
+                            client ajoutée pour ce correctif). */}
+                        <Link
+                          href={`/administration/organizations/${row.organizationId}`}
+                          className="admin-table__actions-link"
+                          aria-label={t.viewManageAriaLabel(row.name)}
+                        >
+                          {t.viewManageLabel}
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 )}
