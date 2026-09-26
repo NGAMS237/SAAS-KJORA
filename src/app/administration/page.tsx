@@ -1,4 +1,8 @@
-import { getMonitoringIndicators, getPlatformCounters } from "@/modules/platform-admin/server";
+import {
+  getInterventionCounters,
+  getMonitoringIndicators,
+  getPlatformCounters,
+} from "@/modules/platform-admin/server";
 import { OverviewView } from "@/modules/platform-admin/views";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +14,10 @@ export const dynamic = "force-dynamic";
  * layout était contournée, ces lectures échoueraient avec un refus explicite.
  */
 export default async function AdministrationOverviewPage() {
-  const [counters, indicators] = await Promise.all([
+  const [counters, indicators, interventionCounters] = await Promise.all([
     getPlatformCounters(),
     getMonitoringIndicators(),
+    getInterventionCounters(),
   ]);
 
   return (
@@ -20,6 +25,7 @@ export default async function AdministrationOverviewPage() {
       counters={counters.ok ? counters.data : null}
       indicators={indicators}
       error={counters.ok ? null : counters.reason}
+      interventionCounters={interventionCounters.ok ? interventionCounters.data : null}
     />
   );
 }

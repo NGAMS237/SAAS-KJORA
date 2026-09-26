@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePreferences } from "@/core/preferences/preferences-provider";
@@ -14,9 +14,17 @@ import {
 import type {
   AdminOrganizationRow,
   AdminSubscriptionRow,
+  InterventionCounters,
+  OrganizationDetail,
   Paginated,
   PlatformCounters,
 } from "./server";
+import {
+  extendCommercialInterventionAction,
+  grantCommercialInterventionAction,
+  revokeCommercialInterventionAction,
+  type CommercialActionResult,
+} from "./commercial-ops-actions";
 
 // =============================================================================
 // KJORA — ADMIN-01 — Vues de la console
@@ -90,10 +98,12 @@ export function OverviewView({
   counters,
   indicators,
   error,
+  interventionCounters = null,
 }: {
   counters: PlatformCounters | null;
   indicators: MonitoringIndicator[];
   error: "denied" | "failed" | null;
+  interventionCounters?: InterventionCounters | null;
 }) {
   const { t, lang } = useCopy();
 
@@ -126,6 +136,18 @@ export function OverviewView({
           <div className="admin-breakdowns">
             <Breakdown title={t.byPlan} data={counters.subscriptionsByPlan} empty={t.emptyRows} />
             <Breakdown title={t.byStatus} data={counters.subscriptionsByStatus} empty={t.emptyRows} />
+          </div>
+        </section>
+      ) : null}
+
+      {interventionCounters ? (
+        <section className="admin-section" aria-labelledby="commercial-counters-heading">
+          <h2 id="commercial-counters-heading">{t.commercialCountersTitle}</h2>
+          <div className="admin-counters">
+            <Counter label={t.commercialCounterActive} value={interventionCounters.activeInterventions} />
+            <Counter label={t.commercialCounterComplimentary} value={interventionCounters.complimentaryActive} />
+            <Counter label={t.commercialCounterOfflinePayments} value={interventionCounters.offlinePaymentsActive} />
+            <Counter label={t.commercialCounterExpiring30} value={interventionCounters.expiringNext30Days} />
           </div>
         </section>
       ) : null}
@@ -351,24 +373,45 @@ export function OrganizationsView({
                   <th scope="col">{t.colPlan}</th>
                   <th scope="col">{t.colBilling}</th>
                   <th scope="col">{t.colCreated}</th>
+                  <th scope="col">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="admin-table__muted">
+                    <td colSpan={7} className="admin-table__muted">
                       {t.emptyRows}
                     </td>
                   </tr>
                 ) : (
                   page.rows.map((row) => (
-                    <tr key={row.organizationId}>
-                      <th scope="row">{row.name || "—"}</th>
+                    <tr key={row.organizationId} className="admin-table__row">
+                      <th scope="row">
+                        <Link
+                          href={`/administration/organizations/${row.organizationId}`}
+                          className="admin-table__view-link"
+                        >
+                          {row.name || "—"}
+                        </Link>
+                      </th>
                       <td>{row.status}</td>
                       <td className="admin-table__num">{row.memberCount}</td>
                       <td>{row.plan}</td>
                       <td>{row.billingStatus}</td>
                       <td className="admin-table__muted">{formatDate(row.createdAt, lang)}</td>
+                      <td>
+                        {/* ADMIN-BILLING-OPS-01 — correctif UX : action explicite,
+                            en plus du nom cliquable ci-dessus (redondance volontaire,
+                            un <Link> natif suffit — pas de navigation impérative côté
+                            client ajoutée pour ce correctif). */}
+                        <Link
+                          href={`/administration/organizations/${row.organizationId}`}
+                          className="admin-table__actions-link"
+                          aria-label={t.viewManageAriaLabel(row.name)}
+                        >
+                          {t.viewManageLabel}
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -518,6 +561,604 @@ export function SubscriptionsView({
           <Pagination page={page} basePath="/administration/abonnements" extraParams={extraParams} />
         </>
       ) : null}
+    </div>
+  );
+}
+
+// =============================================================================
+// ADMIN-BILLING-OPS-01 — Fiche Organization + interventions commerciales
+// =============================================================================
+
+const CANONICAL_GRANT_PLANS = ["decouverte", "essentiel", "avance", "patrimoine"] as const;
+const INTERVENTION_TYPES = [
+  "complimentary",
+  "offline_payment",
+  "promotion",
+  "partnership",
+  "support_adjustment",
+] as const;
+const REASON_CODES = [
+  "sales_gift",
+  "partner_offer",
+  "manual_payment_received",
+  "promotional_campaign",
+  "support_goodwill",
+  "other",
+] as const;
+const END_DATE_REQUIRED_TYPES = new Set(["complimentary", "promotion", "partnership"]);
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `k-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatMoney(amountMinor: number | null, currency: string | null): string {
+  if (amountMinor === null || !currency) return "—";
+  const major = currency === "XAF" ? amountMinor : amountMinor / 100;
+  return `${major.toLocaleString("fr-FR")} ${currency}`;
+}
+
+/** Boîte de confirmation générique, native <dialog> (focus trap + Échap intégrés). */
+function ConfirmDialog({
+  id,
+  title,
+  open,
+  onClose,
+  children,
+  onSubmit,
+  submitLabel,
+  cancelLabel,
+  confirmChecked,
+  onConfirmCheckedChange,
+  confirmLabel,
+  pending,
+  feedback,
+}: {
+  id: string;
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+  onSubmit: () => void;
+  submitLabel: string;
+  cancelLabel: string;
+  confirmChecked: boolean;
+  onConfirmCheckedChange: (checked: boolean) => void;
+  confirmLabel: string;
+  pending: boolean;
+  feedback: string | null;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // L'ouverture/fermeture de <dialog> est un effet de bord (appel impératif
+  // showModal()/close()), jamais une lecture pendant le rendu.
+  useEffect(() => {
+    const node = dialogRef.current;
+    if (!node) return;
+    if (open && !node.open) node.showModal();
+    if (!open && node.open) node.close();
+  }, [open]);
+
+  return (
+    <dialog
+      id={id}
+      ref={dialogRef}
+      className="admin-dialog"
+      onClose={onClose}
+      aria-labelledby={`${id}-title`}
+    >
+      <form
+        method="dialog"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <h2 id={`${id}-title`}>{title}</h2>
+        <div className="admin-dialog__body">{children}</div>
+        {feedback ? (
+          <p className="admin-error" role="alert">
+            {feedback}
+          </p>
+        ) : null}
+        <label className="admin-dialog__confirm">
+          <input
+            type="checkbox"
+            checked={confirmChecked}
+            onChange={(event) => onConfirmCheckedChange(event.target.checked)}
+          />
+          {confirmLabel}
+        </label>
+        <div className="admin-dialog__actions">
+          <button type="button" className="admin-action-button" onClick={onClose}>
+            {cancelLabel}
+          </button>
+          <button
+            type="submit"
+            className="admin-action-button admin-action-button--primary"
+            disabled={!confirmChecked || pending}
+          >
+            {submitLabel}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
+
+function ReasonField({
+  value,
+  onChange,
+  label,
+  id,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  id: string;
+}) {
+  return (
+    <label className="admin-dialog__field" htmlFor={id}>
+      <span>{label}</span>
+      <textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={3} required minLength={3} />
+    </label>
+  );
+}
+
+export function OrganizationDetailView({
+  detail,
+  error,
+}: {
+  detail: OrganizationDetail | null;
+  error: "denied" | "failed" | "not_found" | null;
+}) {
+  const { t, lang } = useCopy();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const [grantOpen, setGrantOpen] = useState(false);
+  const [revokeOpen, setRevokeOpen] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [dialogFeedback, setDialogFeedback] = useState<string | null>(null);
+
+  const [grantConfirmed, setGrantConfirmed] = useState(false);
+  const [revokeConfirmed, setRevokeConfirmed] = useState(false);
+  const [extendConfirmed, setExtendConfirmed] = useState(false);
+
+  const [interventionType, setInterventionType] = useState<string>("complimentary");
+  const [grantedPlan, setGrantedPlan] = useState<string>("essentiel");
+  const [reasonCode, setReasonCode] = useState<string>("sales_gift");
+  const [adminNote, setAdminNote] = useState("");
+  const [startsOn, setStartsOn] = useState(todayIso());
+  const [endsOn, setEndsOn] = useState("");
+  const [currency, setCurrency] = useState("XAF");
+  const [amount, setAmount] = useState("");
+  const [manualReference, setManualReference] = useState("");
+  const idempotencyKeyRef = useRef(newIdempotencyKey());
+
+  const [revokeReason, setRevokeReason] = useState("");
+  const [extendReason, setExtendReason] = useState("");
+  const [newEndsOn, setNewEndsOn] = useState("");
+
+  if (error === "not_found" || (!detail && !error)) {
+    return (
+      <div className="admin-page">
+        <p className="admin-error" role="alert">
+          {t.orgDetailNotFound}
+        </p>
+        <Link href="/administration/organizations">{t.orgDetailBackToList}</Link>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <p className="admin-error" role="alert">
+          {error === "denied" ? t.errorDenied : t.errorFailed}
+        </p>
+        <Link href="/administration/organizations">{t.orgDetailBackToList}</Link>
+      </div>
+    );
+  }
+
+  if (!detail) return null;
+
+  function resultMessage(result: CommercialActionResult): string {
+    if (!result.ok) return result.message;
+    return t.outcomeLabels[result.outcome] ?? result.outcome;
+  }
+
+  function closeAllDialogs() {
+    setGrantOpen(false);
+    setRevokeOpen(false);
+    setExtendOpen(false);
+    setDialogFeedback(null);
+    setGrantConfirmed(false);
+    setRevokeConfirmed(false);
+    setExtendConfirmed(false);
+  }
+
+  function handleGrantSubmit() {
+    if (!detail) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await grantCommercialInterventionAction(
+        detail.organizationId,
+        interventionType,
+        grantedPlan,
+        reasonCode,
+        adminNote,
+        startsOn,
+        endsOn || null,
+        interventionType === "offline_payment" ? currency : null,
+        interventionType === "offline_payment" && amount ? Number(amount) : null,
+        interventionType === "offline_payment" ? manualReference || null : null,
+        idempotencyKeyRef.current,
+      );
+      if (result.ok) {
+        idempotencyKeyRef.current = newIdempotencyKey();
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleRevokeSubmit() {
+    if (!detail || !detail.activeIntervention) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await revokeCommercialInterventionAction(
+        detail.organizationId,
+        detail.activeIntervention!.interventionId,
+        revokeReason,
+      );
+      if (result.ok) {
+        closeAllDialogs();
+        setRevokeReason("");
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleExtendSubmit() {
+    if (!detail || !detail.activeIntervention) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await extendCommercialInterventionAction(
+        detail.organizationId,
+        detail.activeIntervention!.interventionId,
+        newEndsOn,
+        extendReason,
+      );
+      if (result.ok) {
+        closeAllDialogs();
+        setExtendReason("");
+        setNewEndsOn("");
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  const intervention = detail.activeIntervention;
+  const endDateRequired = END_DATE_REQUIRED_TYPES.has(interventionType);
+
+  return (
+    <div className="admin-page">
+      <Link href="/administration/organizations" className="admin-breadcrumb">
+        {t.orgDetailBackToList}
+      </Link>
+
+      <header className="admin-page__header">
+        <h1>{t.orgDetailTitle(detail.name || "—")}</h1>
+        <p>
+          {t.colStatus}: {detail.status} · {t.colCreated}: {formatDate(detail.createdAt, lang)}
+        </p>
+      </header>
+
+      {feedback ? (
+        <p className={feedback.kind === "success" ? "admin-success" : "admin-error"} role="status">
+          {feedback.message}
+        </p>
+      ) : null}
+
+      {detail.planBillingMismatch ? (
+        <p className="admin-error" role="alert">
+          {t.orgDetailMismatchWarning}
+        </p>
+      ) : null}
+
+      <section className="admin-section">
+        <h2>{t.overviewTitle}</h2>
+        <dl className="admin-detail-grid">
+          <div>
+            <dt>{t.orgDetailOwnerEmail}</dt>
+            <dd>{detail.ownerEmail ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailActiveMembers}</dt>
+            <dd>{detail.activeMemberCount}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailProperties}</dt>
+            <dd>{detail.propertiesCount}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailUnits}</dt>
+            <dd>{detail.unitsCount}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailEffectivePlan}</dt>
+            <dd>
+              <span className="admin-badge">{detail.effectivePlan}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailSubscription}</dt>
+            <dd>{detail.subscription.exists ? detail.subscription.plan : t.providerNo}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailBillingStatus}</dt>
+            <dd>{detail.subscription.status}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailCycle}</dt>
+            <dd>{detail.subscription.billingCycle}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailCurrency}</dt>
+            <dd>{detail.subscription.currency}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailPeriodEnd}</dt>
+            <dd>{formatDate(detail.subscription.currentPeriodEnd, lang)}</dd>
+          </div>
+          <div>
+            <dt>{t.orgDetailProvider}</dt>
+            <dd>{detail.subscription.provider ?? t.providerNo}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.orgDetailActiveInterventionTitle}</h2>
+        {intervention ? (
+          <dl className="admin-detail-grid">
+            <div>
+              <dt>{t.orgDetailInterventionType}</dt>
+              <dd>{t.interventionTypeLabels[intervention.interventionType] ?? intervention.interventionType}</dd>
+            </div>
+            <div>
+              <dt>{t.orgDetailInterventionReason}</dt>
+              <dd>{t.reasonCodeLabels[intervention.reasonCode] ?? intervention.reasonCode}</dd>
+            </div>
+            <div>
+              <dt>{t.orgDetailInterventionNote}</dt>
+              <dd>{intervention.adminNote}</dd>
+            </div>
+            <div>
+              <dt>{t.orgDetailInterventionPeriod}</dt>
+              <dd>
+                {formatDate(intervention.startsOn, lang)} → {intervention.endsOn ? formatDate(intervention.endsOn, lang) : "—"}
+              </dd>
+            </div>
+            {intervention.interventionType === "offline_payment" ? (
+              <>
+                <div>
+                  <dt>{t.orgDetailInterventionAmount}</dt>
+                  <dd>{formatMoney(intervention.amountMinor, intervention.currency)}</dd>
+                </div>
+                <div>
+                  <dt>{t.orgDetailInterventionReference}</dt>
+                  <dd>{intervention.manualReference ?? "—"}</dd>
+                </div>
+              </>
+            ) : null}
+            <div>
+              <dt>{t.orgDetailInterventionCreatedBy}</dt>
+              <dd>{intervention.createdByEmail ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>{t.colStatus}</dt>
+              <dd>
+                <span className={intervention.effectivelyExpired ? "admin-badge admin-badge--archived" : "admin-badge"}>
+                  {intervention.effectivelyExpired ? t.orgDetailInterventionExpired : t.orgDetailInterventionActive}
+                </span>
+              </dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="admin-table__muted">{t.orgDetailNoActiveIntervention}</p>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.actionsTitle}</h2>
+        <div className="admin-actions-menu">
+          {!intervention ? (
+            <button type="button" className="admin-action-button admin-action-button--primary" onClick={() => setGrantOpen(true)}>
+              {t.actionGrant}
+            </button>
+          ) : (
+            <>
+              <button type="button" className="admin-action-button" onClick={() => setExtendOpen(true)}>
+                {t.actionExtend}
+              </button>
+              <button type="button" className="admin-action-button admin-action-button--danger" onClick={() => setRevokeOpen(true)}>
+                {t.actionRevoke}
+              </button>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.orgDetailHistoryTitle}</h2>
+        {detail.recentAdminEvents.length === 0 ? (
+          <p className="admin-table__muted">{t.orgDetailNoHistory}</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colObserved}</th>
+                  <th scope="col">{t.orgDetailInterventionType}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.recentAdminEvents.map((event) => (
+                  <tr key={event.eventId}>
+                    <td className="admin-table__muted">{formatDateTime(event.createdAt, lang)}</td>
+                    <td>{t.eventTypeLabels[event.eventType] ?? event.eventType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <ConfirmDialog
+        id="grant-dialog"
+        title={t.actionGrant}
+        open={grantOpen}
+        onClose={closeAllDialogs}
+        onSubmit={handleGrantSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={grantConfirmed}
+        onConfirmCheckedChange={setGrantConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p className="admin-dialog__summary-title">{t.grantSummaryTitle}</p>
+        <p>
+          {t.grantSummaryOrganization}: <strong>{detail.name}</strong>
+        </p>
+        <label className="admin-dialog__field">
+          <span>{t.formInterventionType}</span>
+          <select value={interventionType} onChange={(e) => setInterventionType(e.target.value)}>
+            {INTERVENTION_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t.interventionTypeLabels[type]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="admin-dialog__field">
+          <span>{t.formGrantedPlan}</span>
+          <select value={grantedPlan} onChange={(e) => setGrantedPlan(e.target.value)}>
+            {CANONICAL_GRANT_PLANS.map((plan) => (
+              <option key={plan} value={plan}>
+                {plan}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="admin-dialog__field">
+          <span>{t.formReasonCode}</span>
+          <select value={reasonCode} onChange={(e) => setReasonCode(e.target.value)}>
+            {REASON_CODES.map((code) => (
+              <option key={code} value={code}>
+                {t.reasonCodeLabels[code]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <ReasonField id="grant-note" label={t.formAdminNote} value={adminNote} onChange={setAdminNote} />
+        <label className="admin-dialog__field">
+          <span>{t.formStartsOn}</span>
+          <input type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} required />
+        </label>
+        <label className="admin-dialog__field">
+          <span>
+            {t.formEndsOn} {endDateRequired ? <em>({t.formEndsOnRequired})</em> : null}
+          </span>
+          <input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} required={endDateRequired} />
+        </label>
+        {interventionType === "offline_payment" ? (
+          <>
+            <label className="admin-dialog__field">
+              <span>{t.formCurrency}</span>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                <option value="XAF">XAF</option>
+                <option value="CAD">CAD</option>
+              </select>
+            </label>
+            <label className="admin-dialog__field">
+              <span>{t.formAmount}</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </label>
+            <label className="admin-dialog__field">
+              <span>{t.formManualReference}</span>
+              <input type="text" value={manualReference} onChange={(e) => setManualReference(e.target.value)} maxLength={200} />
+            </label>
+          </>
+        ) : null}
+        <p className="admin-table__muted">{t.grantSummaryConsequence}</p>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="revoke-dialog"
+        title={t.actionRevoke}
+        open={revokeOpen}
+        onClose={closeAllDialogs}
+        onSubmit={handleRevokeSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={revokeConfirmed}
+        onConfirmCheckedChange={setRevokeConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>{t.revokeConfirmText}</p>
+        <ReasonField id="revoke-reason" label={t.formReason} value={revokeReason} onChange={setRevokeReason} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="extend-dialog"
+        title={t.actionExtend}
+        open={extendOpen}
+        onClose={closeAllDialogs}
+        onSubmit={handleExtendSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={extendConfirmed}
+        onConfirmCheckedChange={setExtendConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>{t.extendConfirmText}</p>
+        <label className="admin-dialog__field">
+          <span>{t.formNewEndsOn}</span>
+          <input type="date" value={newEndsOn} onChange={(e) => setNewEndsOn(e.target.value)} required />
+        </label>
+        <ReasonField id="extend-reason" label={t.formReason} value={extendReason} onChange={setExtendReason} />
+      </ConfirmDialog>
     </div>
   );
 }
