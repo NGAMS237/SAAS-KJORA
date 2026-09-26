@@ -82,6 +82,178 @@ export type AdminSubscriptionRow = {
 
 export type { Paginated };
 
+// =============================================================================
+// ADMIN-BILLING-OPS-01 — Fiche Organization détaillée
+// =============================================================================
+
+export type CommercialInterventionType =
+  | "complimentary"
+  | "offline_payment"
+  | "promotion"
+  | "partnership"
+  | "support_adjustment";
+
+export type CommercialReasonCode =
+  | "sales_gift"
+  | "partner_offer"
+  | "manual_payment_received"
+  | "promotional_campaign"
+  | "support_goodwill"
+  | "other";
+
+export type ActiveIntervention = {
+  interventionId: string;
+  interventionType: CommercialInterventionType;
+  reasonCode: CommercialReasonCode;
+  adminNote: string;
+  grantedPlan: string;
+  startsOn: string;
+  endsOn: string | null;
+  currency: string | null;
+  amountMinor: number | null;
+  manualReference: string | null;
+  createdByEmail: string | null;
+  createdAt: string;
+  extensionCount: number;
+  effectivelyExpired: boolean;
+};
+
+export type AdminCommercialEvent = {
+  eventId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  actorEmail: string | null;
+};
+
+export type OrganizationDetail = {
+  organizationId: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  ownerEmail: string | null;
+  activeMemberCount: number;
+  propertiesCount: number;
+  unitsCount: number;
+  effectivePlan: string;
+  subscription: {
+    exists: boolean;
+    status: string;
+    plan: string;
+    billingCycle: string;
+    currency: string;
+    currentPeriodEnd: string | null;
+    renewalDate: string | null;
+    provider: string | null;
+  };
+  planBillingMismatch: boolean;
+  activeIntervention: ActiveIntervention | null;
+  recentAdminEvents: AdminCommercialEvent[];
+};
+
+function mapActiveIntervention(raw: unknown): ActiveIntervention | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  return {
+    interventionId: String(r.interventionId ?? ""),
+    interventionType: String(r.interventionType ?? "") as CommercialInterventionType,
+    reasonCode: String(r.reasonCode ?? "") as CommercialReasonCode,
+    adminNote: String(r.adminNote ?? ""),
+    grantedPlan: String(r.grantedPlan ?? ""),
+    startsOn: String(r.startsOn ?? ""),
+    endsOn: r.endsOn ? String(r.endsOn) : null,
+    currency: r.currency ? String(r.currency) : null,
+    amountMinor: r.amountMinor === null || r.amountMinor === undefined ? null : toNumber(r.amountMinor),
+    manualReference: r.manualReference ? String(r.manualReference) : null,
+    createdByEmail: r.createdByEmail ? String(r.createdByEmail) : null,
+    createdAt: String(r.createdAt ?? ""),
+    extensionCount: toNumber(r.extensionCount),
+    effectivelyExpired: r.effectivelyExpired === true,
+  };
+}
+
+function mapRecentEvents(raw: unknown): AdminCommercialEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    return {
+      eventId: String(r.event_id ?? ""),
+      eventType: String(r.event_type ?? ""),
+      payload: (r.payload ?? {}) as Record<string, unknown>,
+      createdAt: String(r.created_at ?? ""),
+      actorEmail: r.actor_email ? String(r.actor_email) : null,
+    };
+  });
+}
+
+export async function getOrganizationDetail(
+  organizationId: string,
+): Promise<ReadResult<OrganizationDetail | null>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_get_organization_detail", {
+    target_organization_id: organizationId,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  const payload = data as Record<string, unknown>;
+  if (payload.found !== true) {
+    return { ok: true, data: null };
+  }
+
+  const sub = (payload.subscription ?? {}) as Record<string, unknown>;
+
+  return {
+    ok: true,
+    data: {
+      organizationId: String(payload.organizationId ?? ""),
+      name: String(payload.name ?? ""),
+      status: String(payload.status ?? ""),
+      createdAt: String(payload.createdAt ?? ""),
+      ownerEmail: payload.ownerEmail ? String(payload.ownerEmail) : null,
+      activeMemberCount: toNumber(payload.activeMemberCount),
+      propertiesCount: toNumber(payload.propertiesCount),
+      unitsCount: toNumber(payload.unitsCount),
+      effectivePlan: String(payload.effectivePlan ?? "decouverte"),
+      subscription: {
+        exists: sub.exists === true,
+        status: String(sub.status ?? "free"),
+        plan: String(sub.plan ?? "decouverte"),
+        billingCycle: String(sub.billingCycle ?? "monthly"),
+        currency: String(sub.currency ?? "XAF"),
+        currentPeriodEnd: sub.currentPeriodEnd ? String(sub.currentPeriodEnd) : null,
+        renewalDate: sub.renewalDate ? String(sub.renewalDate) : null,
+        provider: sub.provider ? String(sub.provider) : null,
+      },
+      planBillingMismatch: payload.planBillingMismatch === true,
+      activeIntervention: mapActiveIntervention(payload.activeIntervention),
+      recentAdminEvents: mapRecentEvents(payload.recentAdminEvents),
+    },
+  };
+}
+
+export type InterventionCounters = {
+  activeInterventions: number;
+  complimentaryActive: number;
+  offlinePaymentsActive: number;
+  expiringNext30Days: number;
+};
+
+export async function getInterventionCounters(): Promise<ReadResult<InterventionCounters>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_commercial_intervention_counters");
+  if (error || !data) return { ok: false, reason: classify(error) };
+  const payload = data as Record<string, unknown>;
+  return {
+    ok: true,
+    data: {
+      activeInterventions: toNumber(payload.activeInterventions),
+      complimentaryActive: toNumber(payload.complimentaryActive),
+      offlinePaymentsActive: toNumber(payload.offlinePaymentsActive),
+      expiringNext30Days: toNumber(payload.expiringNext30Days),
+    },
+  };
+}
+
 /** Résultat de lecture : le refus et l'échec sont distingués de la donnée. */
 export type ReadResult<T> =
   | { ok: true; data: T }

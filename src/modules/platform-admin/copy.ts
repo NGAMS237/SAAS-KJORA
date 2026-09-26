@@ -42,6 +42,12 @@ export type AdminCopy = {
   organizationsWithoutSubscription: string;
   revenueTitle: string;
   supportRequestsTitle: string;
+
+  commercialCountersTitle: string;
+  commercialCounterActive: string;
+  commercialCounterComplimentary: string;
+  commercialCounterOfflinePayments: string;
+  commercialCounterExpiring30: string;
   lastRefreshed: string;
   refreshButton: string;
   byPlan: string;
@@ -94,6 +100,71 @@ export type AdminCopy = {
 
   errorDenied: string;
   errorFailed: string;
+
+  // ADMIN-BILLING-OPS-01 — fiche Organization
+  viewDetail: string;
+  orgDetailBackToList: string;
+  orgDetailTitle: (name: string) => string;
+  orgDetailOwnerEmail: string;
+  orgDetailActiveMembers: string;
+  orgDetailProperties: string;
+  orgDetailUnits: string;
+  orgDetailEffectivePlan: string;
+  orgDetailSubscription: string;
+  orgDetailBillingStatus: string;
+  orgDetailCycle: string;
+  orgDetailCurrency: string;
+  orgDetailPeriodEnd: string;
+  orgDetailProvider: string;
+  orgDetailMismatchWarning: string;
+  orgDetailNotFound: string;
+  orgDetailActiveInterventionTitle: string;
+  orgDetailNoActiveIntervention: string;
+  orgDetailInterventionType: string;
+  orgDetailInterventionReason: string;
+  orgDetailInterventionNote: string;
+  orgDetailInterventionPeriod: string;
+  orgDetailInterventionAmount: string;
+  orgDetailInterventionReference: string;
+  orgDetailInterventionCreatedBy: string;
+  orgDetailInterventionExpired: string;
+  orgDetailInterventionActive: string;
+  orgDetailHistoryTitle: string;
+  orgDetailNoHistory: string;
+
+  interventionTypeLabels: Record<string, string>;
+  reasonCodeLabels: Record<string, string>;
+  eventTypeLabels: Record<string, string>;
+
+  actionsTitle: string;
+  actionGrant: string;
+  actionRevoke: string;
+  actionExtend: string;
+
+  formInterventionType: string;
+  formGrantedPlan: string;
+  formReasonCode: string;
+  formAdminNote: string;
+  formStartsOn: string;
+  formEndsOn: string;
+  formEndsOnRequired: string;
+  formCurrency: string;
+  formAmount: string;
+  formManualReference: string;
+  formReason: string;
+  formNewEndsOn: string;
+  formCancel: string;
+  formConfirm: string;
+  formConfirmCheckbox: string;
+
+  grantSummaryTitle: string;
+  grantSummaryOrganization: string;
+  grantSummaryConsequence: string;
+
+  revokeConfirmText: string;
+  extendConfirmText: string;
+
+  outcomeLabels: Record<string, string>;
 };
 
 const fr: AdminCopy = {
@@ -131,6 +202,12 @@ const fr: AdminCopy = {
   organizationsWithoutSubscription: "Sans abonnement enregistré",
   revenueTitle: "Revenus",
   supportRequestsTitle: "Demandes de support",
+
+  commercialCountersTitle: "Interventions commerciales",
+  commercialCounterActive: "Interventions actives",
+  commercialCounterComplimentary: "Gratuités actives",
+  commercialCounterOfflinePayments: "Paiements hors-ligne actifs",
+  commercialCounterExpiring30: "Expirent sous 30 jours",
   lastRefreshed: "Dernière actualisation",
   refreshButton: "Actualiser",
   byPlan: "Abonnements par forfait",
@@ -185,6 +262,108 @@ const fr: AdminCopy = {
 
   errorDenied: "Accès refusé par le serveur.",
   errorFailed: "Lecture impossible. Réessayez plus tard.",
+
+  viewDetail: "Voir",
+  orgDetailBackToList: "← Retour à la liste",
+  orgDetailTitle: (name) => `Organization — ${name}`,
+  orgDetailOwnerEmail: "Courriel du propriétaire",
+  orgDetailActiveMembers: "Membres actifs",
+  orgDetailProperties: "Biens",
+  orgDetailUnits: "Logements",
+  orgDetailEffectivePlan: "Forfait effectif",
+  orgDetailSubscription: "Abonnement enregistré",
+  orgDetailBillingStatus: "Statut de facturation",
+  orgDetailCycle: "Cycle",
+  orgDetailCurrency: "Devise",
+  orgDetailPeriodEnd: "Fin de période",
+  orgDetailProvider: "Fournisseur",
+  orgDetailMismatchWarning:
+    "Le forfait effectif et l'abonnement enregistré sont en désaccord, sans intervention manuelle active pour l'expliquer.",
+  orgDetailNotFound: "Cette Organization est introuvable.",
+  orgDetailActiveInterventionTitle: "Intervention commerciale active",
+  orgDetailNoActiveIntervention: "Aucune intervention commerciale active.",
+  orgDetailInterventionType: "Type",
+  orgDetailInterventionReason: "Motif",
+  orgDetailInterventionNote: "Note",
+  orgDetailInterventionPeriod: "Période",
+  orgDetailInterventionAmount: "Montant",
+  orgDetailInterventionReference: "Référence",
+  orgDetailInterventionCreatedBy: "Accordée par",
+  orgDetailInterventionExpired: "Expirée (en attente de réconciliation)",
+  orgDetailInterventionActive: "Active",
+  orgDetailHistoryTitle: "Historique administratif",
+  orgDetailNoHistory: "Aucune action administrative enregistrée pour cette Organization.",
+
+  interventionTypeLabels: {
+    complimentary: "Forfait offert",
+    offline_payment: "Paiement hors ligne",
+    promotion: "Promotion",
+    partnership: "Partenariat",
+    support_adjustment: "Correction commerciale",
+  },
+  reasonCodeLabels: {
+    sales_gift: "Cadeau commercial",
+    partner_offer: "Offre partenaire",
+    manual_payment_received: "Paiement reçu manuellement",
+    promotional_campaign: "Campagne promotionnelle",
+    support_goodwill: "Geste commercial support",
+    other: "Autre",
+  },
+  eventTypeLabels: {
+    admin_commercial_intervention_granted: "Intervention accordée",
+    admin_commercial_intervention_revoked: "Intervention révoquée",
+    admin_commercial_intervention_extended: "Intervention prolongée",
+    admin_commercial_intervention_expired: "Intervention expirée",
+  },
+
+  actionsTitle: "Actions administratives",
+  actionGrant: "Accorder un forfait",
+  actionRevoke: "Révoquer l'avantage",
+  actionExtend: "Prolonger",
+
+  formInterventionType: "Type d'intervention",
+  formGrantedPlan: "Forfait accordé",
+  formReasonCode: "Motif normalisé",
+  formAdminNote: "Note administrative (obligatoire)",
+  formStartsOn: "Date de début",
+  formEndsOn: "Date de fin",
+  formEndsOnRequired: "Obligatoire pour ce type d'intervention.",
+  formCurrency: "Devise",
+  formAmount: "Montant",
+  formManualReference: "Référence manuelle (facultatif)",
+  formReason: "Motif (obligatoire)",
+  formNewEndsOn: "Nouvelle date de fin",
+  formCancel: "Annuler",
+  formConfirm: "Confirmer",
+  formConfirmCheckbox: "Je confirme cette action administrative.",
+
+  grantSummaryTitle: "Résumé avant confirmation",
+  grantSummaryOrganization: "Organization ciblée",
+  grantSummaryConsequence: "Le forfait effectif de cette Organization sera immédiatement mis à jour.",
+
+  revokeConfirmText: "Cette action révoquera l'avantage commercial actif. L'historique est conservé.",
+  extendConfirmText: "Cette action prolonge l'intervention commerciale active jusqu'à la nouvelle date choisie.",
+
+  outcomeLabels: {
+    granted: "Intervention accordée avec succès.",
+    already_recorded: "Cette intervention avait déjà été enregistrée (double soumission évitée).",
+    intervention_already_active: "Une intervention est déjà active : révoquez-la ou prolongez-la d'abord.",
+    revoked: "Avantage révoqué. Le forfait normal a été restauré.",
+    not_active: "Cette intervention n'est plus active.",
+    extended: "Intervention prolongée.",
+    organization_not_found: "Organization introuvable.",
+    invalid_type: "Type d'intervention invalide.",
+    invalid_plan: "Forfait invalide.",
+    invalid_reason: "Motif invalide.",
+    note_required: "Une note administrative est obligatoire.",
+    end_date_required: "Une date de fin est obligatoire pour ce type d'intervention.",
+    invalid_period: "Période invalide.",
+    invalid_currency: "Devise invalide pour un paiement hors ligne.",
+    invalid_amount: "Montant invalide pour un paiement hors ligne.",
+    invalid_idempotency_key: "Jeton de soumission invalide, réessayez.",
+    reason_required: "Un motif est obligatoire.",
+    not_found: "Intervention introuvable.",
+  },
 };
 
 const en: AdminCopy = {
@@ -222,6 +401,12 @@ const en: AdminCopy = {
   organizationsWithoutSubscription: "Without a registered subscription",
   revenueTitle: "Revenue",
   supportRequestsTitle: "Support requests",
+
+  commercialCountersTitle: "Commercial interventions",
+  commercialCounterActive: "Active interventions",
+  commercialCounterComplimentary: "Active complimentary grants",
+  commercialCounterOfflinePayments: "Active offline payments",
+  commercialCounterExpiring30: "Expiring within 30 days",
   lastRefreshed: "Last refreshed",
   refreshButton: "Refresh",
   byPlan: "Subscriptions by plan",
@@ -276,6 +461,108 @@ const en: AdminCopy = {
 
   errorDenied: "Access denied by the server.",
   errorFailed: "Unable to read. Try again later.",
+
+  viewDetail: "View",
+  orgDetailBackToList: "← Back to list",
+  orgDetailTitle: (name) => `Organization — ${name}`,
+  orgDetailOwnerEmail: "Owner email",
+  orgDetailActiveMembers: "Active members",
+  orgDetailProperties: "Properties",
+  orgDetailUnits: "Units",
+  orgDetailEffectivePlan: "Effective plan",
+  orgDetailSubscription: "Registered subscription",
+  orgDetailBillingStatus: "Billing status",
+  orgDetailCycle: "Cycle",
+  orgDetailCurrency: "Currency",
+  orgDetailPeriodEnd: "Period end",
+  orgDetailProvider: "Provider",
+  orgDetailMismatchWarning:
+    "The effective plan and the registered subscription disagree, with no active manual intervention to explain it.",
+  orgDetailNotFound: "This Organization could not be found.",
+  orgDetailActiveInterventionTitle: "Active commercial intervention",
+  orgDetailNoActiveIntervention: "No active commercial intervention.",
+  orgDetailInterventionType: "Type",
+  orgDetailInterventionReason: "Reason",
+  orgDetailInterventionNote: "Note",
+  orgDetailInterventionPeriod: "Period",
+  orgDetailInterventionAmount: "Amount",
+  orgDetailInterventionReference: "Reference",
+  orgDetailInterventionCreatedBy: "Granted by",
+  orgDetailInterventionExpired: "Expired (awaiting reconciliation)",
+  orgDetailInterventionActive: "Active",
+  orgDetailHistoryTitle: "Administrative history",
+  orgDetailNoHistory: "No administrative action recorded for this Organization.",
+
+  interventionTypeLabels: {
+    complimentary: "Complimentary plan",
+    offline_payment: "Offline payment",
+    promotion: "Promotion",
+    partnership: "Partnership",
+    support_adjustment: "Commercial correction",
+  },
+  reasonCodeLabels: {
+    sales_gift: "Commercial gift",
+    partner_offer: "Partner offer",
+    manual_payment_received: "Payment received manually",
+    promotional_campaign: "Promotional campaign",
+    support_goodwill: "Support goodwill gesture",
+    other: "Other",
+  },
+  eventTypeLabels: {
+    admin_commercial_intervention_granted: "Intervention granted",
+    admin_commercial_intervention_revoked: "Intervention revoked",
+    admin_commercial_intervention_extended: "Intervention extended",
+    admin_commercial_intervention_expired: "Intervention expired",
+  },
+
+  actionsTitle: "Administrative actions",
+  actionGrant: "Grant a plan",
+  actionRevoke: "Revoke the benefit",
+  actionExtend: "Extend",
+
+  formInterventionType: "Intervention type",
+  formGrantedPlan: "Granted plan",
+  formReasonCode: "Normalized reason",
+  formAdminNote: "Administrative note (required)",
+  formStartsOn: "Start date",
+  formEndsOn: "End date",
+  formEndsOnRequired: "Required for this intervention type.",
+  formCurrency: "Currency",
+  formAmount: "Amount",
+  formManualReference: "Manual reference (optional)",
+  formReason: "Reason (required)",
+  formNewEndsOn: "New end date",
+  formCancel: "Cancel",
+  formConfirm: "Confirm",
+  formConfirmCheckbox: "I confirm this administrative action.",
+
+  grantSummaryTitle: "Summary before confirmation",
+  grantSummaryOrganization: "Targeted Organization",
+  grantSummaryConsequence: "This Organization's effective plan will be updated immediately.",
+
+  revokeConfirmText: "This will revoke the active commercial benefit. History is preserved.",
+  extendConfirmText: "This extends the active commercial intervention to the new chosen date.",
+
+  outcomeLabels: {
+    granted: "Intervention granted successfully.",
+    already_recorded: "This intervention had already been recorded (double submission avoided).",
+    intervention_already_active: "An intervention is already active: revoke or extend it first.",
+    revoked: "Benefit revoked. The normal plan has been restored.",
+    not_active: "This intervention is no longer active.",
+    extended: "Intervention extended.",
+    organization_not_found: "Organization not found.",
+    invalid_type: "Invalid intervention type.",
+    invalid_plan: "Invalid plan.",
+    invalid_reason: "Invalid reason.",
+    note_required: "An administrative note is required.",
+    end_date_required: "An end date is required for this intervention type.",
+    invalid_period: "Invalid period.",
+    invalid_currency: "Invalid currency for an offline payment.",
+    invalid_amount: "Invalid amount for an offline payment.",
+    invalid_idempotency_key: "Invalid submission token, please retry.",
+    reason_required: "A reason is required.",
+    not_found: "Intervention not found.",
+  },
 };
 
 export const ADMIN_COPY = { fr, en } as const;
