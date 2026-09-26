@@ -5013,6 +5013,27 @@ a.portfolio-metric:hover {
 .admin-state--unavailable { background: var(--danger-soft); color: var(--danger); }
 .admin-state--not-connected { background: transparent; color: var(--text-muted); border-color: var(--border-strong); }
 
+/* FINANCE-ADMIN-01 — graphiques légers, HTML/CSS, aucune bibliothèque lourde. */
+.admin-charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.admin-charts-grid--tight { gap: 10px; margin-top: 8px; }
+.admin-chart {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; border: 1px solid var(--border-strong); border-radius: 10px;
+  background: var(--surface);
+}
+.admin-chart h3 { margin: 0; font-size: 0.85rem; }
+.admin-chart__bars { display: flex; flex-direction: column; gap: 8px; }
+.admin-chart__bar-row { display: grid; grid-template-columns: minmax(80px, auto) 1fr auto; align-items: center; gap: 8px; }
+.admin-chart__bar-label { font-size: 0.78rem; color: var(--text-secondary); }
+.admin-chart__bar-track {
+  display: block; height: 10px; border-radius: var(--radius-pill);
+  background: var(--surface-muted); overflow: hidden;
+}
+.admin-chart__bar-fill { display: block; height: 100%; background: var(--brand-ink); border-radius: var(--radius-pill); }
+.admin-chart__bar-value { font-size: 0.78rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-chart__table summary { cursor: pointer; font-size: 0.78rem; color: var(--text-secondary); }
+.admin-chart__table table { margin-top: 8px; }
+
 .admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .admin-pagination__link {
   padding: 8px 14px; border-radius: var(--radius-pill);

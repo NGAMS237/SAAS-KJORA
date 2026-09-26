@@ -14,11 +14,16 @@ import {
 import type {
   AdminOrganizationRow,
   AdminSubscriptionRow,
+  FinanceEventRow,
+  FinancePeriodFilter,
+  FinanceSummary,
   InterventionCounters,
   OrganizationDetail,
   Paginated,
   PlatformCounters,
 } from "./server";
+import { FINANCE_PERIOD_FILTERS } from "./finance-periods";
+import { formatMinorAmount as formatMoneyMinorAmount, minorToMajor } from "./money";
 import {
   extendCommercialInterventionAction,
   grantCommercialInterventionAction,
@@ -598,7 +603,7 @@ function newIdempotencyKey(): string {
 
 function formatMoney(amountMinor: number | null, currency: string | null): string {
   if (amountMinor === null || !currency) return "—";
-  const major = currency === "XAF" ? amountMinor : amountMinor / 100;
+  const major = minorToMajor(amountMinor, currency);
   return `${major.toLocaleString("fr-FR")} ${currency}`;
 }
 
@@ -1159,6 +1164,364 @@ export function OrganizationDetailView({
         </label>
         <ReasonField id="extend-reason" label={t.formReason} value={extendReason} onChange={setExtendReason} />
       </ConfirmDialog>
+    </div>
+  );
+}
+
+// =============================================================================
+// FINANCE-ADMIN-01 — Finances (lecture seule)
+// =============================================================================
+// Trois principes tenus dans toute cette section :
+//   1. CAD et XAF ne sont jamais additionnés ni affichés dans une même barre
+//      ou un même total — chaque montant reste sous sa devise.
+//   2. « Attendu » (théorique) et « encaissé » (réel) restent deux blocs
+//      visuellement distincts, jamais une seule ligne fusionnée.
+//   3. Chaque graphique est accompagné de sa table de valeurs — le graphique
+//      n'est jamais la seule façon d'obtenir un chiffre exact.
+
+/** Formatte un montant en unités mineures vers une chaîne lisible, sans jamais
+ *  convertir entre devises ni les additionner. Délègue la conversion réelle
+ *  (CAD /100, XAF inchangé) à money.ts — jamais de règle "/100" locale ici. */
+function formatMinorAmount(minor: number, currency: string, lang: "fr" | "en"): string {
+  return formatMoneyMinorAmount(minor, currency, lang === "en" ? "en-CA" : "fr-FR");
+}
+
+/** Barre horizontale accessible + table de valeurs. Aucune barre n'est jamais
+ *  affichée seule : `role="img"` porte un `aria-label` résumant les valeurs,
+ *  et la table qui suit reste la source exacte, toujours visible. */
+function BarChart({
+  title,
+  entries,
+  captionLabel,
+  formatValue,
+}: {
+  title: string;
+  entries: { key: string; label: string; value: number }[];
+  captionLabel: string;
+  formatValue: (value: number) => string;
+}) {
+  const max = Math.max(1, ...entries.map((e) => e.value));
+  const summary = entries.map((e) => `${e.label}: ${formatValue(e.value)}`).join(", ");
+
+  return (
+    <div className="admin-chart">
+      <h3>{title}</h3>
+      <div className="admin-chart__bars" role="img" aria-label={`${title} — ${summary}`}>
+        {entries.map((e) => (
+          <div className="admin-chart__bar-row" key={e.key}>
+            <span className="admin-chart__bar-label">{e.label}</span>
+            <span className="admin-chart__bar-track">
+              <span
+                className="admin-chart__bar-fill"
+                style={{ width: `${Math.round((e.value / max) * 100)}%` }}
+              />
+            </span>
+            <span className="admin-chart__bar-value">{formatValue(e.value)}</span>
+          </div>
+        ))}
+      </div>
+      <details className="admin-chart__table">
+        <summary>{captionLabel}</summary>
+        <table className="admin-table">
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e.key}>
+                <th scope="row">{e.label}</th>
+                <td>{formatValue(e.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    </div>
+  );
+}
+
+function ConnectorRow({
+  label,
+  connected,
+  t,
+}: {
+  label: string;
+  connected: boolean;
+  t: ReturnType<typeof useCopy>["t"];
+}) {
+  return (
+    <tr>
+      <th scope="row">{label}</th>
+      <td>
+        <span className={connected ? "admin-state admin-state--normal" : "admin-state admin-state--not-connected"}>
+          {connected ? t.connectorStateConnected : t.connectorStateNotConnected}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+export function FinancesView({
+  summary,
+  events,
+  error,
+  period,
+}: {
+  summary: FinanceSummary | null;
+  events: Paginated<FinanceEventRow> | null;
+  error: "denied" | "failed" | null;
+  period: FinancePeriodFilter;
+}) {
+  const { t, lang } = useCopy();
+
+  const periodLabels: Record<FinancePeriodFilter, string> = {
+    last_30_days: t.periodLast30Days,
+    last_90_days: t.periodLast90Days,
+    current_year: t.periodCurrentYear,
+    all_time: t.periodAllTime,
+  };
+
+  const eventSourceLabel = (source: string): string => {
+    if (source === "subscription") return t.financeEventSourceSubscription;
+    if (source === "offline_payment") return t.financeEventSourceOfflinePayment;
+    if (source === "manual_intervention") return t.financeEventSourceManualIntervention;
+    return source;
+  };
+
+  return (
+    <div className="admin-page">
+      <header className="admin-page__header">
+        <h1>{t.financeTitle}</h1>
+        <p>{t.financeSubtitle}</p>
+        {summary ? <RefreshControl generatedAt={summary.generatedAt} /> : null}
+      </header>
+
+      {error ? (
+        <p className="admin-error" role="alert">
+          {error === "denied" ? t.errorDenied : t.errorFailed}
+        </p>
+      ) : null}
+
+      <FilterBar action="/administration/finances">
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.financePeriodLabel}</span>
+          <select name="period" defaultValue={period} className="admin-filters__select">
+            {FINANCE_PERIOD_FILTERS.map((key) => (
+              <option key={key} value={key}>
+                {periodLabels[key]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className="admin-filters__submit">
+          {t.financeApplyFilter}
+        </button>
+      </FilterBar>
+
+      {summary ? (
+        <>
+          {/* B. Compteurs commerciaux — état courant, indépendant de la période. */}
+          <section className="admin-section" aria-labelledby="finance-counters-heading">
+            <h2 id="finance-counters-heading">{t.financeSectionCounters}</h2>
+            <div className="admin-counters">
+              <Counter label={t.financeCounterOrganizations} value={summary.counters.organizationsTotal} />
+              <Counter label={t.financeCounterFreeSubs} value={summary.counters.subscriptionsFree} />
+              <Counter label={t.financeCounterPaidSubs} value={summary.counters.subscriptionsPaid} />
+              <Counter
+                label={t.financeCounterWithoutSubscription}
+                value={summary.counters.organizationsWithoutSubscription}
+              />
+              <Counter label={t.financeCounterMismatches} value={summary.counters.planBillingMismatches} />
+              <Counter
+                label={t.financeCounterActiveInterventions}
+                value={summary.counters.activeCommercialInterventions}
+              />
+              <Counter label={t.financeCounterActiveComplimentary} value={summary.counters.activeComplimentary} />
+              <Counter label={t.financeCounterOfflinePayments} value={summary.counters.registeredOfflinePayments} />
+            </div>
+          </section>
+
+          {/* C. Revenus RÉELLEMENT encaissés — jamais confondus avec le D. */}
+          <section className="admin-section" aria-labelledby="finance-collected-heading">
+            <h2 id="finance-collected-heading">{t.financeSectionCollected}</h2>
+            <div className="admin-counters">
+              <Counter
+                label={t.financeCollectedOfflineCad}
+                value={Math.round(minorToMajor(summary.collectedOfflineByCurrency.CAD ?? 0, "CAD"))}
+              />
+              <Counter
+                label={t.financeCollectedOfflineXaf}
+                value={Math.round(minorToMajor(summary.collectedOfflineByCurrency.XAF ?? 0, "XAF"))}
+              />
+            </div>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <tbody>
+                  <tr>
+                    <th scope="row">{t.financeCollectedOfflineCad}</th>
+                    <td>
+                      {formatMinorAmount(summary.collectedOfflineByCurrency.CAD ?? 0, "CAD", lang)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">{t.financeCollectedOfflineXaf}</th>
+                    <td>
+                      {formatMinorAmount(summary.collectedOfflineByCurrency.XAF ?? 0, "XAF", lang)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">{t.financeCollectedStripe}</th>
+                    <td>
+                      <span className="admin-state admin-state--not-connected">{t.notConnectedValue}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">{t.financeCollectedMobileMoney}</th>
+                    <td>
+                      <span className="admin-state admin-state--not-connected">{t.notConnectedValue}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* D. Revenus MENSUELS attendus — théorique, jamais un encaissement. */}
+          <section className="admin-section" aria-labelledby="finance-expected-heading">
+            <h2 id="finance-expected-heading">{t.financeSectionExpected}</h2>
+            <p className="admin-section__lead">{t.financeExpectedBasisNote}</p>
+            <div className="admin-counters">
+              <Counter
+                label={t.financeExpectedCad}
+                value={Math.round(minorToMajor(summary.expectedRevenueByCurrency.CAD ?? 0, "CAD"))}
+              />
+              <Counter
+                label={t.financeExpectedXaf}
+                value={Math.round(minorToMajor(summary.expectedRevenueByCurrency.XAF ?? 0, "XAF"))}
+              />
+            </div>
+          </section>
+
+          {/* E. Trois graphiques légers, chacun avec sa table de valeurs. */}
+          <section className="admin-section" aria-labelledby="finance-charts-heading">
+            <h2 id="finance-charts-heading">{t.financeSectionCharts}</h2>
+            <div className="admin-charts-grid">
+              <BarChart
+                title={t.chartSubscriptionsByPlan}
+                captionLabel={t.chartTableCaption}
+                entries={Object.entries(summary.charts.subscriptionsByPlan).map(([plan, count]) => ({
+                  key: plan,
+                  label: plan,
+                  value: count,
+                }))}
+                formatValue={(v) => String(v)}
+              />
+              <BarChart
+                title={t.chartFreePaidBreakdown}
+                captionLabel={t.chartTableCaption}
+                entries={[
+                  { key: "free", label: t.financeCounterFreeSubs, value: summary.charts.freePaidBreakdown.free },
+                  { key: "paid", label: t.financeCounterPaidSubs, value: summary.charts.freePaidBreakdown.paid },
+                  {
+                    key: "without",
+                    label: t.financeCounterWithoutSubscription,
+                    value: summary.charts.freePaidBreakdown.withoutSubscription,
+                  },
+                ]}
+                formatValue={(v) => String(v)}
+              />
+              <div className="admin-chart">
+                <h3>{t.chartExpectedRevenueByCurrency}</h3>
+                <div className="admin-charts-grid admin-charts-grid--tight">
+                  <BarChart
+                    title="CAD"
+                    captionLabel={t.chartTableCaption}
+                    entries={[
+                      {
+                        key: "cad",
+                        label: t.financeExpectedCad,
+                        value: summary.expectedRevenueByCurrency.CAD ?? 0,
+                      },
+                    ]}
+                    formatValue={(v) => formatMinorAmount(v, "CAD", lang)}
+                  />
+                  <BarChart
+                    title="XAF"
+                    captionLabel={t.chartTableCaption}
+                    entries={[
+                      {
+                        key: "xaf",
+                        label: t.financeExpectedXaf,
+                        value: summary.expectedRevenueByCurrency.XAF ?? 0,
+                      },
+                    ]}
+                    formatValue={(v) => formatMinorAmount(v, "XAF", lang)}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* G. État des connecteurs — l'absence d'intégration n'est jamais « Normal ». */}
+          <section className="admin-section" aria-labelledby="finance-connectors-heading">
+            <h2 id="finance-connectors-heading">{t.financeSectionConnectors}</h2>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <tbody>
+                  <ConnectorRow label={t.connectorSupabaseInternal} connected={true} t={t} />
+                  <ConnectorRow label={t.connectorStripe} connected={summary.stripeConnected} t={t} />
+                  <ConnectorRow label={t.connectorMobileMoney} connected={summary.mobileMoneyConnected} t={t} />
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {/* F. Tableau des événements financiers récents — assaini, paginé. */}
+      <section className="admin-section" aria-labelledby="finance-events-heading">
+        <h2 id="finance-events-heading">{t.financeSectionEvents}</h2>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">{t.colEventDate}</th>
+                <th scope="col">{t.colEventOrganization}</th>
+                <th scope="col">{t.colEventCategory}</th>
+                <th scope="col">{t.colEventStatus}</th>
+                <th scope="col">{t.colEventCurrency}</th>
+                <th scope="col">{t.colEventAmount}</th>
+                <th scope="col">{t.colEventSource}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events && events.rows.length > 0 ? (
+                events.rows.map((ev) => (
+                  <tr key={ev.eventId}>
+                    <td>{formatDateTime(ev.occurredAt, lang) ?? "—"}</td>
+                    <th scope="row">{ev.organizationName || "—"}</th>
+                    <td>{ev.category}</td>
+                    <td>{ev.status}</td>
+                    <td>{ev.currency ?? "—"}</td>
+                    <td>
+                      {ev.amountMinor !== null && ev.currency
+                        ? formatMinorAmount(ev.amountMinor, ev.currency, lang)
+                        : t.notAvailable}
+                    </td>
+                    <td>{eventSourceLabel(ev.source)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="admin-table__muted">
+                    {t.financeNoEvents}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {events ? (
+          <Pagination page={events} basePath="/administration/finances" extraParams={{ period }} />
+        ) : null}
+      </section>
     </div>
   );
 }
