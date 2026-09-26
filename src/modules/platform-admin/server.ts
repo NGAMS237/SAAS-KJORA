@@ -77,7 +77,46 @@ export type AdminSubscriptionRow = {
   renewalDate: string | null;
   graceEndsOn: string | null;
   hasProvider: boolean;
+  /** ADMIN-02 — masqué des listes actives (jamais supprimé). */
+  archived: boolean;
   updatedAt: string;
+};
+
+/** ADMIN-02 — filtre d'archivage pour la liste des abonnements. */
+export type ArchivedFilter = "active" | "archived" | "all";
+
+/** ADMIN-02 — historique d'audit d'un abonnement (billing_events, event_type admin_*). */
+export type SubscriptionAuditEvent = {
+  eventType: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  payload: Record<string, unknown>;
+  actorUserId: string | null;
+  createdAt: string;
+};
+
+/** ADMIN-02 — détail complet d'un abonnement, pour la page de détail. */
+export type SubscriptionDetail = {
+  organizationId: string;
+  organizationName: string;
+  status: string;
+  plan: string;
+  billingCycle: string;
+  currency: string;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  renewalDate: string | null;
+  graceEndsOn: string | null;
+  blockedAt: string | null;
+  cancellationRequestedAt: string | null;
+  cancellationEffectiveOn: string | null;
+  scheduledPlan: string | null;
+  scheduledCycle: string | null;
+  scheduledEffectiveOn: string | null;
+  archivedAt: string | null;
+  archivedBy: string | null;
+  updatedAt: string;
+  recentEvents: SubscriptionAuditEvent[];
 };
 
 export type { Paginated };
@@ -152,6 +191,7 @@ function mapSubscriptionRow(r: Record<string, unknown>): AdminSubscriptionRow {
     renewalDate: r.renewal_date ? String(r.renewal_date) : null,
     graceEndsOn: r.grace_ends_on ? String(r.grace_ends_on) : null,
     hasProvider: r.has_provider === true,
+    archived: r.archived === true,
     updatedAt: String(r.updated_at ?? ""),
   };
 }
@@ -183,6 +223,7 @@ export async function listSubscriptions(
   limit = DEFAULT_PAGE_SIZE,
   offset = 0,
   filters: SubscriptionFilters = {},
+  archivedFilter: ArchivedFilter = "active",
 ): Promise<ReadResult<Paginated<AdminSubscriptionRow>>> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("admin_list_subscriptions", {
@@ -192,12 +233,69 @@ export async function listSubscriptions(
     plan_filter: filters.plan?.trim() || null,
     status_filter: filters.status?.trim() || null,
     currency_filter: filters.currency?.trim() || null,
+    archived_filter: archivedFilter,
   });
   if (error || !data) return { ok: false, reason: classify(error) };
 
   return {
     ok: true,
     data: parsePagedPayload(data, mapSubscriptionRow, limit, offset),
+  };
+}
+
+/** ADMIN-02 — détail complet d'un abonnement, pour /administration/abonnements/[organizationId]. */
+export async function getSubscriptionDetail(
+  organizationId: string,
+): Promise<ReadResult<SubscriptionDetail | null>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_get_subscription", {
+    target_organization_id: organizationId,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  const payload = data as Record<string, unknown>;
+  if (payload.found !== true) return { ok: true, data: null };
+
+  const events = Array.isArray(payload.recentEvents) ? payload.recentEvents : [];
+
+  return {
+    ok: true,
+    data: {
+      organizationId: String(payload.organizationId ?? ""),
+      organizationName: String(payload.organizationName ?? ""),
+      status: String(payload.status ?? ""),
+      plan: String(payload.plan ?? ""),
+      billingCycle: String(payload.billingCycle ?? ""),
+      currency: String(payload.currency ?? ""),
+      currentPeriodStart: payload.currentPeriodStart ? String(payload.currentPeriodStart) : null,
+      currentPeriodEnd: payload.currentPeriodEnd ? String(payload.currentPeriodEnd) : null,
+      renewalDate: payload.renewalDate ? String(payload.renewalDate) : null,
+      graceEndsOn: payload.graceEndsOn ? String(payload.graceEndsOn) : null,
+      blockedAt: payload.blockedAt ? String(payload.blockedAt) : null,
+      cancellationRequestedAt: payload.cancellationRequestedAt
+        ? String(payload.cancellationRequestedAt)
+        : null,
+      cancellationEffectiveOn: payload.cancellationEffectiveOn
+        ? String(payload.cancellationEffectiveOn)
+        : null,
+      scheduledPlan: payload.scheduledPlan ? String(payload.scheduledPlan) : null,
+      scheduledCycle: payload.scheduledCycle ? String(payload.scheduledCycle) : null,
+      scheduledEffectiveOn: payload.scheduledEffectiveOn ? String(payload.scheduledEffectiveOn) : null,
+      archivedAt: payload.archivedAt ? String(payload.archivedAt) : null,
+      archivedBy: payload.archivedBy ? String(payload.archivedBy) : null,
+      updatedAt: String(payload.updatedAt ?? ""),
+      recentEvents: events.map((e) => {
+        const ev = e as Record<string, unknown>;
+        return {
+          eventType: String(ev.event_type ?? ""),
+          fromStatus: ev.from_status ? String(ev.from_status) : null,
+          toStatus: ev.to_status ? String(ev.to_status) : null,
+          payload: (ev.payload as Record<string, unknown>) ?? {},
+          actorUserId: ev.actor_user_id ? String(ev.actor_user_id) : null,
+          createdAt: String(ev.created_at ?? ""),
+        };
+      }),
+    },
   };
 }
 

@@ -24,8 +24,15 @@ export default async function AdministrationSubscriptionsPage({
   const plan = single(params.plan);
   const status = single(params.status);
   const currency = single(params.currency);
+  const archivedRaw = single(params.archived);
+  const archived = archivedRaw === "archived" || archivedRaw === "all" ? archivedRaw : "active";
   const [result, counters] = await Promise.all([
-    listSubscriptions(DEFAULT_PAGE_SIZE, parseOffset(params.offset), { search, plan, status, currency }),
+    listSubscriptions(
+      DEFAULT_PAGE_SIZE,
+      parseOffset(params.offset),
+      { search, plan, status, currency },
+      archived,
+    ),
     getPlatformCounters(),
   ]);
 
@@ -37,6 +44,7 @@ export default async function AdministrationSubscriptionsPage({
       plan={plan ?? ""}
       status={status ?? ""}
       currency={currency ?? ""}
+      archived={archived}
       freeCount={counters.ok ? counters.data.subscriptionsFree : null}
       paidCount={counters.ok ? counters.data.subscriptionsPaid : null}
     />

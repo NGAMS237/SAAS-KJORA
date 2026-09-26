@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePreferences } from "@/core/preferences/preferences-provider";
@@ -16,7 +16,17 @@ import type {
   AdminSubscriptionRow,
   Paginated,
   PlatformCounters,
+  SubscriptionDetail,
 } from "./server";
+import {
+  archiveSubscriptionAction,
+  changeSubscriptionPlanAction,
+  reactivateSubscriptionAction,
+  revokeSubscriptionCancellationAction,
+  scheduleSubscriptionCancellationAction,
+  suspendSubscriptionAction,
+  type SubscriptionActionResult,
+} from "./subscription-actions";
 
 // =============================================================================
 // KJORA — ADMIN-01 — Vues de la console
@@ -393,6 +403,7 @@ export function SubscriptionsView({
   plan,
   status,
   currency,
+  archived,
   freeCount,
   paidCount,
 }: {
@@ -402,6 +413,7 @@ export function SubscriptionsView({
   plan: string;
   status: string;
   currency: string;
+  archived: "active" | "archived" | "all";
   freeCount: number | null;
   paidCount: number | null;
 }) {
@@ -412,6 +424,7 @@ export function SubscriptionsView({
   if (plan) extraParams.plan = plan;
   if (status) extraParams.status = status;
   if (currency) extraParams.currency = currency;
+  if (archived !== "active") extraParams.archived = archived;
 
   return (
     <div className="admin-page">
@@ -458,6 +471,14 @@ export function SubscriptionsView({
             className="admin-filters__input"
           />
         </label>
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.archivedFilterLabel}</span>
+          <select name="archived" defaultValue={archived} className="admin-filters__select">
+            <option value="active">{t.archivedFilterActive}</option>
+            <option value="archived">{t.archivedFilterArchived}</option>
+            <option value="all">{t.archivedFilterAll}</option>
+          </select>
+        </label>
         <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
         {hasFilters ? (
           <Link href="/administration/abonnements" className="admin-filters__clear">
@@ -488,19 +509,25 @@ export function SubscriptionsView({
                   <th scope="col">{t.colRenewal}</th>
                   <th scope="col">{t.colGraceEnds}</th>
                   <th scope="col">{t.colProvider}</th>
+                  <th scope="col">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="admin-table__muted">
+                    <td colSpan={10} className="admin-table__muted">
                       {t.emptyRows}
                     </td>
                   </tr>
                 ) : (
                   page.rows.map((row) => (
                     <tr key={row.organizationId}>
-                      <th scope="row">{row.organizationName || "—"}</th>
+                      <th scope="row">
+                        {row.organizationName || "—"}
+                        {row.archived ? (
+                          <span className="admin-badge admin-badge--archived">{t.archivedBadge}</span>
+                        ) : null}
+                      </th>
                       <td>{row.status}</td>
                       <td>{row.plan}</td>
                       <td>{row.billingCycle}</td>
@@ -509,6 +536,14 @@ export function SubscriptionsView({
                       <td className="admin-table__muted">{formatDate(row.renewalDate, lang)}</td>
                       <td className="admin-table__muted">{formatDate(row.graceEndsOn, lang)}</td>
                       <td>{row.hasProvider ? t.providerYes : t.providerNo}</td>
+                      <td>
+                        <Link
+                          href={`/administration/abonnements/${row.organizationId}`}
+                          className="admin-table__view-link"
+                        >
+                          {t.viewDetail}
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -519,5 +554,362 @@ export function SubscriptionsView({
         </>
       ) : null}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Détail d'un abonnement — ADMIN-02
+// ---------------------------------------------------------------------------
+// Composant client : les actions sont des Server Actions Next.js (aucune
+// mutation via GET, aucun secret ni prix envoyé par le client). Chaque action
+// sensible passe par un <dialog> natif : focus piégé, fermeture au clavier
+// (Échap) et retour de focus au déclencheur gérés par le navigateur.
+
+const CANONICAL_PLANS = ["decouverte", "essentiel", "avance", "patrimoine", "sur_mesure"] as const;
+const CANONICAL_CYCLES = ["monthly", "annual"] as const;
+
+function ConfirmDialog({
+  id,
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  pending,
+  children,
+  onConfirm,
+  onClose,
+}: {
+  id: string;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  pending: boolean;
+  children?: ReactNode;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <dialog id={id} className="admin-dialog" aria-labelledby={`${id}-title`} onClose={onClose}>
+      <form method="dialog" className="admin-dialog__body">
+        <h2 id={`${id}-title`}>{title}</h2>
+        <p>{message}</p>
+        {children}
+        <div className="admin-dialog__actions">
+          <button type="button" className="admin-dialog__cancel" onClick={onClose} disabled={pending}>
+            {cancelLabel}
+          </button>
+          <button
+            type="button"
+            className="admin-dialog__confirm"
+            onClick={onConfirm}
+            disabled={pending}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
+
+function ActionFeedback({ result, t }: { result: SubscriptionActionResult | null; t: ReturnType<typeof useCopy>["t"] }) {
+  if (!result) return null;
+  if (!result.ok) {
+    return (
+      <p className="admin-error" role="alert">
+        {result.message}
+      </p>
+    );
+  }
+  const label = t.subscriptionOutcomeLabels[result.outcome] ?? result.outcome;
+  return (
+    <p className="admin-success" role="status">
+      {label}
+    </p>
+  );
+}
+
+export function SubscriptionDetailView({
+  detail,
+  error,
+}: {
+  detail: SubscriptionDetail | null;
+  error: "denied" | "failed" | "not_found" | null;
+}) {
+  const { t, lang } = useCopy();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [lastResult, setLastResult] = useState<SubscriptionActionResult | null>(null);
+  const [reason, setReason] = useState("");
+  const [targetPlan, setTargetPlan] = useState<(typeof CANONICAL_PLANS)[number]>("decouverte");
+  const [targetCycle, setTargetCycle] = useState<(typeof CANONICAL_CYCLES)[number]>("monthly");
+
+  const planDialogRef = useRef<HTMLDialogElement>(null);
+  const suspendDialogRef = useRef<HTMLDialogElement>(null);
+  const reactivateDialogRef = useRef<HTMLDialogElement>(null);
+  const cancelDialogRef = useRef<HTMLDialogElement>(null);
+  const revokeCancelDialogRef = useRef<HTMLDialogElement>(null);
+  const archiveDialogRef = useRef<HTMLDialogElement>(null);
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <p className="admin-error" role="alert">
+          {error === "denied" ? t.errorDenied : error === "not_found" ? t.subscriptionNotFound : t.errorFailed}
+        </p>
+      </div>
+    );
+  }
+  if (!detail) return null;
+
+  const run = (fn: () => Promise<SubscriptionActionResult>, dialog: HTMLDialogElement | null) => {
+    startTransition(async () => {
+      const result = await fn();
+      setLastResult(result);
+      setReason("");
+      dialog?.close();
+      if (result.ok) router.refresh();
+    });
+  };
+
+  const isSuspended = detail.status === "billing_blocked";
+  const isCancellationScheduled = detail.status === "cancellation_scheduled";
+  const isArchived = detail.archivedAt !== null;
+  const isActive = detail.status === "active";
+
+  return (
+    <div className="admin-page">
+      <header className="admin-page__header">
+        <p className="admin-breadcrumb">
+          <Link href="/administration/abonnements">{t.subscriptionsTitle}</Link> / {detail.organizationName || "—"}
+        </p>
+        <h1>{detail.organizationName || "—"}</h1>
+        {isArchived ? <span className="admin-badge admin-badge--archived">{t.archivedBadge}</span> : null}
+      </header>
+
+      <ActionFeedback result={lastResult} t={t} />
+
+      <section className="admin-section" aria-labelledby="detail-heading">
+        <h2 id="detail-heading">{t.subscriptionDetailTitle}</h2>
+        <dl className="admin-detail-grid">
+          <div><dt>{t.colStatus}</dt><dd>{detail.status}</dd></div>
+          <div><dt>{t.colPlan}</dt><dd>{detail.plan}</dd></div>
+          <div><dt>{t.colCycle}</dt><dd>{detail.billingCycle}</dd></div>
+          <div><dt>{t.colCurrency}</dt><dd>{detail.currency}</dd></div>
+          <div><dt>{t.periodStart}</dt><dd>{formatDate(detail.currentPeriodStart, lang)}</dd></div>
+          <div><dt>{t.colPeriodEnd}</dt><dd>{formatDate(detail.currentPeriodEnd, lang)}</dd></div>
+          <div><dt>{t.colRenewal}</dt><dd>{formatDate(detail.renewalDate, lang)}</dd></div>
+          <div><dt>{t.colGraceEnds}</dt><dd>{formatDate(detail.graceEndsOn, lang)}</dd></div>
+          <div><dt>{t.cancellationEffectiveOn}</dt><dd>{formatDate(detail.cancellationEffectiveOn, lang)}</dd></div>
+        </dl>
+      </section>
+
+      <section className="admin-section" aria-labelledby="actions-heading">
+        <h2 id="actions-heading">{t.actionsTitle}</h2>
+        <div className="admin-actions-menu">
+          {!isArchived && (
+            <button
+              type="button"
+              className="admin-action-button"
+              onClick={() => {
+                setTargetPlan(detail.plan as (typeof CANONICAL_PLANS)[number]);
+                setTargetCycle(detail.billingCycle as (typeof CANONICAL_CYCLES)[number]);
+                planDialogRef.current?.showModal();
+              }}
+            >
+              {t.actionChangePlan}
+            </button>
+          )}
+          {!isArchived && !isSuspended && (
+            <button type="button" className="admin-action-button" onClick={() => suspendDialogRef.current?.showModal()}>
+              {t.actionSuspend}
+            </button>
+          )}
+          {!isArchived && isSuspended && (
+            <button type="button" className="admin-action-button" onClick={() => reactivateDialogRef.current?.showModal()}>
+              {t.actionReactivate}
+            </button>
+          )}
+          {!isArchived && !isCancellationScheduled && detail.status !== "free" && detail.status !== "cancelled" && (
+            <button type="button" className="admin-action-button" onClick={() => cancelDialogRef.current?.showModal()}>
+              {t.actionScheduleCancellation}
+            </button>
+          )}
+          {!isArchived && isCancellationScheduled && (
+            <button type="button" className="admin-action-button" onClick={() => revokeCancelDialogRef.current?.showModal()}>
+              {t.actionRevokeCancellation}
+            </button>
+          )}
+          {!isArchived && !isActive && (
+            <button
+              type="button"
+              className="admin-action-button admin-action-button--danger"
+              onClick={() => archiveDialogRef.current?.showModal()}
+            >
+              {t.actionArchive}
+            </button>
+          )}
+        </div>
+      </section>
+
+      {detail.recentEvents.length > 0 ? (
+        <section className="admin-section" aria-labelledby="audit-heading">
+          <h2 id="audit-heading">{t.auditTitle}</h2>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colObserved}</th>
+                  <th scope="col">{t.auditEvent}</th>
+                  <th scope="col">{t.auditTransition}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.recentEvents.map((ev, i) => (
+                  <tr key={`${ev.eventType}-${ev.createdAt}-${i}`}>
+                    <td className="admin-table__muted">{formatDateTime(ev.createdAt, lang)}</td>
+                    <td>{ev.eventType}</td>
+                    <td className="admin-table__muted">
+                      {ev.fromStatus ?? "—"} → {ev.toStatus ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      <ConfirmDialog
+        id="dialog-change-plan"
+        title={t.actionChangePlan}
+        message={t.confirmChangePlan(detail.plan, targetPlan)}
+        confirmLabel={t.confirm}
+        cancelLabel={t.cancel}
+        pending={isPending}
+        onConfirm={() =>
+          run(() => changeSubscriptionPlanAction(detail.organizationId, targetPlan, targetCycle, reason), planDialogRef.current)
+        }
+        onClose={() => planDialogRef.current?.close()}
+      >
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.colPlan}</span>
+          <select
+            className="admin-filters__select"
+            value={targetPlan}
+            onChange={(e) => setTargetPlan(e.target.value as (typeof CANONICAL_PLANS)[number])}
+          >
+            {CANONICAL_PLANS.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </label>
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.colCycle}</span>
+          <select
+            className="admin-filters__select"
+            value={targetCycle}
+            onChange={(e) => setTargetCycle(e.target.value as (typeof CANONICAL_CYCLES)[number])}
+          >
+            {CANONICAL_CYCLES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+        <ReasonField value={reason} onChange={setReason} label={t.reasonLabel} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="dialog-suspend"
+        title={t.actionSuspend}
+        message={t.confirmSuspend}
+        confirmLabel={t.confirm}
+        cancelLabel={t.cancel}
+        pending={isPending}
+        onConfirm={() => run(() => suspendSubscriptionAction(detail.organizationId, reason), suspendDialogRef.current)}
+        onClose={() => suspendDialogRef.current?.close()}
+      >
+        <ReasonField value={reason} onChange={setReason} label={t.reasonLabel} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="dialog-reactivate"
+        title={t.actionReactivate}
+        message={t.confirmReactivate}
+        confirmLabel={t.confirm}
+        cancelLabel={t.cancel}
+        pending={isPending}
+        onConfirm={() => run(() => reactivateSubscriptionAction(detail.organizationId, reason), reactivateDialogRef.current)}
+        onClose={() => reactivateDialogRef.current?.close()}
+      >
+        <ReasonField value={reason} onChange={setReason} label={t.reasonLabel} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="dialog-cancel"
+        title={t.actionScheduleCancellation}
+        message={t.confirmScheduleCancellation}
+        confirmLabel={t.confirm}
+        cancelLabel={t.cancel}
+        pending={isPending}
+        onConfirm={() =>
+          run(() => scheduleSubscriptionCancellationAction(detail.organizationId, reason), cancelDialogRef.current)
+        }
+        onClose={() => cancelDialogRef.current?.close()}
+      >
+        <ReasonField value={reason} onChange={setReason} label={t.reasonLabel} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="dialog-revoke-cancel"
+        title={t.actionRevokeCancellation}
+        message={t.confirmRevokeCancellation}
+        confirmLabel={t.confirm}
+        cancelLabel={t.cancel}
+        pending={isPending}
+        onConfirm={() =>
+          run(() => revokeSubscriptionCancellationAction(detail.organizationId, reason), revokeCancelDialogRef.current)
+        }
+        onClose={() => revokeCancelDialogRef.current?.close()}
+      >
+        <ReasonField value={reason} onChange={setReason} label={t.reasonLabel} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="dialog-archive"
+        title={t.actionArchive}
+        message={t.confirmArchive}
+        confirmLabel={t.confirm}
+        cancelLabel={t.cancel}
+        pending={isPending}
+        onConfirm={() => run(() => archiveSubscriptionAction(detail.organizationId, reason), archiveDialogRef.current)}
+        onClose={() => archiveDialogRef.current?.close()}
+      >
+        <ReasonField value={reason} onChange={setReason} label={t.reasonLabel} />
+      </ConfirmDialog>
+    </div>
+  );
+}
+
+function ReasonField({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  return (
+    <label className="admin-filters__field">
+      <span className="admin-filters__label">{label}</span>
+      <textarea
+        className="admin-filters__input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={2}
+      />
+    </label>
   );
 }
