@@ -1,0 +1,423 @@
+# KJORA — SITE-APP-FLOW-01.3 — Rapport de validation SQL et Preview
+
+## Base, périmètre et sécurité
+
+- Dépôt : `NGAMS237/SAAS-KJORA`.
+- Branche : `codex/site-app-flow-01`.
+- SHA de base : `5103bc1a71f1a4858121bc64c2f56e37151d9c70`.
+- Projet Supabase de développement vérifié : `KJORA`
+  (`alvheiwlfzuefljcfrtv`, région `eu-west-3`, PostgreSQL 17).
+- EXPORT-01 est préservé. Aucun fichier Stripe ou SASPAY n’est modifié.
+- Aucun `db reset`, force-push, merge, DNS, paiement, webhook externe ou
+  changement Production n’est utilisé par ce lot.
+
+## Sauvegarde avant migration
+
+Les six tables de développement autorisées, leur structure utile, leurs
+contraintes, politiques, grants et fonctions concernées ont été exportés sans
+écrire de donnée en clair sur disque. Le contenu est protégé par Windows DPAPI
+`CurrentUser` et ne peut être déchiffré que par le compte Windows autorisé.
+
+- Chemin :
+  `%LOCALAPPDATA%\Temp\kjora-backups\site-app-flow-01-3-20260912\pre-migration-snapshot.json.dpapi`
+- Date UTC : `2026-09-12T12:27:57.9884338Z`.
+- Taille : `98 774 octets`.
+- SHA-256 :
+  `B90F5FDBF3218561095A0452CF4115D764FF3FD526DA9EA4EEC8C9E834F538A9`.
+- Test de déchiffrement et de structure, sous le compte Windows autorisé :
+  **PASS**.
+
+La procédure exacte est conservée hors Git et hors OneDrive dans le même
+dossier temporaire (`RESTORE.md`, `restore-snapshot.ps1` et rollback SQL).
+Elle déchiffre et construit la restauration en mémoire, puis transmet le SQL à
+la CLI par l’entrée standard. La sauvegarde ne sera supprimée qu’après
+validation complète et confirmation explicite de l’utilisateur.
+
+## État Git/Supabase avant migration
+
+L’inventaire distant contient 9 Organizations, 9 profils (tous CM/XAF),
+9 plans, 11 memberships, 3 états d’onboarding et 1 abonnement gratuit XAF.
+Seuls des agrégats non sensibles ont été journalisés. L’utilisateur confirme qu’il
+s’agit de données de développement.
+
+Les noms fonctionnels des migrations historiques correspondent largement,
+mais plusieurs horodatages Git et distants diffèrent. Une migration distante
+`align_01_advisor_fixes` n’a pas de fichier local correspondant; Git contient
+également les corrections EXPORT-01 postérieures attendues. Par conséquent,
+un `supabase db push` global est interdit pour ce lot. Si les gates éphémères
+passent, seule la migration additive
+`20260911210927_site_app_flow_canada_intent.sql` sera appliquée isolément.
+
+Un point de sécurité préexistant et hors périmètre a été signalé séparément
+pour revue; aucun détail exploitable n’est reproduit dans ce rapport public
+à la branche privée. Ce lot ne le corrige pas et ne le présente pas comme une
+régression SITE-APP-FLOW.
+
+## Revue fonctionnelle et sécurité
+
+- La devise immobilière reste `organization_profiles.currency_code`; aucune
+  écriture du lot ne la remplace.
+- Le pays Billing est validé côté serveur : `CA → CAD`, `CM → XAF`; aucune
+  devise libre n’est acceptée depuis l’URL.
+- Plan, cycle, pays, locale et source sont persistés. Une nouvelle intention
+  valide remplace atomiquement l’ancienne; une entrée invalide ne l’efface pas.
+- L’intention n’est jamais un entitlement et ne modifie pas le plan effectif.
+- L’Organization provient du contexte serveur. La préparation exige
+  `billing.manage` et sérialise la première création d’abonnement sur la ligne
+  Organization.
+- Les RPC sont `SECURITY DEFINER`, avec `search_path = ''`, références
+  qualifiées, retrait de `PUBLIC`/`anon` et exécution par `authenticated`.
+- Découverte reste gratuite et sans carte. Un marché d’abonnement payant
+  existant ne change pas silencieusement.
+- Le parcours commercial ajouté est entièrement FR/EN; aucune affirmation
+  n’est faite sur un bilinguisme intégral de l’application historique.
+- Décision de traçabilité : l’URL commerciale est une intention non fiable et
+  ne confère aucun droit; la reprise exige une persistance contrôlée; le pays
+  de facturation SaaS et la devise des biens restent distincts; le premier
+  abonnement est sérialisé avant préparation Billing.
+
+## Validation SQL éphémère
+
+Une CI dédiée crée une pile Supabase locale PostgreSQL 17 sans secret distant,
+applique toutes les migrations historiques sur une base neuve, injecte des
+fixtures pré-migration, applique uniquement la migration Canada, puis vérifie :
+
+- backfills CAD→CA et XAF→CM;
+- refus CA/XAF et CM/CAD;
+- grants, `anon`, `billing.manage` et isolation Organization;
+- remplacement atomique, cycle annuel et reprise;
+- Découverte Canada en CAD sans carte ni activation payante;
+- maintien de la devise immobilière XAF;
+- changement de marché payant soumis au support;
+- concurrence sur la première préparation d’abonnement;
+- présence et sécurité de la RPC EXPORT-01;
+- suite pgTAP historique complète.
+
+Résultat distant de cette CI : **FAIL** — [run 34756668352](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34756668352),
+sur le commit `89257789871b9f0363312ed4918e7242a3def367`. Le démarrage de la
+pile locale a appliqué les premières migrations, puis s’est arrêté sur
+`20260826200000_lot_6a_domain_events_deny_policy.sql` avec SQLSTATE `42710` :
+la politique `domain events are internal only` existe déjà, car la migration
+historique `20260826190000_lot_6a_properties_units.sql` la crée aussi. Les
+fixtures, la migration Canada, les tests pgTAP et le test de concurrence
+n’ont pas été exécutés. Les erreurs temporaires de quota d’images Docker
+observées au début ont été surmontées; elles ne sont pas la cause finale.
+Les deux documents de contexte sont inchangés par rapport au SHA de base;
+seuls les 28 autres fichiers ont été poussés.
+Le projet KJORA n’est pas utilisé par cette CI.
+
+## Réparation ciblée 01.3.1 — politique historique Lot 6A
+
+Les définitions dans `20260826190000_lot_6a_properties_units.sql` et
+`20260826200000_lot_6a_domain_events_deny_policy.sql` sont identiques :
+table `private.domain_events`, politique permissive `FOR SELECT TO authenticated`,
+`USING (false)`, sans `WITH CHECK` (non applicable au SELECT). Elles interdisent
+la lecture directe des événements internes, en défense supplémentaire du schéma
+privé non exposé et de l’absence de grant de table. La seconde migration ajoute
+seulement un commentaire descriptif. Sa création est désormais gardée par une
+vérification explicite dans `pg_catalog.pg_policy`; la première création reste
+inchangée. Il s’agit uniquement d’une réparation de rejouabilité historique,
+sans modification du projet Supabase distant. Le test pgTAP ajouté vérifie
+qu’une reconstruction laisse exactement une politique avec le refus et la RLS.
+
+La CI initiale 34756668352 reste FAIL avant la reconstruction.
+La première nouvelle CI [34757570666](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34757570666)
+sur `9ffb7d2829dbd5520452f1b497aa44d75f77e893` a validé la reconstruction
+complète, les fixtures et l'application de la migration Canada. Son test pgTAP
+Canada a échoué à 2/31, uniquement sur les assertions 9 et 10 qui comparaient
+la sérialisation textuelle PostgreSQL de `proconfig` plutôt que sa valeur
+`search_path=""`. Les assertions sont corrigées pour inspecter directement
+les éléments du tableau de configuration, sans changer les fonctions. Le test
+de concurrence et la suite pgTAP historique n'ont pas encore été lancés.
+La CI suivante [34757838934](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34757838934)
+sur `7406ccc03c2550aa81c7462dbc78c54063629765` confirme à nouveau
+reconstruction, fixtures et migration Canada PASS, puis **31/31 pgTAP Canada
+PASS**. Elle échoue au démarrage du script de concurrence : la fixture réinsère
+`organization_plans`, déjà créé par le trigger de création d'Organization
+(`organization_plans_pkey`), puis le teardown tente de supprimer le dernier
+Owner (`last_owner_protected`). Le test n'a donc pas atteint ses huit requêtes
+concurrentes. La fixture ne réinsère plus le forfait; les deux teardowns CI
+désactivent ce trigger précis seulement durant une transaction locale de
+suppression des données de test, puis le réactivent avant `COMMIT`. La protection
+reste inchangée dans les migrations et dans toute base réelle.
+Contrôles locaux de ce correctif CI : syntaxe Bash PASS via Git Bash;
+`git diff --check` PASS; scan anti-secrets des seules lignes ajoutées PASS.
+Le DSN `postgres/postgres` du script est une valeur factice locale préexistante,
+pas une connexion au projet KJORA. La sauvegarde DPAPI reste présente hors Git.
+La CI [34838042746](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34838042746)
+sur `af5aca24e05e2c2a2e1499cd55001fd69eed7356` valide reconstruction,
+fixtures, migration Canada, pgTAP Canada 31/31, huit appels concurrents et
+nettoyage des fixtures. Le premier test de la suite historique échoue avant
+assertions car il suppose qu'`auth.users` possède déjà une ligne; la base
+éphémère propre n'en a aucune. Ce test historique crée désormais un utilisateur
+fictif dans sa transaction uniquement si nécessaire; son `ROLLBACK` final
+retire cette donnée. Aucune donnée métier réelle ni migration n'est modifiée.
+La CI [34838559285](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34838559285)
+sur `fd63a28f64b12567dfa7180ccf457c96686b9444` confirme les gates
+précédents et exécute les premiers tests historiques : cohérence du plan 6/6,
+politique historique unique 6/6, import 57/57, onboarding 35/35, Billing
+39/39, webhook 21/21, contrats 51/51, tableau de bord 35/35 et documents
+68/68. Le test des échéances s'arrête avant assertions : sa fixture crée six
+unités sous Découverte, qui en autorise trois. Son Organization fictive reçoit
+Avancé (quota 30) dans la transaction de test, afin que les assertions Ledger
+s'exécutent sans modifier le contrôle de quotas; le `ROLLBACK` retire ce plan.
+La CI [34839202513](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34839202513)
+sur `39976cc6ba0db1cf8cabffa004541ce4d8243702` confirme les mêmes gates
+et le test Ledger 49/49. Le test des entitlements passe 17 assertions puis sa
+fixture tente de créer plusieurs `whole_house` pour une maison, déjà dotée
+automatiquement de son unité unique. La fixture utilise désormais un immeuble
+et des appartements; cela conserve l'objet du test (quotas et entitlements),
+sans changer la règle métier d'unicité des maisons entières.
+La CI [34839698047](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34839698047)
+sur `1318bb50365a2ca36b3337b9e7974d8afbee6b6e` confirme ensuite le test
+entitlements 42/42. Le test RBAC s'arrête à 15/47 : sa fixture contient déjà
+cinq collaborateurs et crée des invitations sous Découverte (quota zéro).
+L'Organization fictive RBAC reçoit `sur_mesure` dans la transaction du test,
+sans changement aux règles d'accès ni aux limites de forfait réelles.
+La CI [34840215606](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34840215606)
+sur `06fcca85db612a2ec1e428924215128a7f6bafbb` valide RBAC 47/47 et
+atteint le test historique Properties/Units. Celui-ci échoue 19/54 à cause
+d'un premier refus de quota Découverte sur la seconde Property, puis de
+conséquences en cascade; le contrôle cross-tenant est lui aussi intercepté
+par un quota avant sa vérification RLS. Les deux Organizations de cette fixture
+RLS reçoivent `sur_mesure` dans leur transaction, tandis que les quotas gardent
+leur test dédié entitlements 42/42 PASS. Aucune politique ni migration n'est
+assouplie.
+La CI [34840751922](https://github.com/NGAMS237/SAAS-KJORA/actions/runs/34840751922)
+sur `3e93c1c1ad58b36b5237db9cbbdff745a67eeda5` valide la reconstruction
+historique complète, les fixtures pré-migration, l'application isolée Canada,
+pgTAP Canada 31/31, la concurrence et le nettoyage. Le test de politique
+historique confirme exactement une politique 6/6. La suite pgTAP existante
+avance jusqu'à `rls_tenants_leases.test.sql` mais échoue à 2/51 sur deux
+assertions de confidentialité : des champs privés de contact et d'identité
+restent lisibles directement par un rôle client, contrairement au contrat du
+test. Une migration historique ultérieure accorde un privilège SELECT global
+après les grants limités aux colonnes non sensibles de Lot 6B. Ce n'est pas
+une erreur de fixture :
+réduire ce grant exige un audit des lecteurs directs et une correction de
+sécurité distincte. Aucun test n'est affaibli pour masquer cet échec. La suite
+complète reste FAIL et la migration KJORA distante est interdite à ce gate.
+Validation locale de la réparation : comparaison statique des deux instructions
+de création et de la garde PASS (une création initiale, seconde conditionnelle);
+TypeScript PASS; ESLint PASS (un avertissement préexistant); tests Node 424/424
+PASS; build Webpack PASS, 69/69 pages statiques générées; `git diff --check`
+PASS; scan anti-secrets du lot PASS. Le nouveau test pgTAP a été exécuté et
+passe 6/6 dans la CI éphémère.
+
+## Validations locales
+
+- TypeScript : **PASS** — `npm run typecheck`, code 0.
+- ESLint : **PASS** — code 0, aucune erreur; un avertissement préexistant dans
+  `src/core/analytics/events.ts` (directive `no-console` inutilisée).
+- Tests Node : **PASS — 424/424**, 0 échec, 0 ignoré.
+- Build Next.js 16.3.4 Webpack : **PASS** — compilation, TypeScript et
+  génération statique 69/69 réussis, code 0.
+- `git diff --check` : **PASS**. Les avertissements LF/CRLF Windows ne sont pas
+  des erreurs de diff.
+- Contrôle anti-secrets : **PASS** — aucune signature de secret détectée.
+- `.env.local`, `.vercel`, `node_modules`, `.next`, `supabase/.temp`, journaux
+  et ZIP sont ignorés/non suivis. `.env.example` est un gabarit historique sans
+  valeur secrète.
+- Stripe/SASPAY : **PASS** — aucun fichier correspondant dans le diff.
+- EXPORT-01 : **PASS statique et Node**.
+
+## Inventaire du commit corrigé — 28 fichiers
+
+### Modifiés — 16
+
+- `.gitignore`
+- `src/app/(internal)/app/billing/page.tsx`
+- `src/app/api/billing/route.ts`
+- `src/app/api/onboarding/route.ts`
+- `src/app/connexion/page.tsx`
+- `src/app/onboarding/organization/page.tsx`
+- `src/app/page.tsx`
+- `src/core/auth/callback-diagnostics.ts`
+- `src/core/auth/login-form.tsx`
+- `src/core/billing/billing-view.tsx`
+- `src/core/billing/server.ts`
+- `src/core/onboarding/onboarding-state.ts`
+- `src/core/onboarding/plan-intent.ts`
+- `src/core/organization/organization-onboarding-form.tsx`
+- `src/core/routing/context-resolver.ts`
+- `tests/align-02-routing-onboarding.test.ts`
+
+### Ajoutés — 12
+
+- `.github/ci/site-app-flow-cleanup.sql`
+- `.github/ci/site-app-flow-concurrency.sh`
+- `.github/ci/site-app-flow-pre-migration.sql`
+- `.github/workflows/site-app-flow-ephemeral-sql.yml`
+- `KJORA-SITE-APP-FLOW-01-REPORT.md`
+- `docs/product/KJORA-SITE-APP-INTEGRATION-CONTRACT-v0.2.md`
+- `src/core/onboarding/server.ts`
+- `supabase/.gitignore`
+- `supabase/config.toml`
+- `supabase/migrations/20260911210927_site_app_flow_canada_intent.sql`
+- `supabase/tests/database/site_app_flow_canada_intent.test.sql`
+- `tests/site-app-flow-canada.test.ts`
+
+## État des phases distantes
+
+- Premier commit local `306a20154f75a68fc4965b032b94677cca2b7fc5`
+  remplacé par un amendement excluant les deux documents de contexte.
+- Commit corrigé et poussé sans force :
+  `89257789871b9f0363312ed4918e7242a3def367` sur
+  `origin/codex/site-app-flow-01`. Aucun merge vers `main`.
+- La première CI SQL éphémère échouait avant les fixtures; les dernières CI
+  franchissent reconstruction, fixtures et migration Canada, mais la suite
+  pgTAP complète reste FAIL sur l'accès direct à `public.tenants`.
+- Le contrôle du commit local confirme qu'aucun fichier AppData, snapshot,
+  script de restauration, rollback ou `RESTORE.md` n'y figure.
+- Migration KJORA : non exécutée.
+- Vérification SQL distante : non exécutée.
+- Preview Vercel : non créée.
+- Navigateur authentifié : non exécuté.
+- Administration : aucune route `/administration` n’existe dans ce produit;
+  le parcours Admin est donc non applicable, sauf environnement différent.
+
+## Gates
+
+HISTORICAL POLICY DEFINITIONS : IDENTIQUES
+
+MIGRATION REPLAYABILITY FIX : PASS — garde PostgreSQL et CI de reconstruction
+
+EPHEMERAL FULL REBUILD : PASS — runs 34757570666 et 34757838934
+
+CANADA MIGRATION IN CI : PASS — runs 34757570666 et 34757838934 après fixtures
+
+PGTAP : FAIL — Canada 31/31 PASS, politique historique 6/6 PASS; suite complète interrompue sur confidentialité Tenants 2/51 FAIL
+
+CONCURRENCY TEST : PASS — run 34838042746, huit appels concurrents
+
+READY FOR KJORA DEV MIGRATION : NON
+
+BACKUP : PASS
+
+EPHEMERAL SQL TESTS : FAIL — accès direct aux colonnes privées Tenants; réparation historique PASS
+
+LOCAL VALIDATIONS : PASS
+
+COMMIT : 3e93c1c1ad58b36b5237db9cbbdff745a67eeda5 (dernier commit poussé)
+
+PUSH : PASS — branche dédiée, sans force
+
+KJORA SUPABASE MIGRATION : NON EXÉCUTÉ
+
+REMOTE SQL VERIFICATION : NON EXÉCUTÉ
+
+VERCEL PREVIEW : NON CRÉÉE
+
+BROWSER OWNER FLOW : NON EXÉCUTÉ
+
+BROWSER ADMIN FLOW : NON APPLICABLE
+
+READY FOR USER TESTING : NON
+
+READY FOR PRODUCTION : NON
+
+## Exécution Canada + Preview — 2026-09-16
+
+Cette section est l'état final autoritaire du lot après l'application contrôlée
+sur le projet KJORA `alvheiwlfzuefljcfrtv`. Elle remplace les statuts
+« non exécuté » de la section historique ci-dessus.
+
+### Sauvegarde et application
+
+- Préflight : projet `ACTIVE_HEALTHY`; migration sécurité
+  `20260914120000` présente une fois; migration Canada absente.
+- Snapshot DPAPI frais, chiffré pour le compte Windows courant seulement :
+  `C:\Users\Veraluz\AppData\Local\Temp\kjora-backups\canada-preview-20260916-162219\pre-canada-migration-snapshot.json.dpapi`.
+- Taille : 98 774 octets. SHA-256 :
+  `8DEBD9A4ED3252AB34FB16EAF948E1A8F965E8D2C8D07F518C4E5AEA9749438C`.
+- Test indépendant de déchiffrement et de structure : **PASS**. Aucune donnée
+  déchiffrée n'a été conservée sur disque ni reproduite dans ce rapport.
+- Application : **PASS**, avec `supabase migration up --linked --include-all`
+  dans un répertoire temporaire aligné sur les 39 versions distantes. Le plan
+  préalable montrait uniquement `20260911210927` comme version manquante et la
+  sortie d'application ne contenait que
+  `20260911210927_site_app_flow_canada_intent.sql`. Aucun `db push`, `db reset`
+  ou rejeu historique.
+
+### Postflight SQL distant
+
+- Historique : Canada **1 fois**; sécurité **1 fois**.
+- Données préservées : 9 Organizations, 11 locataires, 11 memberships,
+  9 profils, 9 plans, 1 abonnement et 3 états d'onboarding, identiques au
+  préflight.
+- Devise immobilière : 9/9 profils en XAF; aucune devise immobilière non-XAF.
+- Abonnement existant : `CM/XAF`, conformément au backfill attendu.
+- Tests transactionnels avec rollback : **PASS** pour CA→CAD, CM→XAF,
+  conservation de la devise immobilière, reprise du cycle annuel, remplacement
+  complet de l'intention, absence d'activation payante sur l'Organization de
+  test et refus d'une Organization étrangère.
+- RPC Canada : `SECURITY DEFINER`, `search_path = ''`, exécution retirée à
+  `anon`; contrôle `billing.manage` conservé.
+- Sécurité Tenants : RLS active; aucun SELECT table pour `authenticated` ou
+  `anon`.
+
+### Validations après migration
+
+- TypeScript : **PASS**.
+- ESLint : **PASS**, 0 erreur et 1 avertissement préexistant dans
+  `src/core/analytics/events.ts`.
+- Tests Node : **PASS — 431/431**, 0 échec, 0 ignoré.
+- Build Next.js 16.3.4 Webpack : **PASS**, 69/69 pages statiques générées.
+- `git diff --check` : **PASS**.
+- Advisors Supabase exécutés. Avis historiques restant ouverts : 12
+  `rls_enabled_no_policy` informatifs, 87 avertissements génériques sur les RPC
+  `SECURITY DEFINER` exécutables par les utilisateurs authentifiés, 1 avis Auth
+  sur la protection des mots de passe compromis, 10 clés étrangères sans index
+  couvrant et 66 index encore inutilisés. Aucun nouvel avis bloquant propre à la
+  migration Canada n'a été constaté.
+
+### Preview et navigateur
+
+- Déploiement Vercel Preview `dpl_BEYySqSM3gSzu9qGFa39SmvtPCNN` : **READY**,
+  cible `preview`, jamais Production.
+- URL : `https://saas-kjora-35epvz3oz-kjemostudio.vercel.app`.
+- Redirect URLs Supabase Auth ajoutées exactement pour cette Preview :
+  `/auth/callback` et `/auth/confirm`. Le Site URL principal est resté inchangé.
+- Desktop : **PASS** pour Découverte FR et rendu visuel.
+- Mobile 390×844 : **PASS** pour Essentiel annuel Canada EN et rendu visuel.
+- Parcours EN : les textes ajoutés au parcours commercial sont traduits.
+- URL hostile : **PASS**; `currency=USD`, `price=1` et `role=owner` sont retirés,
+  tandis que `plan=essentiel`, `billing_cycle=annual`, `billing_country=CA`,
+  `locale=en` et `source=site` sont conservés.
+- `/app` et `/app/billing` anonymes : **PASS**, redirection vers `/connexion`
+  avec un `next` interne sûr.
+- Logs Vercel depuis le déploiement : aucune erreur et aucune réponse 500.
+- Logs Supabase, filtre Error 5xx sur les 60 dernières minutes : 0 résultat.
+- Magic Link/OTP et parcours Owner authentifié : **NON EXÉCUTÉS**. Une tentative
+  d'automatisation sûre a été arrêtée avant création de compte parce qu'elle
+  aurait nécessité soit l'extraction d'une clé privilégiée, soit la transmission
+  d'un lien d'authentification à une messagerie tierce non approuvée. Aucun compte
+  jetable n'a été créé et aucun lien d'authentification n'a été exposé.
+- Reprise navigateur authentifiée, accès interne Owner et isolation
+  inter-Organization via l'UI : **NON EXÉCUTÉS**; les garanties SQL
+  transactionnelles et les 431 tests applicatifs sont PASS.
+
+### Verdict final de cette exécution
+
+CANADA MIGRATION : PASS
+
+SECURITY MIGRATION PRESERVED : PASS
+
+DATA PRESERVED : OUI
+
+VERCEL PREVIEW : https://saas-kjora-35epvz3oz-kjemostudio.vercel.app
+
+OWNER FLOW : FAIL — non exécuté faute de canal OTP/Magic Link approuvé
+
+MOBILE : PASS — parcours public et URL hostile
+
+DESKTOP : PASS — parcours public FR/EN
+
+LOGS : PASS
+
+READY FOR BLAISE TESTING : OUI
+
+READY FOR PRODUCTION : NON
+
+Aucun merge vers `main`, aucun DNS, aucun domaine personnalisé, aucun paiement,
+aucune modification Stripe/SASPAY et aucun déploiement Production.

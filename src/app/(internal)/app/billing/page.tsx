@@ -3,17 +3,31 @@ import { getActiveAuthorization } from "@/core/authorization/server";
 import { checkoutAffordance, getBillingOverview, listBillingInvoices } from "@/core/billing/server";
 import { priceFor } from "@/core/billing/model";
 import { BillingView } from "@/core/billing/billing-view";
+import { mergeSiteAppIntent, parseSiteAppIntent, type SiteAppSearchParams } from "@/core/onboarding/plan-intent";
+import { siteAppIntentFromOnboardingState } from "@/core/onboarding/onboarding-state";
+import { persistIncomingSiteAppIntent } from "@/core/onboarding/server";
+import { loadOnboardingState } from "@/core/routing/context-resolver";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Abonnement & facturation — réservé à l'Organization Owner (capability billing.view).
 // Cette surface reste accessible même lorsque le compte est bloqué : c'est
 // précisément depuis ici que le blocage se résout.
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<SiteAppSearchParams>;
+}) {
   const authorization = await getActiveAuthorization();
   if (!authorization?.capabilities.includes("billing.view")) notFound();
 
-  const [overview, invoices] = await Promise.all([
+  const supabase = await createSupabaseServerClient();
+  const params = await searchParams;
+  const incomingIntent = parseSiteAppIntent(params);
+  await persistIncomingSiteAppIntent(incomingIntent);
+  const [overview, invoices, state] = await Promise.all([
     getBillingOverview(authorization.organizationId),
     listBillingInvoices(authorization.organizationId),
+    loadOnboardingState(supabase),
   ]);
 
   if (!overview) notFound();
@@ -21,6 +35,10 @@ export default async function BillingPage() {
   // Le routage provider est décidé ici, côté serveur, à partir de l'état stocké
   // et du catalogue de prix. Aucun paramètre de requête n'y participe.
   const sub = overview.subscription;
+  const storedIntent = state.intentStatus === "active"
+    ? siteAppIntentFromOnboardingState(state)
+    : null;
+  const requestedIntent = mergeSiteAppIntent(incomingIntent, storedIntent);
   const affordance = checkoutAffordance({
     plan: sub.plan,
     cycle: sub.billingCycle,
@@ -28,5 +46,5 @@ export default async function BillingPage() {
     amountMinor: priceFor(sub.plan, sub.billingCycle, sub.currency) ?? 0,
   });
 
-  return <BillingView affordance={affordance} invoices={invoices} overview={overview} />;
+  return <BillingView affordance={affordance} invoices={invoices} overview={overview} requestedIntent={requestedIntent} />;
 }

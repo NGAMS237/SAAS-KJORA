@@ -22,6 +22,14 @@ insert into public.memberships (organization_id, user_id, role) values
   ('22000000-0000-4000-8000-00000000000a', '12000000-0000-4000-8000-000000000003', 'manager'),
   ('22000000-0000-4000-8000-00000000000a', '12000000-0000-4000-8000-000000000004', 'viewer');
 
+-- This RLS/hierarchy fixture needs multiple properties and must test
+-- cross-tenant denial before unrelated plan quotas. Rolled back below.
+update public.organization_plans set plan = 'sur_mesure'
+ where organization_id in (
+   '22000000-0000-4000-8000-00000000000a',
+   '22000000-0000-4000-8000-00000000000b'
+ );
+
 insert into public.properties (id, organization_id, name, locality, type, created_by)
 values (
   '32000000-0000-4000-8000-00000000000b',

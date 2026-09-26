@@ -17,7 +17,16 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
 import { trackEvent } from "@/core/analytics/events";
-import { needsIntentPreservation, planLabel } from "@/core/onboarding/plan-intent";
+import {
+  destinationAfterOnboarding,
+  subscriptionCurrencyForBillingCountry,
+  needsIntentPreservation,
+  planLabel,
+  type SiteAppLocale,
+  type SiteAppSource,
+  type BillingCountry,
+} from "@/core/onboarding/plan-intent";
+import type { BillingCycle } from "@/core/billing/model";
 import {
   RENT_COLLECTION_LABELS,
   RENT_COLLECTION_METHODS,
@@ -28,6 +37,15 @@ import {
 import type { PlanSlug } from "@/core/entitlements/model";
 
 type QuotaError = { quota: number | null; current: number };
+
+const RENT_COLLECTION_LABELS_EN: Record<RentCollectionMethod, string> = {
+  mtn_momo: "MTN MoMo on my personal number",
+  orange_money: "Orange Money on my personal number",
+  merchant_account: "Merchant account",
+  bank_transfer: "Bank transfer",
+  cash: "Cash",
+  multiple: "Several methods",
+};
 
 async function patchOnboarding(payload: Record<string, unknown>) {
   const response = await fetch("/api/onboarding", {
@@ -43,10 +61,20 @@ async function patchOnboarding(payload: Record<string, unknown>) {
 export function OrganizationOnboardingForm({
   initialState,
   planRequested = null,
+  billingCycle = null,
+  billingCountry = null,
+  locale = "fr",
+  source = null,
+  isNewCommercialIntent = false,
   isNewOrgRequest = false,
 }: {
   initialState: OnboardingState;
   planRequested?: PlanSlug | null;
+  billingCycle?: BillingCycle | null;
+  billingCountry?: BillingCountry | null;
+  locale?: SiteAppLocale;
+  source?: SiteAppSource | null;
+  isNewCommercialIntent?: boolean;
   isNewOrgRequest?: boolean;
 }) {
   const router = useRouter();
@@ -62,7 +90,7 @@ export function OrganizationOnboardingForm({
   const [propertyType, setPropertyType] = useState<"house" | "building">("house");
 
   const [name, setName] = useState("");
-  const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [language, setLanguage] = useState<"fr" | "en">(locale);
   const [timezone, setTimezone] = useState("Africa/Douala");
   const [rentMethod, setRentMethod] = useState<RentCollectionMethod | "">(
     initialState.rentCollectionMethod ?? "",
@@ -71,6 +99,12 @@ export function OrganizationOnboardingForm({
   const [propertyLocality, setPropertyLocality] = useState("");
   const [referenceRent, setReferenceRent] = useState("");
   const [unitLabel, setUnitLabel] = useState("");
+  const [selectedCycle, setSelectedCycle] = useState<BillingCycle | "">(
+    billingCycle ?? initialState.billingCycleIntent ?? "",
+  );
+  const [selectedBillingCountry, setSelectedBillingCountry] = useState<BillingCountry | "">(
+    billingCountry ?? (isNewCommercialIntent ? "" : initialState.billingCountryIntent ?? ""),
+  );
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,17 +113,41 @@ export function OrganizationOnboardingForm({
   // Verrou anti-double-submit côté client, en complément de l'idempotence serveur
   const inFlight = useRef(false);
 
-  const effectiveIntent = initialState.planIntent ?? planRequested;
+  const effectiveIntent = planRequested ?? initialState.planIntent ?? "decouverte";
+  const flowIntent = {
+    plan: effectiveIntent,
+    billingCycle: selectedCycle || null,
+    billingCountry: selectedBillingCountry || null,
+    locale,
+    source,
+  } as const;
+  const t = (fr: string, en: string) => locale === "en" ? en : fr;
+
+  async function replaceIntent(
+    cycle: BillingCycle | "" = selectedCycle,
+    country: BillingCountry | "" = selectedBillingCountry,
+  ) {
+    if (!effectiveIntent || !cycle || !country) return false;
+    return Boolean(await patchOnboarding({
+      intent_mode: "replace",
+      plan_intent: effectiveIntent,
+      billing_cycle_intent: cycle,
+      billing_country_intent: country,
+      locale_intent: locale,
+      source_intent: source,
+    }));
+  }
 
   useEffect(() => {
     trackEvent("onboarding_started", {
       plan_intent: effectiveIntent,
       resumed: initialState.exists && initialState.step !== "plan_intent",
     });
-    // Enregistre l'intention de plan sans jamais activer de plan payant
-    if (planRequested && !initialState.planIntent) {
-      trackEvent("plan_intent_received", { plan_intent: planRequested, activated: false });
-      void patchOnboarding({ plan_intent: planRequested });
+    // A complete new intent atomically replaces the previous one. It remains
+    // acquisition metadata and never activates a paid plan.
+    if (effectiveIntent && selectedCycle && selectedBillingCountry) {
+      trackEvent("plan_intent_received", { plan_intent: effectiveIntent, activated: false });
+      void replaceIntent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -111,6 +169,20 @@ export function OrganizationOnboardingForm({
   async function submitOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await guard(async () => {
+      if (!selectedCycle || !selectedBillingCountry) {
+        setError(t(
+          "Choisissez le cycle et le pays de facturation de l’abonnement.",
+          "Choose the subscription billing cycle and country.",
+        ));
+        return;
+      }
+      if (!await replaceIntent()) {
+        setError(t(
+          "Impossible d’enregistrer votre choix d’abonnement. Réessayez.",
+          "Unable to save your subscription selection. Try again.",
+        ));
+        return;
+      }
       // Idempotence : une Organization déjà créée n'est jamais recréée
       if (organizationId) {
         setStep("rent_method");
@@ -135,7 +207,7 @@ export function OrganizationOnboardingForm({
         }
       }
       if (!response.ok) {
-        setError("Impossible de créer l'organisation. Vérifiez les informations et réessayez.");
+        setError(t("Impossible de créer l'organisation. Vérifiez les informations et réessayez.", "Unable to create the organization. Check the information and try again."));
         return;
       }
 
@@ -183,7 +255,7 @@ export function OrganizationOnboardingForm({
         }),
       });
       if (!response.ok) {
-        setError("Impossible de créer ce bien. Vérifiez les informations et réessayez.");
+        setError(t("Impossible de créer ce bien. Vérifiez les informations et réessayez.", "Unable to create this property. Check the information and try again."));
         return;
       }
       const { propertyId: createdId } = (await response.json()) as { propertyId: string };
@@ -219,7 +291,7 @@ export function OrganizationOnboardingForm({
         }),
       });
       if (!response.ok) {
-        setError("Impossible de créer ce logement. Vérifiez les informations et réessayez.");
+        setError(t("Impossible de créer ce logement. Vérifiez les informations et réessayez.", "Unable to create this unit. Check the information and try again."));
         return;
       }
       const { unitId } = (await response.json()) as { unitId: string };
@@ -231,7 +303,7 @@ export function OrganizationOnboardingForm({
 
   function finish() {
     trackEvent("onboarding_completed", { plan_effective: "decouverte" });
-    router.replace("/app");
+    router.replace(destinationAfterOnboarding(flowIntent));
     router.refresh();
   }
 
@@ -245,13 +317,13 @@ export function OrganizationOnboardingForm({
     return (
       <div className="onboarding-quota-blocked">
         <p className="form-feedback form-feedback--error" role="alert">
-          Votre plan actuel n&apos;autorise pas d&apos;organisation supplémentaire
-          {quotaError.quota != null ? ` (limite : ${quotaError.quota}, actuel : ${quotaError.current})` : ""}.
+          {t("Votre plan actuel n’autorise pas d’organisation supplémentaire", "Your current plan does not allow another organization")}
+          {quotaError.quota != null ? t(` (limite : ${quotaError.quota}, actuel : ${quotaError.current})`, ` (limit: ${quotaError.quota}, current: ${quotaError.current})`) : ""}.
         </p>
         <p className="auth-intro">
-          Aucune organisation existante n&apos;est modifiée. Un plan supérieur est nécessaire pour en ajouter une.
+          {t("Aucune organisation existante n’est modifiée. Un plan supérieur est nécessaire pour en ajouter une.", "No existing organization is changed. A higher plan is required to add one.")}
         </p>
-        <a className="button button--primary" href="/app">Retour à mon espace</a>
+        <a className="button button--primary" href="/app">{t("Retour à mon espace", "Back to my workspace")}</a>
       </div>
     );
   }
@@ -262,20 +334,20 @@ export function OrganizationOnboardingForm({
       <form className="form-stack" onSubmit={submitOrganization}>
         {needsIntentPreservation(effectiveIntent) ? (
           <p className="onboarding-plan-note">
-            Plan visé : <strong>{planLabel(effectiveIntent)}</strong> · Démarrage sur Découverte, sans paiement.
+            {t("Plan visé", "Selected plan")}: <strong>{planLabel(effectiveIntent, locale)}</strong> · {t("Démarrage sur Découverte, sans paiement.", "Start on Discovery with no payment.")}
           </p>
         ) : null}
         <label className="field">
-          <span>Nom de l&apos;organisation</span>
+          <span>{t("Nom de l’organisation", "Organization name")}</span>
           <input
             autoFocus maxLength={120} minLength={2} name="name" required
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ex. Horizon Habitat" value={name}
+            placeholder={t("Ex. Horizon Habitat", "E.g. Horizon Housing")} value={name}
           />
         </label>
         <div className="form-grid">
           <label className="field">
-            <span>Langue</span>
+            <span>{t("Langue", "Language")}</span>
             <select name="language" value={language}
               onChange={(e) => setLanguage(e.target.value as "fr" | "en")}>
               <option value="fr">Français</option>
@@ -283,7 +355,7 @@ export function OrganizationOnboardingForm({
             </select>
           </label>
           <label className="field">
-            <span>Fuseau horaire</span>
+            <span>{t("Fuseau horaire", "Time zone")}</span>
             <select name="timezone" required value={timezone}
               onChange={(e) => setTimezone(e.target.value)}>
               {ORGANIZATION_TIMEZONES.map(([id, label]) => (
@@ -292,16 +364,43 @@ export function OrganizationOnboardingForm({
             </select>
           </label>
         </div>
+        <div className="form-grid">
+          <label className="field">
+            <span>{t("Cycle d’abonnement", "Subscription cycle")}</span>
+            <select required value={selectedCycle} onChange={(event) => {
+              const value = event.target.value as BillingCycle | "";
+              setSelectedCycle(value);
+              void replaceIntent(value, selectedBillingCountry);
+            }}>
+              <option value="">{t("Choisir", "Choose")}</option>
+              <option value="monthly">{t("Mensuel", "Monthly")}</option>
+              <option value="annual">{t("Annuel", "Annual")}</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>{t("Pays de facturation KJORA", "KJORA billing country")}</span>
+            <select required value={selectedBillingCountry} onChange={(event) => {
+              const value = event.target.value as BillingCountry | "";
+              setSelectedBillingCountry(value);
+              void replaceIntent(selectedCycle, value);
+            }}>
+              <option value="">{t("Choisir", "Choose")}</option>
+              <option value="CA">Canada · CAD</option>
+              <option value="CM">{t("Cameroun", "Cameroon")} · XAF</option>
+            </select>
+            <small>{t("Ce choix concerne uniquement l’abonnement KJORA.", "This choice applies only to the KJORA subscription.")}</small>
+          </label>
+        </div>
         <div className="fixed-configuration">
-          <span><small>Pays</small><strong>Cameroun</strong></span>
-          <span><small>Devise</small><strong>XAF</strong></span>
-          <span><small>Plan</small><strong>Découverte · gratuit</strong></span>
+          <span><small>{t("Marché immobilier", "Rental market")}</small><strong>{t("Cameroun", "Cameroon")}</strong></span>
+          <span><small>{t("Devise des loyers", "Rental currency")}</small><strong>XAF</strong></span>
+          <span><small>{t("Devise d’abonnement", "Subscription currency")}</small><strong>{selectedBillingCountry ? subscriptionCurrencyForBillingCountry(selectedBillingCountry) : "—"}</strong></span>
         </div>
         {error && error !== "quota" ? (
           <p className="form-feedback form-feedback--error" role="alert">{error}</p>
         ) : null}
-        <button className="button button--primary" disabled={busy || name.trim().length < 2} type="submit">
-          {busy ? "Création…" : "Créer mon espace"}
+        <button className="button button--primary" disabled={busy || name.trim().length < 2 || !selectedCycle || !selectedBillingCountry} type="submit">
+          {busy ? t("Création…", "Creating…") : t("Créer mon espace", "Create my workspace")}
         </button>
       </form>
     );
@@ -312,18 +411,18 @@ export function OrganizationOnboardingForm({
     return (
       <form className="form-stack" onSubmit={submitRentMethod}>
         <label className="field">
-          <span>Comment recevez-vous actuellement vos loyers ?</span>
+          <span>{t("Comment recevez-vous actuellement vos loyers ?", "How do you currently collect rent?")}</span>
           <select name="rent_method" value={rentMethod}
             onChange={(e) => setRentMethod(e.target.value as RentCollectionMethod | "")}>
-            <option value="">Je préfère ne pas répondre</option>
+            <option value="">{t("Je préfère ne pas répondre", "I prefer not to answer")}</option>
             {RENT_COLLECTION_METHODS.map((m) => (
-              <option key={m} value={m}>{RENT_COLLECTION_LABELS[m]}</option>
+              <option key={m} value={m}>{locale === "en" ? RENT_COLLECTION_LABELS_EN[m] : RENT_COLLECTION_LABELS[m]}</option>
             ))}
           </select>
-          <small>Simple préférence de configuration. Aucun compte n&apos;est connecté et aucun encaissement n&apos;est automatisé.</small>
+          <small>{t("Simple préférence de configuration. Aucun compte n’est connecté et aucun encaissement n’est automatisé.", "This is only a setup preference. No account is connected and no collection is automated.")}</small>
         </label>
         {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
-        <button className="button button--primary" disabled={busy} type="submit">Continuer</button>
+        <button className="button button--primary" disabled={busy} type="submit">{t("Continuer", "Continue")}</button>
       </form>
     );
   }
@@ -332,28 +431,28 @@ export function OrganizationOnboardingForm({
   if (step === "property") {
     return (
       <form className="form-stack" onSubmit={submitProperty}>
-        <p className="auth-intro">Ajoutons votre premier bien.</p>
+        <p className="auth-intro">{t("Ajoutons votre premier bien.", "Let’s add your first property.")}</p>
         <label className="field">
-          <span>Type de bien</span>
+          <span>{t("Type de bien", "Property type")}</span>
           <select value={propertyType}
             onChange={(e) => setPropertyType(e.target.value as "house" | "building")}>
-            <option value="house">Maison entière</option>
-            <option value="building">Immeuble à plusieurs logements</option>
+            <option value="house">{t("Maison entière", "Entire house")}</option>
+            <option value="building">{t("Immeuble à plusieurs logements", "Multi-unit building")}</option>
           </select>
         </label>
         <label className="field">
-          <span>Nom du bien</span>
+          <span>{t("Nom du bien", "Property name")}</span>
           <input maxLength={120} minLength={2} required value={propertyName}
-            onChange={(e) => setPropertyName(e.target.value)} placeholder="Ex. Résidence Pola" />
+            onChange={(e) => setPropertyName(e.target.value)} placeholder={t("Ex. Résidence Pola", "E.g. Pola Residence")} />
         </label>
         <label className="field">
-          <span>Localité</span>
+          <span>{t("Localité", "Location")}</span>
           <input maxLength={160} minLength={2} required value={propertyLocality}
-            onChange={(e) => setPropertyLocality(e.target.value)} placeholder="Ex. Douala, Bonapriso" />
+            onChange={(e) => setPropertyLocality(e.target.value)} placeholder={t("Ex. Douala, Bonapriso", "E.g. Douala, Bonapriso")} />
         </label>
         {propertyType === "house" ? (
           <label className="field">
-            <span>Loyer mensuel de référence (XAF, facultatif)</span>
+            <span>{t("Loyer mensuel de référence (XAF, facultatif)", "Reference monthly rent (XAF, optional)")}</span>
             <input inputMode="numeric" value={referenceRent}
               onChange={(e) => setReferenceRent(e.target.value.replace(/\D/g, ""))} placeholder="150000" />
           </label>
@@ -361,10 +460,10 @@ export function OrganizationOnboardingForm({
         {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
         <div className="form-actions">
           <button className="button button--ghost" disabled={busy} onClick={skipToApp} type="button">
-            Plus tard
+            {t("Plus tard", "Later")}
           </button>
           <button className="button button--primary" disabled={busy} type="submit">
-            {busy ? "Création…" : "Ajouter ce bien"}
+            {busy ? t("Création…", "Creating…") : t("Ajouter ce bien", "Add this property")}
           </button>
         </div>
       </form>
@@ -375,24 +474,24 @@ export function OrganizationOnboardingForm({
   if (step === "unit") {
     return (
       <form className="form-stack" onSubmit={submitUnit}>
-        <p className="auth-intro">Ajoutons le premier logement de cet immeuble.</p>
+        <p className="auth-intro">{t("Ajoutons le premier logement de cet immeuble.", "Let’s add the first unit in this building.")}</p>
         <label className="field">
-          <span>Nom du logement</span>
+          <span>{t("Nom du logement", "Unit name")}</span>
           <input maxLength={120} minLength={1} required value={unitLabel}
-            onChange={(e) => setUnitLabel(e.target.value)} placeholder="Ex. Appartement A1" />
+            onChange={(e) => setUnitLabel(e.target.value)} placeholder={t("Ex. Appartement A1", "E.g. Apartment A1")} />
         </label>
         <label className="field">
-          <span>Loyer mensuel de référence (XAF, facultatif)</span>
+          <span>{t("Loyer mensuel de référence (XAF, facultatif)", "Reference monthly rent (XAF, optional)")}</span>
           <input inputMode="numeric" value={referenceRent}
             onChange={(e) => setReferenceRent(e.target.value.replace(/\D/g, ""))} placeholder="120000" />
         </label>
         {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
         <div className="form-actions">
           <button className="button button--ghost" disabled={busy} onClick={skipToApp} type="button">
-            Plus tard
+            {t("Plus tard", "Later")}
           </button>
           <button className="button button--primary" disabled={busy} type="submit">
-            {busy ? "Création…" : "Terminer"}
+            {busy ? t("Création…", "Creating…") : t("Terminer", "Finish")}
           </button>
         </div>
       </form>

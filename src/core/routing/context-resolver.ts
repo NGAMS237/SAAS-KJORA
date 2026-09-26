@@ -56,9 +56,9 @@ export type ResolvedContext =
   /** Organization créée mais onboarding non terminé : reprise */
   | { kind: "onboarding_incomplete"; onboarding: OnboardingState; organizationId: string }
   /** Owner d'une seule Organization */
-  | { kind: "owner_single_org"; organization: OrganizationSummary }
+  | { kind: "owner_single_org"; organization: OrganizationSummary; onboarding: OnboardingState }
   /** Owner de plusieurs Organizations */
-  | { kind: "owner_multi_org"; organizations: OrganizationSummary[]; lastActiveId: string | null }
+  | { kind: "owner_multi_org"; organizations: OrganizationSummary[]; lastActiveId: string | null; onboarding: OnboardingState }
   /** Membre non-owner (gestionnaire, encaisseur, gardien, comptable, consultation) */
   | { kind: "collaborator"; organizations: OrganizationSummary[]; lastActiveId: string | null }
   /** Identité locataire uniquement */
@@ -238,9 +238,9 @@ export async function resolveUserContext(): Promise<ResolvedContext> {
     return { kind: "collaborator", organizations, lastActiveId };
   }
   if (organizations.length === 1) {
-    return { kind: "owner_single_org", organization: organizations[0] };
+    return { kind: "owner_single_org", organization: organizations[0], onboarding };
   }
-  return { kind: "owner_multi_org", organizations, lastActiveId };
+  return { kind: "owner_multi_org", organizations, lastActiveId, onboarding };
 }
 
 // ---------------------------------------------------------------------------

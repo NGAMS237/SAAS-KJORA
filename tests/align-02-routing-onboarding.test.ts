@@ -13,6 +13,10 @@ import {
   needsIntentPreservation,
   planLabel,
   buildConnexionUrl,
+  parseSiteAppIntent,
+  appendSiteAppIntent,
+  destinationAfterOnboarding,
+  type SiteAppIntent,
   SUR_MESURE_CONTACT_URL,
 } from "../src/core/onboarding/plan-intent.ts";
 import {
@@ -94,6 +98,16 @@ test("sur_mesure route vers le contact commercial et n'active aucun plan", () =>
   assert.ok(new URL(SUR_MESURE_CONTACT_URL).hostname.length > 0);
 });
 
+test("SITE-APP-FLOW-01 valide plan, cycle, locale et source côté serveur", () => {
+  assert.deepEqual(parseSiteAppIntent({
+    plan: "avance", billing_cycle: "annual", billing_country: "CA", locale: "en", source: "site",
+  }), { plan: "avance", billingCycle: "annual", billingCountry: "CA", locale: "en", source: "site" });
+  assert.deepEqual(parseSiteAppIntent({
+    plan: "avance", plan_requested: "patrimoine", billing_cycle: "weekly", billing_country: "US", locale: "xx", source: "utm_campaign",
+  }), { plan: "avance", billingCycle: null, billingCountry: null, locale: "fr", source: null });
+  assert.equal(parseSiteAppIntent({ plan: "sur_mesure" }).plan, "sur_mesure");
+});
+
 // ---------------------------------------------------------------------------
 // 6–7. URL manipulée / return_to externe refusé
 // ---------------------------------------------------------------------------
@@ -127,12 +141,15 @@ test("§17.16 URL manipulée : chemin interne légitime conservé, reste neutral
 });
 
 test("buildConnexionUrl produit un next interne cohérent avec la route réelle", () => {
-  const url = buildConnexionUrl("essentiel");
-  assert.match(url, /^\/connexion\?plan_requested=essentiel&next=/);
-  const next = decodeURIComponent(url.split("next=")[1]);
-  assert.equal(next, "/onboarding/organization?plan_requested=essentiel");
+  const intent: SiteAppIntent = { plan: "essentiel", billingCycle: "annual", billingCountry: "CA", locale: "en", source: "site" };
+  const url = buildConnexionUrl(intent);
+  assert.match(url, /^\/connexion\?plan=essentiel&billing_cycle=annual&billing_country=CA&locale=en&source=site&next=/);
+  const next = new URLSearchParams(url.split("?")[1]).get("next");
+  assert.equal(next, "/onboarding/organization?plan=essentiel&billing_cycle=annual&billing_country=CA&locale=en&source=site");
   assert.equal(safeNextPath(next), next, "le next généré doit survivre à safeNextPath");
-  assert.equal(buildConnexionUrl(null), "/connexion");
+  assert.equal(buildConnexionUrl({ plan: null, billingCycle: null, billingCountry: null, locale: "fr", source: null }), "/connexion?locale=fr&next=%2Fapp");
+  assert.equal(appendSiteAppIntent("/app/billing", intent), "/app/billing?plan=essentiel&billing_cycle=annual&billing_country=CA&locale=en&source=site");
+  assert.equal(destinationAfterOnboarding({ ...intent, plan: "decouverte" }), "/app");
 });
 
 // ---------------------------------------------------------------------------

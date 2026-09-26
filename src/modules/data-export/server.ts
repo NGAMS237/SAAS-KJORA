@@ -31,6 +31,19 @@ import {
 type DateRange = { from: string | null; to: string | null };
 
 type ScopeData = { headers: string[]; rows: unknown[][] };
+type ContractSummaryRow = {
+  id: string;
+  lease_id: string;
+  tenant_id: string;
+  reference: string;
+  status: string;
+  final_storage_path: string | null;
+  created_at: string | null;
+};
+type TenantExportRow = {
+  id: string; full_name: string; phone: string | null; email: string | null;
+  preferred_language: string | null; created_at: string | null;
+};
 
 const SHEET_TITLES: Record<ExportScope, string> = {
   properties: "Biens",
@@ -77,13 +90,13 @@ async function readUnits(organizationId: string): Promise<ScopeData> {
 
 async function readTenants(organizationId: string): Promise<ScopeData> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("tenants")
-    .select("id, full_name, phone, email, preferred_language, created_at")
-    .eq("organization_id", organizationId).order("created_at");
+  const { data, error } = await supabase.rpc("list_tenants_for_export", {
+    target_organization_id: organizationId,
+  });
   if (error) throw error;
   return {
     headers: ["id", "nom_complet", "telephone", "email", "langue", "cree_le"],
-    rows: (data ?? []).map((t) => [t.id, t.full_name, t.phone, t.email, t.preferred_language, iso(t.created_at)]),
+    rows: ((data ?? []) as TenantExportRow[]).map((t) => [t.id, t.full_name, t.phone, t.email, t.preferred_language, iso(t.created_at)]),
   };
 }
 
@@ -240,15 +253,16 @@ async function readFinancialDocumentsSummary(organizationId: string): Promise<{ 
 
 async function readContractsSummary(organizationId: string): Promise<{ data: ScopeData; contracts: Array<{ id: string; leaseId: string; reference: string; status: string; finalStoragePath: string | null }> }> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("lease_contracts")
-    .select("id, lease_id, tenant_id, reference, status, final_storage_path, created_at")
-    .eq("organization_id", organizationId).order("created_at");
+  const { data, error } = await supabase.rpc("list_contracts_for_export", {
+    target_organization_id: organizationId,
+  });
   if (error) throw error;
-  const contracts = (data ?? []).map((c) => ({ id: c.id, leaseId: c.lease_id, reference: c.reference, status: c.status, finalStoragePath: c.final_storage_path }));
+  const contractRows = (data ?? []) as ContractSummaryRow[];
+  const contracts = contractRows.map((c) => ({ id: c.id, leaseId: c.lease_id, reference: c.reference, status: c.status, finalStoragePath: c.final_storage_path }));
   return {
     data: {
       headers: ["id", "location_id", "locataire_id", "reference", "statut", "cree_le"],
-      rows: (data ?? []).map((c) => [c.id, c.lease_id, c.tenant_id, c.reference, c.status, iso(c.created_at)]),
+      rows: contractRows.map((c) => [c.id, c.lease_id, c.tenant_id, c.reference, c.status, iso(c.created_at)]),
     },
     contracts,
   };

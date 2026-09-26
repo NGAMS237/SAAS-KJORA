@@ -25,6 +25,7 @@ import type {
   BillingOverview,
   SubscriptionView,
 } from "@/core/billing/types";
+import type { BillingCountry } from "@/core/onboarding/plan-intent";
 
 // Les types de vue vivent dans `types.ts`, qui est pur : le client peut les
 // importer sans franchir la frontière `server-only`. On les ré-exporte ici
@@ -162,12 +163,14 @@ export async function requestPlanChange(
   organizationId: string,
   targetPlan: PlanSlug,
   targetCycle: BillingCycle,
+  targetBillingCountry: BillingCountry,
 ): Promise<PlanChangeResult | null> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("request_plan_change", {
+  const { data, error } = await supabase.rpc("prepare_plan_change_for_market", {
     target_organization_id: organizationId,
     target_plan: targetPlan,
     target_cycle: targetCycle,
+    target_billing_country: targetBillingCountry,
   });
   if (error) return null;
   return (data ?? null) as PlanChangeResult | null;

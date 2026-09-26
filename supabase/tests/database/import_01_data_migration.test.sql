@@ -15,6 +15,26 @@ create extension if not exists pgtap with schema extensions;
 select plan(57);
 
 -- ---------------------------------------------------------------------------
+-- Fenêtre de préavis de 5 jours (generate_due_days_before par défaut, cf.
+-- commit_data_import) : le nombre d'échéances "déjà visibles" pour un bail
+-- mensuel à échéance le 1er dépend du jour réel d'exécution du test. Durant
+-- les 5 derniers jours d'un mois, l'échéance du 1er du mois SUIVANT devient
+-- déjà visible (notice_date = due_date - 5 <= current_date), exactement comme
+-- le ferait le vrai générateur de dues en Production — ce n'est PAS un bug de
+-- commit_data_import. Les Cas A et B ci-dessous utilisent des dates de départ
+-- relatives à current_date (via date_trunc) pour rester déterministes le
+-- reste du mois, mais cette fenêtre de 5 jours reste, elle, irréductible :
+-- on la calcule donc UNE SEULE FOIS ici (même formule que la boucle réelle)
+-- pour que les attentes du test restent exactes et déterministes quel que
+-- soit le jour réel d'exécution, au lieu de figer un nombre d'échéances qui
+-- deviendrait faux 5 jours par mois (cause du rouge CI du 2026-09-26).
+select set_config(
+  'kjora_test.pull_forward_next_period',
+  (current_date >= (date_trunc('month', current_date) + interval '1 month' - interval '5 days')::date)::text,
+  true
+);
+
+-- ---------------------------------------------------------------------------
 -- Fixture : trois Organizations distinctes
 --   Org A (99...0a) — plan relevé à 'avance' : scénarios fonctionnels (dette,
 --                      crédit, dépôt, idempotence, rollback format).
@@ -210,7 +230,8 @@ select is(
      join public.leases l on l.id = le.lease_id
      join public.tenants t on t.id = l.tenant_id
     where t.full_name='Locataire Cas A' and le.entry_type='opening_credit'),
-  0, 'Cas A : pas de crédit d''ouverture (dette totale = échéances échues, prépaiement = 0)');
+  case when (select current_setting('kjora_test.pull_forward_next_period')::boolean) then 1 else 0 end,
+  'Cas A : le crédit d''ouverture est cohérent avec la fenêtre de préavis de 5 jours (0 en temps normal — dette totale = échéances échues, prépaiement = 0 ; 1 uniquement si le test tombe dans les 5 derniers jours du mois, où l''échéance du mois suivant devient déjà visible et dépasse la dette déclarée)');
 
 select is(
   (select coalesce(sum(d.remaining_amount_xaf),0)::bigint from public.dues_with_status d
@@ -225,7 +246,8 @@ select is(
      join public.leases l on l.id = d.lease_id
      join public.tenants t on t.id = l.tenant_id
     where t.full_name='Locataire Cas A' and d.kind='periodic'),
-  3, 'Cas A : exactement 3 échéances périodiques générées (mois échus)');
+  3 + case when (select current_setting('kjora_test.pull_forward_next_period')::boolean) then 1 else 0 end,
+  'Cas A : 3 échéances périodiques (mois échus), plus 1 échéance supplémentaire uniquement si le test s''exécute dans la fenêtre de préavis de 5 jours précédant le mois suivant');
 
 -- Pas de doublon d'échéance (même period_start) pour cette Location.
 select is(
@@ -271,8 +293,8 @@ select is(
      join public.leases l on l.id = le.lease_id
      join public.tenants t on t.id = l.tenant_id
     where t.full_name='Locataire Cas B' and le.entry_type='opening_credit'),
-  220000::bigint,
-  'Cas B : le crédit d''ouverture comptabilisé = échéances échues (160 000) + crédit déclaré (60 000)');
+  ((2 + case when (select current_setting('kjora_test.pull_forward_next_period')::boolean) then 1 else 0 end) * 80000 + 60000)::bigint,
+  'Cas B : le crédit d''ouverture comptabilisé = échéances échues (2, ou 3 uniquement si le test tombe dans la fenêtre de préavis de 5 jours précédant le mois suivant) x 80 000 + crédit déclaré (60 000)');
 
 select is(
   (select coalesce(sum(d.remaining_amount_xaf),0)::bigint from public.dues_with_status d

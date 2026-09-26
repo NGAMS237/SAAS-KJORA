@@ -4858,3 +4858,218 @@ a.portfolio-metric:hover {
 @media (max-width: 640px) {
   .billing-invoice-row { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   ADMIN-01 — Console plateforme
+   Réutilise les tokens existants (--surface, --text, --border…). Aucun token
+   nouveau, aucune police supplémentaire, aucune librairie.
+   ========================================================================== */
+
+.admin-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--text);
+}
+
+.admin-shell__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--brand-ink);
+  color: #fff;
+  flex-wrap: wrap;
+}
+
+.admin-shell__identity { display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap; }
+
+/* ADMIN-01.1 — badge d'environnement : jamais déduit du hostname, reçu du serveur. */
+.admin-shell__env-badge {
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.admin-shell__env-badge--production { background: var(--danger); color: #fff; border-color: var(--danger); }
+.admin-shell__env-badge--preview { background: var(--warning); color: #1a1a1a; border-color: var(--warning); }
+.admin-shell__env-badge--development { background: rgba(255, 255, 255, 0.16); color: #fff; }
+
+.admin-shell__mark {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--brand-blue);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; color: #fff;
+}
+
+.admin-shell__title { margin: 0; font-weight: 700; font-size: 0.95rem; }
+.admin-shell__subtitle { margin: 0; font-size: 0.75rem; opacity: 0.7; }
+
+.admin-shell__actions { display: flex; gap: 8px; }
+
+.admin-shell__toggle {
+  min-width: 38px; min-height: 38px; padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer;
+}
+.admin-shell__toggle:hover { background: rgba(255, 255, 255, 0.16); }
+
+.admin-shell__nav-link { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.admin-shell__nav-link--external::after { content: "↗"; font-size: 0.8em; }
+.admin-shell__nav-link--disabled { opacity: 0.55; cursor: default; font-style: italic; }
+.admin-shell__sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.admin-shell__identity-email {
+  font-size: 0.78rem; color: rgba(255, 255, 255, 0.85);
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-shell__signout { background: rgba(255, 255, 255, 0.08); }
+
+.admin-shell__nav {
+  display: flex; gap: 4px; padding: 8px 20px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.admin-shell__link {
+  padding: 9px 14px; border-radius: var(--radius-pill);
+  font-size: 0.85rem; font-weight: 600;
+  color: var(--text-secondary); text-decoration: none; white-space: nowrap;
+}
+.admin-shell__link:hover { background: var(--surface-muted); color: var(--text); }
+.admin-shell__link--active { background: var(--brand-ink); color: #fff; }
+
+.admin-shell__main { flex: 1; padding: 24px 20px 40px; }
+
+.admin-shell__footer {
+  padding: 14px 20px; border-top: 1px solid var(--border);
+  color: var(--text-muted); font-size: 0.78rem;
+}
+
+.admin-page { max-width: 1160px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+.admin-page__header h1 { margin: 0 0 6px; font-size: clamp(1.4rem, 3vw, 1.9rem); }
+.admin-page__header p { margin: 0; color: var(--text-secondary); }
+
+.admin-section { display: flex; flex-direction: column; gap: 14px; }
+.admin-section h2 { margin: 0; font-size: 1.05rem; }
+.admin-section__lead { margin: 0; color: var(--text-secondary); font-size: 0.85rem; }
+
+.admin-counters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+
+.admin-counter {
+  padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-surface);
+  background: var(--surface); display: flex; flex-direction: column; gap: 4px;
+}
+.admin-counter__value { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.admin-counter__label { font-size: 0.78rem; color: var(--text-secondary); }
+
+.admin-breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.admin-breakdown {
+  padding: 16px; border: 1px solid var(--border);
+  border-radius: var(--radius-surface); background: var(--surface);
+}
+.admin-breakdown h3 { margin: 0 0 10px; font-size: 0.85rem; }
+.admin-breakdown__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.admin-breakdown__list li { display: flex; justify-content: space-between; gap: 12px; font-size: 0.85rem; }
+.admin-breakdown__list strong { font-variant-numeric: tabular-nums; }
+
+/* Défilement horizontal confiné au tableau : la page ne défile jamais latéralement. */
+.admin-table-wrap {
+  overflow-x: auto; border: 1px solid var(--border);
+  border-radius: var(--radius-surface); background: var(--surface);
+}
+
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.admin-table th, .admin-table td {
+  padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.admin-table thead th {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); background: var(--surface-muted);
+}
+.admin-table tbody tr:last-child th, .admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table__muted { color: var(--text-secondary); }
+.admin-table__num { font-variant-numeric: tabular-nums; }
+
+/* État : le libellé textuel porte le sens ; la couleur ne fait que l'appuyer. */
+.admin-state {
+  display: inline-block; padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 0.72rem; font-weight: 700; border: 1px solid transparent;
+}
+.admin-state--normal { background: var(--success-soft); color: var(--success); }
+/* ADMIN-01.1 : libellé "Attention" (incident) et "Erreur" (unavailable) — les
+   deux restent visuellement distincts du "Non connecté" neutre, la couleur
+   n'étant qu'un appui au libellé textuel qui, lui, change réellement. */
+.admin-state--incident { background: var(--warning-soft); color: var(--warning); }
+.admin-state--stale { background: var(--warning-soft); color: var(--warning); }
+.admin-state--unavailable { background: var(--danger-soft); color: var(--danger); }
+.admin-state--not-connected { background: transparent; color: var(--text-muted); border-color: var(--border-strong); }
+
+.admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.admin-pagination__link {
+  padding: 8px 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: 0.83rem;
+}
+.admin-pagination__link:hover { background: var(--surface-muted); }
+.admin-pagination__link--disabled { opacity: 0.4; pointer-events: none; }
+.admin-pagination__info { color: var(--text-secondary); font-size: 0.83rem; font-variant-numeric: tabular-nums; }
+
+.admin-error {
+  padding: 12px 16px; border-radius: var(--radius-surface);
+  background: var(--danger-soft); color: var(--danger); font-size: 0.85rem; margin: 0;
+}
+
+/* ADMIN-01.1 — Actualiser */
+.admin-refresh {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);
+}
+.admin-refresh__button {
+  padding: 6px 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+}
+.admin-refresh__button:hover { background: var(--surface-muted); }
+
+/* ADMIN-01.1 — recherche et filtres, toujours résolus côté serveur (RPC) */
+.admin-filters {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: var(--radius-surface); background: var(--surface);
+}
+.admin-filters__field { display: flex; flex-direction: column; gap: 4px; min-width: 160px; flex: 1 1 160px; }
+.admin-filters__label { font-size: 0.72rem; color: var(--text-secondary); font-weight: 600; }
+.admin-filters__input, .admin-filters__select {
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--background); color: var(--text); font: inherit;
+}
+.admin-filters__submit {
+  padding: 9px 16px; border-radius: var(--radius-pill); border: none;
+  background: var(--brand-ink); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+}
+.admin-filters__submit:hover { opacity: 0.9; }
+.admin-filters__clear {
+  font-size: 0.8rem; color: var(--text-secondary); text-decoration: underline;
+  align-self: center;
+}
+
+.admin-results-count { margin: 0; font-size: 0.82rem; color: var(--text-secondary); }
+.admin-free-paid-summary { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .admin-shell__main { padding: 18px 14px 32px; }
+  .admin-shell__bar, .admin-shell__nav { padding-left: 14px; padding-right: 14px; }
+  .admin-shell__subtitle { display: none; }
+  .admin-shell__identity-email { max-width: 140px; }
+  .admin-filters { flex-direction: column; align-items: stretch; }
+  .admin-filters__field { min-width: 0; }
+  .admin-filters__clear { align-self: flex-start; }
+}

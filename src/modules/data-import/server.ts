@@ -24,6 +24,8 @@ import type {
 import { MAX_IMPORT_ROWS } from "@/modules/data-import/model";
 export { buildCommitPayload, type FinalizedRowInput } from "@/modules/data-import/commit-payload";
 
+type TenantImportRow = { id: string; full_name: string; phone: string | null; email: string | null };
+
 export function sha256Hex(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
@@ -56,7 +58,7 @@ export async function previewImport(
   const [properties, units, tenants, activeLeases] = await Promise.all([
     supabase.from("properties").select("id, name, locality, type").eq("organization_id", organizationId).eq("status", "active").limit(2000),
     supabase.from("units").select("id, label, property_id").eq("organization_id", organizationId).eq("status", "active").limit(5000),
-    supabase.from("tenants").select("id, full_name, phone, email").eq("organization_id", organizationId).limit(5000),
+    supabase.rpc("list_tenants_for_import", { target_organization_id: organizationId }),
     supabase.from("leases").select("unit_id").eq("organization_id", organizationId).eq("status", "active").limit(5000),
   ]);
   for (const result of [properties, units, tenants, activeLeases]) {
@@ -68,7 +70,7 @@ export async function previewImport(
   const unitEntities: ExistingEntity[] = (units.data ?? []).map((u) => ({
     id: u.id, label: u.label, fingerprint: `unit:${u.property_id}:${normalizeForFp(u.label)}`, secondary: u.property_id,
   }));
-  const tenantEntities: ExistingEntity[] = (tenants.data ?? []).map((t) => ({
+  const tenantEntities: ExistingEntity[] = ((tenants.data ?? []) as TenantImportRow[]).map((t) => ({
     id: t.id, label: t.full_name, fingerprint: `tenant:${normalizeForFp(t.full_name)}:${normalizeForFp(t.phone ?? t.email ?? "")}`,
   }));
   const unitsWithActiveLease = new Set((activeLeases.data ?? []).map((l) => l.unit_id).filter(Boolean));
