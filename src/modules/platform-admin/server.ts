@@ -491,3 +491,146 @@ export async function getMonitoringIndicators(now = new Date()): Promise<Monitor
 
   return indicators;
 }
+
+// =============================================================================
+// FINANCE-ADMIN-01 — Aperçu financier (lecture seule)
+// =============================================================================
+// Même discipline que le reste de ce fichier : aucune écriture, aucune clé de
+// service, montants renvoyés en unités mineures (centimes / plus petite unité
+// XAF) SANS jamais additionner CAD et XAF entre eux — chaque valeur reste
+// rangée par devise dans son propre Record.
+
+// Le filtre de période lui-même vit dans finance-periods.ts (module PUR, sans
+// "server-only") : un composant client (views.tsx) doit pouvoir l'importer
+// directement pour peupler le <select>, ce que ce fichier lui interdirait.
+// Ré-exporté ici pour que page.tsx (composant serveur) n'ait qu'un seul point
+// d'import pour tout ce qui concerne les Finances.
+import { FINANCE_PERIOD_FILTERS, isFinancePeriodFilter, type FinancePeriodFilter } from "./finance-periods";
+export { FINANCE_PERIOD_FILTERS, isFinancePeriodFilter, type FinancePeriodFilter };
+
+export type FinanceSummary = {
+  periodKey: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  counters: {
+    organizationsTotal: number;
+    subscriptionsFree: number;
+    subscriptionsPaid: number;
+    organizationsWithoutSubscription: number;
+    planBillingMismatches: number;
+    activeCommercialInterventions: number;
+    activeComplimentary: number;
+    registeredOfflinePayments: number;
+  };
+  charts: {
+    subscriptionsByPlan: Record<string, number>;
+    freePaidBreakdown: { free: number; paid: number; withoutSubscription: number };
+    /** Unités mineures, par devise. Jamais fusionné entre devises. */
+    expectedRevenueByCurrency: Record<string, number>;
+  };
+  /** Unités mineures, par devise — encaissé hors ligne uniquement. */
+  collectedOfflineByCurrency: Record<string, number>;
+  stripeConnected: boolean;
+  mobileMoneyConnected: boolean;
+  /** Unités mineures, par devise — état courant, indépendant de la période. */
+  expectedRevenueByCurrency: Record<string, number>;
+  generatedAt: string | null;
+};
+
+export type FinanceEventSource = "subscription" | "manual_intervention" | "offline_payment" | string;
+
+export type FinanceEventRow = {
+  eventId: string;
+  organizationId: string;
+  organizationName: string;
+  category: string;
+  status: string;
+  currency: string | null;
+  amountMinor: number | null;
+  source: FinanceEventSource;
+  occurredAt: string;
+};
+
+export async function getFinanceSummary(
+  periodFilter: FinancePeriodFilter = "last_30_days",
+): Promise<ReadResult<FinanceSummary>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_finance_summary", {
+    period_filter: periodFilter,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  const payload = data as Record<string, unknown>;
+  const period = (payload.period ?? {}) as Record<string, unknown>;
+  const counters = (payload.commercial_counters ?? {}) as Record<string, unknown>;
+  const charts = (payload.charts ?? {}) as Record<string, unknown>;
+  const freePaid = (charts.free_paid_breakdown ?? {}) as Record<string, unknown>;
+  const collected = (payload.collected_revenue ?? {}) as Record<string, unknown>;
+  const expected = (payload.expected_revenue ?? {}) as Record<string, unknown>;
+
+  return {
+    ok: true,
+    data: {
+      periodKey: String(period.key ?? periodFilter),
+      periodStart: period.start ? String(period.start) : null,
+      periodEnd: period.end ? String(period.end) : null,
+      counters: {
+        organizationsTotal: toNumber(counters.organizations_total),
+        subscriptionsFree: toNumber(counters.subscriptions_free),
+        subscriptionsPaid: toNumber(counters.subscriptions_paid),
+        organizationsWithoutSubscription: toNumber(counters.organizations_without_subscription),
+        planBillingMismatches: toNumber(counters.plan_billing_mismatches),
+        activeCommercialInterventions: toNumber(counters.active_commercial_interventions),
+        activeComplimentary: toNumber(counters.active_complimentary),
+        registeredOfflinePayments: toNumber(counters.registered_offline_payments),
+      },
+      charts: {
+        subscriptionsByPlan: toCountRecord(charts.subscriptions_by_plan),
+        freePaidBreakdown: {
+          free: toNumber(freePaid.free),
+          paid: toNumber(freePaid.paid),
+          withoutSubscription: toNumber(freePaid.without_subscription),
+        },
+        expectedRevenueByCurrency: toCountRecord(charts.expected_revenue_by_currency),
+      },
+      collectedOfflineByCurrency: toCountRecord(collected.offline_by_currency),
+      stripeConnected: collected.stripe_connected === true,
+      mobileMoneyConnected: collected.mobile_money_connected === true,
+      expectedRevenueByCurrency: toCountRecord(expected.by_currency),
+      generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
+    },
+  };
+}
+
+function mapFinanceEventRow(r: Record<string, unknown>): FinanceEventRow {
+  return {
+    eventId: String(r.event_id ?? ""),
+    organizationId: String(r.organization_id ?? ""),
+    organizationName: String(r.organization_name ?? ""),
+    category: String(r.category ?? ""),
+    status: String(r.status ?? ""),
+    currency: r.currency ? String(r.currency) : null,
+    amountMinor: r.amount_minor === null || r.amount_minor === undefined ? null : toNumber(r.amount_minor),
+    source: String(r.source ?? ""),
+    occurredAt: String(r.occurred_at ?? ""),
+  };
+}
+
+export async function listFinanceRecentEvents(
+  limit = DEFAULT_PAGE_SIZE,
+  offset = 0,
+  periodFilter: FinancePeriodFilter = "last_30_days",
+): Promise<ReadResult<Paginated<FinanceEventRow>>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_finance_recent_events", {
+    page_limit: limit,
+    page_offset: offset,
+    period_filter: periodFilter,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  return {
+    ok: true,
+    data: parsePagedPayload(data, mapFinanceEventRow, limit, offset),
+  };
+}

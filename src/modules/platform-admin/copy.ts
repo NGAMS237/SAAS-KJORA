@@ -170,6 +170,71 @@ export type AdminCopy = {
   extendConfirmText: string;
 
   outcomeLabels: Record<string, string>;
+
+  // ---------------------------------------------------------------------
+  // FINANCE-ADMIN-01 — Finances (lecture seule)
+  // ---------------------------------------------------------------------
+  navFinances: string;
+  financeTitle: string;
+  financeSubtitle: string;
+
+  financePeriodLabel: string;
+  periodLast30Days: string;
+  periodLast90Days: string;
+  periodCurrentYear: string;
+  periodAllTime: string;
+
+  financeSectionCounters: string;
+  financeCounterOrganizations: string;
+  financeCounterFreeSubs: string;
+  financeCounterPaidSubs: string;
+  financeCounterWithoutSubscription: string;
+  financeCounterMismatches: string;
+  financeCounterActiveInterventions: string;
+  financeCounterActiveComplimentary: string;
+  financeCounterOfflinePayments: string;
+
+  financeSectionCollected: string;
+  financeCollectedOfflineCad: string;
+  financeCollectedOfflineXaf: string;
+  financeCollectedStripe: string;
+  financeCollectedMobileMoney: string;
+  notAvailable: string;
+  notConnectedValue: string;
+
+  financeSectionExpected: string;
+  financeExpectedCad: string;
+  financeExpectedXaf: string;
+  financeExpectedBasisNote: string;
+
+  financeSectionCharts: string;
+  chartSubscriptionsByPlan: string;
+  chartFreePaidBreakdown: string;
+  chartExpectedRevenueByCurrency: string;
+  chartNoSourceAvailable: string;
+  chartTableCaption: string;
+
+  financeSectionEvents: string;
+  colEventDate: string;
+  colEventOrganization: string;
+  colEventCategory: string;
+  colEventStatus: string;
+  colEventCurrency: string;
+  colEventAmount: string;
+  colEventSource: string;
+  financeEventSourceSubscription: string;
+  financeEventSourceManualIntervention: string;
+  financeEventSourceOfflinePayment: string;
+  financeNoEvents: string;
+
+  financeSectionConnectors: string;
+  connectorSupabaseInternal: string;
+  connectorStripe: string;
+  connectorMobileMoney: string;
+  connectorStateConnected: string;
+  connectorStateNotConnected: string;
+
+  financeApplyFilter: string;
 };
 
 const fr: AdminCopy = {
@@ -372,6 +437,70 @@ const fr: AdminCopy = {
     reason_required: "Un motif est obligatoire.",
     not_found: "Intervention introuvable.",
   },
+
+  navFinances: "Finances",
+  financeTitle: "Finances",
+  financeSubtitle:
+    "Aperçu financier en lecture seule. Chaque montant est rattaché à sa devise et à sa source ; rien n'est jamais additionné entre le CAD et le XAF.",
+
+  financePeriodLabel: "Période",
+  periodLast30Days: "30 derniers jours",
+  periodLast90Days: "90 derniers jours",
+  periodCurrentYear: "Année en cours",
+  periodAllTime: "Toute la période",
+
+  financeSectionCounters: "Compteurs commerciaux",
+  financeCounterOrganizations: "Organizations totales",
+  financeCounterFreeSubs: "Abonnements gratuits enregistrés",
+  financeCounterPaidSubs: "Abonnements payants enregistrés",
+  financeCounterWithoutSubscription: "Organizations sans abonnement enregistré",
+  financeCounterMismatches: "Incohérences forfait/facturation",
+  financeCounterActiveInterventions: "Interventions commerciales actives",
+  financeCounterActiveComplimentary: "Gratuités actives",
+  financeCounterOfflinePayments: "Paiements hors ligne enregistrés",
+
+  financeSectionCollected: "Revenus réellement encaissés",
+  financeCollectedOfflineCad: "Encaissé hors ligne (CAD)",
+  financeCollectedOfflineXaf: "Encaissé hors ligne (XAF)",
+  financeCollectedStripe: "Encaissé Stripe",
+  financeCollectedMobileMoney: "Encaissé Mobile Money",
+  notAvailable: "NON DISPONIBLE",
+  notConnectedValue: "NON CONNECTÉ",
+
+  financeSectionExpected: "Revenus mensuels attendus",
+  financeExpectedCad: "Revenu mensuel attendu (CAD)",
+  financeExpectedXaf: "Revenu mensuel attendu (XAF)",
+  financeExpectedBasisNote:
+    "Calculé à partir des abonnements réellement enregistrés et du catalogue de prix ALIGN-03. État courant, indépendant de la période choisie ci-dessus — jamais une estimation présentée comme un encaissement.",
+
+  financeSectionCharts: "Graphiques",
+  chartSubscriptionsByPlan: "Abonnements par forfait",
+  chartFreePaidBreakdown: "Gratuit / Payant / Sans abonnement",
+  chartExpectedRevenueByCurrency: "Revenu attendu par devise",
+  chartNoSourceAvailable: "Aucune source fiable disponible pour ce graphique.",
+  chartTableCaption: "Valeurs détaillées",
+
+  financeSectionEvents: "Événements financiers récents",
+  colEventDate: "Date",
+  colEventOrganization: "Organization",
+  colEventCategory: "Catégorie",
+  colEventStatus: "Statut",
+  colEventCurrency: "Devise",
+  colEventAmount: "Montant",
+  colEventSource: "Source",
+  financeEventSourceSubscription: "Abonnement",
+  financeEventSourceManualIntervention: "Intervention manuelle",
+  financeEventSourceOfflinePayment: "Paiement hors ligne",
+  financeNoEvents: "Aucun événement financier sur cette période.",
+
+  financeSectionConnectors: "État des connecteurs",
+  connectorSupabaseInternal: "Supabase interne",
+  connectorStripe: "Stripe",
+  connectorMobileMoney: "Mobile Money",
+  connectorStateConnected: "CONNECTÉ",
+  connectorStateNotConnected: "NON CONNECTÉ",
+
+  financeApplyFilter: "Appliquer",
 };
 
 const en: AdminCopy = {
@@ -574,6 +703,70 @@ const en: AdminCopy = {
     reason_required: "A reason is required.",
     not_found: "Intervention not found.",
   },
+
+  navFinances: "Finances",
+  financeTitle: "Finances",
+  financeSubtitle:
+    "Read-only financial overview. Every amount stays tied to its currency and its source; CAD and XAF are never added together.",
+
+  financePeriodLabel: "Period",
+  periodLast30Days: "Last 30 days",
+  periodLast90Days: "Last 90 days",
+  periodCurrentYear: "Current year",
+  periodAllTime: "All time",
+
+  financeSectionCounters: "Commercial counters",
+  financeCounterOrganizations: "Total organizations",
+  financeCounterFreeSubs: "Registered free subscriptions",
+  financeCounterPaidSubs: "Registered paid subscriptions",
+  financeCounterWithoutSubscription: "Organizations without a registered subscription",
+  financeCounterMismatches: "Plan/billing mismatches",
+  financeCounterActiveInterventions: "Active commercial interventions",
+  financeCounterActiveComplimentary: "Active complimentary grants",
+  financeCounterOfflinePayments: "Registered offline payments",
+
+  financeSectionCollected: "Revenue actually collected",
+  financeCollectedOfflineCad: "Collected offline (CAD)",
+  financeCollectedOfflineXaf: "Collected offline (XAF)",
+  financeCollectedStripe: "Collected via Stripe",
+  financeCollectedMobileMoney: "Collected via Mobile Money",
+  notAvailable: "NOT AVAILABLE",
+  notConnectedValue: "NOT CONNECTED",
+
+  financeSectionExpected: "Expected monthly revenue",
+  financeExpectedCad: "Expected monthly revenue (CAD)",
+  financeExpectedXaf: "Expected monthly revenue (XAF)",
+  financeExpectedBasisNote:
+    "Computed from really-registered subscriptions and the ALIGN-03 price catalog. Current-state figure, independent of the period selected above — never an estimate presented as a collection.",
+
+  financeSectionCharts: "Charts",
+  chartSubscriptionsByPlan: "Subscriptions by plan",
+  chartFreePaidBreakdown: "Free / Paid / No subscription",
+  chartExpectedRevenueByCurrency: "Expected revenue by currency",
+  chartNoSourceAvailable: "No reliable source available for this chart.",
+  chartTableCaption: "Detailed values",
+
+  financeSectionEvents: "Recent financial events",
+  colEventDate: "Date",
+  colEventOrganization: "Organization",
+  colEventCategory: "Category",
+  colEventStatus: "Status",
+  colEventCurrency: "Currency",
+  colEventAmount: "Amount",
+  colEventSource: "Source",
+  financeEventSourceSubscription: "Subscription",
+  financeEventSourceManualIntervention: "Manual intervention",
+  financeEventSourceOfflinePayment: "Offline payment",
+  financeNoEvents: "No financial event in this period.",
+
+  financeSectionConnectors: "Connector status",
+  connectorSupabaseInternal: "Internal Supabase",
+  connectorStripe: "Stripe",
+  connectorMobileMoney: "Mobile Money",
+  connectorStateConnected: "CONNECTED",
+  connectorStateNotConnected: "NOT CONNECTED",
+
+  financeApplyFilter: "Apply",
 };
 
 export const ADMIN_COPY = { fr, en } as const;
