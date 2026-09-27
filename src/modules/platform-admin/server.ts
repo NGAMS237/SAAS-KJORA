@@ -802,3 +802,64 @@ export async function getOrganizationLifecycle(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// REVENUE-01I — Contacts commerciaux
+// ---------------------------------------------------------------------------
+// Une seule RPC paginée pour la console (admin_list_commercial_contacts) et
+// une RPC de lecture non paginée dédiée à l'export (admin_list_commercial_
+// contacts_for_export, appelée uniquement depuis la route de téléchargement,
+// jamais depuis cette fonction) — voir supabase/migrations/
+// 20260927190000_revenue_01i_commercial_contacts.sql.
+// ---------------------------------------------------------------------------
+
+export type AdminCommercialContactRow = {
+  organizationId: string;
+  organizationName: string;
+  ownerEmail: string | null;
+  phone: string | null;
+  country: string | null;
+  language: string | null;
+  marketingConsent: boolean;
+  marketingConsentAt: string | null;
+  consentSource: string | null;
+  unsubscribedAt: string | null;
+};
+
+export type CommercialContactFilters = {
+  search?: string;
+};
+
+function mapAdminCommercialContactRow(r: Record<string, unknown>): AdminCommercialContactRow {
+  return {
+    organizationId: String(r.organization_id ?? ""),
+    organizationName: String(r.organization_name ?? ""),
+    ownerEmail: r.owner_email ? String(r.owner_email) : null,
+    phone: r.phone ? String(r.phone) : null,
+    country: r.country ? String(r.country) : null,
+    language: r.language ? String(r.language) : null,
+    marketingConsent: r.marketing_consent === true,
+    marketingConsentAt: r.marketing_consent_at ? String(r.marketing_consent_at) : null,
+    consentSource: r.consent_source ? String(r.consent_source) : null,
+    unsubscribedAt: r.unsubscribed_at ? String(r.unsubscribed_at) : null,
+  };
+}
+
+export async function listCommercialContacts(
+  limit = DEFAULT_PAGE_SIZE,
+  offset = 0,
+  filters: CommercialContactFilters = {},
+): Promise<ReadResult<Paginated<AdminCommercialContactRow>>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_list_commercial_contacts", {
+    page_limit: limit,
+    page_offset: offset,
+    search_term: filters.search?.trim() || null,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  return {
+    ok: true,
+    data: parsePagedPayload(data, mapAdminCommercialContactRow, limit, offset),
+  };
+}

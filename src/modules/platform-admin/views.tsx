@@ -12,6 +12,7 @@ import {
   type MonitoringState,
 } from "./monitoring";
 import type {
+  AdminCommercialContactRow,
   AdminOrganizationRow,
   AdminSubscriptionRow,
   FinanceBillingExtension,
@@ -43,6 +44,11 @@ import {
   transferOwnershipAction,
   type LifecycleActionResult,
 } from "./organization-lifecycle-actions";
+import {
+  setMarketingConsentAction,
+  upsertOrganizationContactAction,
+  type ContactActionResult,
+} from "./contacts-actions";
 
 // =============================================================================
 // KJORA — ADMIN-01 — Vues de la console
@@ -1936,6 +1942,286 @@ export function FinancesView({
           <Pagination page={events} basePath="/administration/finances" extraParams={{ period }} />
         ) : null}
       </section>
+    </div>
+  );
+}
+
+// =============================================================================
+// REVENUE-01I — Contacts commerciaux
+// =============================================================================
+// Aucune inscription automatique à une newsletter : le seul chemin d'écriture
+// est une saisie manuelle Admin (les deux dialogues ci-dessous). Cette page
+// ne déclenche jamais aucun envoi — l'export CSV (lien vers la route dédiée)
+// est la seule "sortie" de ces données depuis cette console.
+// =============================================================================
+
+export function ContactsView({
+  page,
+  error,
+  search,
+}: {
+  page: Paginated<AdminCommercialContactRow> | null;
+  error: "denied" | "failed" | null;
+  search: string;
+}) {
+  const { t } = useCopy();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [dialogFeedback, setDialogFeedback] = useState<string | null>(null);
+
+  const [editTarget, setEditTarget] = useState<AdminCommercialContactRow | null>(null);
+  const [editConfirmed, setEditConfirmed] = useState(false);
+  const [editPhone, setEditPhone] = useState("");
+  const [editCountry, setEditCountry] = useState("");
+  const [editLanguage, setEditLanguage] = useState<"fr" | "en">("fr");
+
+  const [consentTarget, setConsentTarget] = useState<{ row: AdminCommercialContactRow; grant: boolean } | null>(null);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
+
+  const hasFilters = search !== "";
+  const extraParams: Record<string, string> = {};
+  if (search) extraParams.q = search;
+
+  function resultMessage(result: ContactActionResult): string {
+    if (!result.ok) return result.message;
+    return t.outcomeLabels[result.outcome] ?? result.outcome;
+  }
+
+  function closeDialogs() {
+    setEditTarget(null);
+    setEditConfirmed(false);
+    setConsentTarget(null);
+    setConsentConfirmed(false);
+    setDialogFeedback(null);
+  }
+
+  function openEdit(row: AdminCommercialContactRow) {
+    setDialogFeedback(null);
+    setEditPhone(row.phone ?? "");
+    setEditCountry(row.country ?? "");
+    setEditLanguage(row.language === "en" ? "en" : "fr");
+    setEditTarget(row);
+  }
+
+  function openConsent(row: AdminCommercialContactRow, grant: boolean) {
+    setDialogFeedback(null);
+    setConsentTarget({ row, grant });
+  }
+
+  function handleEditSubmit() {
+    if (!editTarget) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await upsertOrganizationContactAction(
+        editTarget.organizationId,
+        editPhone,
+        editCountry,
+        editLanguage,
+      );
+      if (result.ok) {
+        closeDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleConsentSubmit() {
+    if (!consentTarget) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      // Seule source possible aujourd'hui : aucun formulaire public de
+      // consentement n'existe encore (voir la migration REVENUE-01I).
+      const result = await setMarketingConsentAction(
+        consentTarget.row.organizationId,
+        consentTarget.grant,
+        "admin_manual_entry",
+      );
+      if (result.ok) {
+        closeDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function consentLabel(row: AdminCommercialContactRow): string {
+    if (row.unsubscribedAt) return t.consentUnsubscribed;
+    return row.marketingConsent ? t.consentYes : t.consentNo;
+  }
+
+  return (
+    <div className="admin-page">
+      <header className="admin-page__header">
+        <h1>{t.contactsTitle}</h1>
+        <p>{t.contactsLead}</p>
+      </header>
+
+      <div className="admin-actions-menu">
+        <a className="admin-action-button" href="/api/administration/contacts/export">
+          {t.exportCsv}
+        </a>
+      </div>
+
+      <FilterBar action="/administration/contacts">
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.searchByNameOrEmail}</span>
+          <input type="text" name="q" defaultValue={search} className="admin-filters__input" />
+        </label>
+        <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
+        {hasFilters ? (
+          <Link href="/administration/contacts" className="admin-filters__clear">
+            {t.clearFilters}
+          </Link>
+        ) : null}
+      </FilterBar>
+
+      {feedback ? (
+        <p className={feedback.kind === "success" ? "admin-success" : "admin-error"} role="status">
+          {feedback.message}
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className="admin-error" role="alert">
+          {error === "denied" ? t.errorDenied : t.errorFailed}
+        </p>
+      ) : null}
+
+      {page ? (
+        <>
+          <p className="admin-results-count">{t.resultsCount(page.total)}</p>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colName}</th>
+                  <th scope="col">{t.orgDetailOwnerEmail}</th>
+                  <th scope="col">{t.colPhone}</th>
+                  <th scope="col">{t.colCountry}</th>
+                  <th scope="col">{t.colLanguage}</th>
+                  <th scope="col">{t.colConsent}</th>
+                  <th scope="col">{t.colActions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="admin-table__muted">
+                      {t.emptyRows}
+                    </td>
+                  </tr>
+                ) : (
+                  page.rows.map((row) => (
+                    <tr key={row.organizationId}>
+                      <th scope="row">
+                        <Link
+                          href={`/administration/organizations/${row.organizationId}`}
+                          className="admin-table__view-link"
+                        >
+                          {row.organizationName || "—"}
+                        </Link>
+                      </th>
+                      <td>{row.ownerEmail ?? "—"}</td>
+                      <td>{row.phone ?? "—"}</td>
+                      <td>{row.country ?? t.noContactRecorded}</td>
+                      <td>{row.language ?? "—"}</td>
+                      <td>
+                        <span className="admin-badge">{consentLabel(row)}</span>
+                      </td>
+                      <td>
+                        <div className="admin-actions-menu">
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small"
+                            onClick={() => openEdit(row)}
+                          >
+                            {t.actionEditContact}
+                          </button>
+                          {row.country ? (
+                            row.marketingConsent ? (
+                              <button
+                                type="button"
+                                className="admin-action-button admin-action-button--small admin-action-button--danger"
+                                onClick={() => openConsent(row, false)}
+                              >
+                                {t.actionUnsubscribe}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="admin-action-button admin-action-button--small"
+                                onClick={() => openConsent(row, true)}
+                              >
+                                {t.actionGrantConsent}
+                              </button>
+                            )
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} basePath="/administration/contacts" extraParams={extraParams} />
+        </>
+      ) : null}
+
+      <ConfirmDialog
+        id="edit-contact-dialog"
+        title={t.actionEditContact}
+        open={editTarget !== null}
+        onClose={closeDialogs}
+        onSubmit={handleEditSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={editConfirmed}
+        onConfirmCheckedChange={setEditConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>{t.editContactConfirmText}</p>
+        <label className="admin-dialog__field">
+          <span>{t.formPhoneOptional}</span>
+          <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} maxLength={30} />
+        </label>
+        <label className="admin-dialog__field">
+          <span>{t.formCountry}</span>
+          <input type="text" value={editCountry} onChange={(e) => setEditCountry(e.target.value)} maxLength={80} required />
+        </label>
+        <label className="admin-dialog__field">
+          <span>{t.formLanguage}</span>
+          <select value={editLanguage} onChange={(e) => setEditLanguage(e.target.value === "en" ? "en" : "fr")}>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="consent-dialog"
+        title={consentTarget?.grant ? t.actionGrantConsent : t.actionUnsubscribe}
+        open={consentTarget !== null}
+        onClose={closeDialogs}
+        onSubmit={handleConsentSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={consentConfirmed}
+        onConfirmCheckedChange={setConsentConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>{consentTarget?.grant ? t.grantConsentConfirmText : t.unsubscribeConfirmText}</p>
+      </ConfirmDialog>
     </div>
   );
 }

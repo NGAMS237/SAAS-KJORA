@@ -282,6 +282,30 @@ export type AdminCopy = {
   colActor: string;
   colTarget: string;
   lifecycleActionLabels: Record<string, string>;
+
+  // REVENUE-01I — Contacts commerciaux.
+  navContacts: string;
+  contactsTitle: string;
+  contactsLead: string;
+  searchByNameOrEmail: string;
+  colPhone: string;
+  colCountry: string;
+  colLanguage: string;
+  colConsent: string;
+  consentYes: string;
+  consentNo: string;
+  consentUnsubscribed: string;
+  noContactRecorded: string;
+  actionEditContact: string;
+  actionGrantConsent: string;
+  actionUnsubscribe: string;
+  exportCsv: string;
+  formPhoneOptional: string;
+  formCountry: string;
+  formLanguage: string;
+  editContactConfirmText: string;
+  grantConsentConfirmText: string;
+  unsubscribeConfirmText: string;
 };
 
 const fr: AdminCopy = {
@@ -504,6 +528,16 @@ const fr: AdminCopy = {
     verified_target_required: "Le membre ciblé doit d'abord confirmer son courriel.",
     transferred: "Propriété transférée.",
     note_added: "Note interne ajoutée.",
+
+    // REVENUE-01I — Contacts commerciaux.
+    invalid_phone: "Numéro de téléphone invalide.",
+    country_required: "Le pays est obligatoire.",
+    invalid_language: "Langue invalide.",
+    saved: "Fiche contact enregistrée.",
+    contact_not_found: "Enregistrez d'abord une fiche contact pour cette Organization.",
+    invalid_consent: "Valeur de consentement invalide.",
+    invalid_source: "Source de consentement invalide.",
+    consent_updated: "Consentement marketing mis à jour.",
   },
 
   navFinances: "Finances",
@@ -649,6 +683,31 @@ const fr: AdminCopy = {
     "owner.transferred_by_admin": "Propriété transférée par un Admin",
     "admin.note_added": "Note interne ajoutée",
   },
+
+  navContacts: "Contacts",
+  contactsTitle: "Contacts commerciaux",
+  contactsLead:
+    "Coordonnées et consentement marketing par Organization. Aucune inscription automatique à une newsletter — saisie manuelle uniquement, jamais d'envoi de campagne depuis cette console.",
+  searchByNameOrEmail: "Rechercher par Organization ou courriel",
+  colPhone: "Téléphone",
+  colCountry: "Pays",
+  colLanguage: "Langue",
+  colConsent: "Consentement marketing",
+  consentYes: "Consentant",
+  consentNo: "Non consentant",
+  consentUnsubscribed: "Désabonné",
+  noContactRecorded: "Aucune fiche contact enregistrée.",
+  actionEditContact: "Modifier la fiche",
+  actionGrantConsent: "Marquer consentant",
+  actionUnsubscribe: "Désabonner",
+  exportCsv: "Exporter en CSV",
+  formPhoneOptional: "Téléphone (facultatif)",
+  formCountry: "Pays",
+  formLanguage: "Langue de communication",
+  editContactConfirmText: "Ces coordonnées seront enregistrées pour cette Organization.",
+  grantConsentConfirmText:
+    "Cette Organization sera marquée comme ayant consenti à recevoir des communications marketing, à la date d'aujourd'hui.",
+  unsubscribeConfirmText: "Cette Organization sera marquée comme désabonnée des communications marketing.",
 };
 
 const en: AdminCopy = {
@@ -871,6 +930,16 @@ const en: AdminCopy = {
     verified_target_required: "The targeted member must confirm their email first.",
     transferred: "Ownership transferred.",
     note_added: "Internal note added.",
+
+    // REVENUE-01I — Commercial contacts.
+    invalid_phone: "Invalid phone number.",
+    country_required: "Country is required.",
+    invalid_language: "Invalid language.",
+    saved: "Contact record saved.",
+    contact_not_found: "Save a contact record for this Organization first.",
+    invalid_consent: "Invalid consent value.",
+    invalid_source: "Invalid consent source.",
+    consent_updated: "Marketing consent updated.",
   },
 
   navFinances: "Finances",
@@ -1016,6 +1085,31 @@ const en: AdminCopy = {
     "owner.transferred_by_admin": "Ownership transferred by an Admin",
     "admin.note_added": "Internal note added",
   },
+
+  navContacts: "Contacts",
+  contactsTitle: "Commercial contacts",
+  contactsLead:
+    "Contact details and marketing consent by Organization. No automatic newsletter sign-up — manual entry only, and this console never sends any campaign.",
+  searchByNameOrEmail: "Search by Organization or email",
+  colPhone: "Phone",
+  colCountry: "Country",
+  colLanguage: "Language",
+  colConsent: "Marketing consent",
+  consentYes: "Opted in",
+  consentNo: "Not opted in",
+  consentUnsubscribed: "Unsubscribed",
+  noContactRecorded: "No contact record saved.",
+  actionEditContact: "Edit record",
+  actionGrantConsent: "Mark as opted in",
+  actionUnsubscribe: "Unsubscribe",
+  exportCsv: "Export as CSV",
+  formPhoneOptional: "Phone (optional)",
+  formCountry: "Country",
+  formLanguage: "Communication language",
+  editContactConfirmText: "This contact information will be saved for this Organization.",
+  grantConsentConfirmText:
+    "This Organization will be marked as having consented to receive marketing communications, as of today.",
+  unsubscribeConfirmText: "This Organization will be marked as unsubscribed from marketing communications.",
 };
 
 export const ADMIN_COPY = { fr, en } as const;
