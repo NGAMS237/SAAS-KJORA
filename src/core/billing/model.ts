@@ -389,3 +389,30 @@ export const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
   monthly: "Mensuel",
   annual: "Annuel",
 };
+
+// ---------------------------------------------------------------------------
+// Facturation manuelle Afrique (REVENUE-01B)
+// ---------------------------------------------------------------------------
+// Portée verrouillée : la confirmation manuelle de paiement ne concerne que la
+// devise XAF (Cameroun/Afrique). Le Canada/diaspora reste sur l'architecture
+// Stripe préparée (REVENUE-01F) — décision produit verrouillée, non rouverte
+// par ce module.
+
+export const MANUAL_INVOICING_CURRENCY: BillingCurrency = "XAF";
+
+export function supportsManualInvoicing(currency: BillingCurrency): boolean {
+  return currency === MANUAL_INVOICING_CURRENCY;
+}
+
+/**
+ * Un reçu (preuve de paiement) n'a de sens qu'une fois la facture réglée.
+ * Avant paiement, seule une facture (demande de règlement) peut être montrée.
+ */
+export function isReceiptAvailable(status: InvoiceStatus): boolean {
+  return status === "paid";
+}
+
+/** Une facture en statut 'open' est-elle en retard sur son échéance ? Calculé, jamais stocké. */
+export function isInvoiceOverdue(status: InvoiceStatus, periodEnd: string, onDate: string): boolean {
+  return status === "open" && Date.parse(`${periodEnd}T00:00:00Z`) < Date.parse(`${onDate}T00:00:00Z`);
+}

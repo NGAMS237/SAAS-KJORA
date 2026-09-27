@@ -120,6 +120,8 @@ export async function listBillingInvoices(organizationId: string): Promise<Billi
       status: isInvoiceStatus(row.status) ? row.status : "draft",
       issuedOn: str(row.issued_on) ?? "",
       paidAt: str(row.paid_at),
+      manualReference: str(row.manual_reference),
+      manualPaymentConfirmedAt: str(row.manual_payment_confirmed_at),
     }];
   });
 }
