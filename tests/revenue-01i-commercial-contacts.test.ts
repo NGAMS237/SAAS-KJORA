@@ -415,7 +415,7 @@ test("outcomeLabels REVENUE-01I sont fournis en FR et en EN pour chaque issue de
 });
 
 // ---------------------------------------------------------------------------
-// 14. pgTAP — cohérence statique uniquement (jamais exécuté, jamais « PASS »)
+// 14. pgTAP — réellement exécuté (PostgreSQL 16 local + pgtap réel)
 // ---------------------------------------------------------------------------
 
 test("le fichier pgTAP 01I déclare exactement autant d'assertions que son plan()", () => {
@@ -433,9 +433,17 @@ test("le fichier pgTAP 01I s'exécute dans une transaction annulée (rollback)",
 });
 
 test("le fichier pgTAP 01I couvre l'exclusivité consentement/désabonnement et la dérivation du courriel propriétaire", () => {
+  // organization_commercial_contacts n'accorde aucun privilège à `authenticated`
+  // (accès exclusif via RPC, par design) : les vérifications post-désabonnement
+  // passent par admin_list_commercial_contacts_for_export(), en deux assertions
+  // scalaires distinctes (pgTAP ne compare pas un type composite anonyme).
   assert.match(
     PGTAP,
-    /select \(marketing_consent, unsubscribed_at is not null\) from public\.organization_commercial_contacts/,
+    /select marketing_consent from public\.admin_list_commercial_contacts_for_export\(\) where organization_name = 'REVENUE-01I Org A'\),\s*\n\s*false,/,
+  );
+  assert.match(
+    PGTAP,
+    /select unsubscribed_at is not null from public\.admin_list_commercial_contacts_for_export\(\) where organization_name = 'REVENUE-01I Org A'\),\s*\n\s*true,/,
   );
   assert.match(PGTAP, /admin_list_commercial_contacts_for_export\(\)/);
   assert.match(PGTAP, /throws_ok\(/);

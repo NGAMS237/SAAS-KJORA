@@ -372,7 +372,7 @@ test("copy.ts fournit les mêmes clés REVENUE-01H en français et en anglais (a
 });
 
 // ---------------------------------------------------------------------------
-// 13. pgTAP — cohérence statique uniquement (jamais exécuté, jamais « PASS »)
+// 13. pgTAP — réellement exécuté (PostgreSQL 16 local + pgtap réel)
 // ---------------------------------------------------------------------------
 
 test("le fichier pgTAP 01H déclare exactement autant d'assertions que son plan()", () => {
@@ -390,6 +390,6 @@ test("le fichier pgTAP 01H s'exécute dans une transaction annulée (rollback)",
 });
 
 test("le fichier pgTAP 01H couvre bien le changement has_capability (le point le plus à risque)", () => {
-  assert.match(PGTAP, /private\.has_capability\('rh100000-0000-4000-8000-00000000000a', 'organization\.view'\)/);
+  assert.match(PGTAP, /private\.has_capability\('08100000-0000-4000-8000-00000000000a', 'organization\.view'\)/);
   assert.match(sansCommentaires(PGTAP), /false,\s*\n\s*'un membre actif d''une Organization suspendue perd sa capacité/);
 });
