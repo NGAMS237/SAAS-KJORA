@@ -37,6 +37,9 @@ export type AdminCopy = {
   organizationsTotal: string;
   organizationsActive: string;
   organizationsSuspended: string;
+  // Complément REVENUE-LAUNCH-01 §1/§2
+  organizationsArchived: string;
+  organizationsRequiringProviderAction: (count: number) => string;
   subscriptionsFreeRegistered: string;
   subscriptionsPaidRegistered: string;
   organizationsWithoutSubscription: string;
@@ -79,6 +82,8 @@ export type AdminCopy = {
   filterStatusAll: string;
   filterStatusActive: string;
   filterStatusSuspended: string;
+  // Complément REVENUE-LAUNCH-01 §1
+  filterStatusArchived: string;
   resultsCount: (count: number) => string;
   clearFilters: string;
   applyFilters: string;
@@ -122,6 +127,8 @@ export type AdminCopy = {
   orgDetailPeriodEnd: string;
   orgDetailProvider: string;
   orgDetailMismatchWarning: string;
+  // Complément REVENUE-LAUNCH-01 §3
+  orgDetailProviderActionRequired: string;
   orgDetailNotFound: string;
   orgDetailActiveInterventionTitle: string;
   orgDetailNoActiveIntervention: string;
@@ -296,6 +303,10 @@ export type AdminCopy = {
   consentNo: string;
   consentUnsubscribed: string;
   noContactRecorded: string;
+  // Complément REVENUE-LAUNCH-01 §4
+  colMarketingEligible: string;
+  marketingEligibleYes: string;
+  marketingEligibleNo: string;
   actionEditContact: string;
   actionGrantConsent: string;
   actionUnsubscribe: string;
@@ -338,6 +349,9 @@ const fr: AdminCopy = {
   organizationsTotal: "Organizations au total",
   organizationsActive: "Actives",
   organizationsSuspended: "Suspendues",
+  organizationsArchived: "Archivées",
+  organizationsRequiringProviderAction: (count) =>
+    `${count} Organization(s) suspendue(s)/archivée(s) avec un abonnement fournisseur encore actif : action manuelle requise (jamais annulé automatiquement).`,
   subscriptionsFreeRegistered: "Abonnements gratuits enregistrés",
   subscriptionsPaidRegistered: "Abonnements payants enregistrés",
   organizationsWithoutSubscription: "Sans abonnement enregistré",
@@ -379,6 +393,7 @@ const fr: AdminCopy = {
   filterStatusAll: "Tous les statuts",
   filterStatusActive: "Actif",
   filterStatusSuspended: "Suspendu",
+  filterStatusArchived: "Archivé",
   resultsCount: (count) => `${count} résultat${count === 1 ? "" : "s"}`,
   clearFilters: "Réinitialiser",
   applyFilters: "Filtrer",
@@ -423,6 +438,8 @@ const fr: AdminCopy = {
   orgDetailProvider: "Fournisseur",
   orgDetailMismatchWarning:
     "Le forfait effectif et l'abonnement enregistré sont en désaccord, sans intervention manuelle active pour l'expliquer.",
+  orgDetailProviderActionRequired:
+    "Cette Organization est suspendue ou archivée, mais son abonnement reste lié à un fournisseur réel non annulé. Aucune annulation automatique n'est effectuée : une action manuelle est requise.",
   orgDetailNotFound: "Cette Organization est introuvable.",
   orgDetailActiveInterventionTitle: "Intervention commerciale active",
   orgDetailNoActiveIntervention: "Aucune intervention commerciale active.",
@@ -697,6 +714,9 @@ const fr: AdminCopy = {
   consentNo: "Non consentant",
   consentUnsubscribed: "Désabonné",
   noContactRecorded: "Aucune fiche contact enregistrée.",
+  colMarketingEligible: "Éligible marketing",
+  marketingEligibleYes: "Éligible",
+  marketingEligibleNo: "Non éligible",
   actionEditContact: "Modifier la fiche",
   actionGrantConsent: "Marquer consentant",
   actionUnsubscribe: "Désabonner",
@@ -740,6 +760,9 @@ const en: AdminCopy = {
   organizationsTotal: "Organizations total",
   organizationsActive: "Active",
   organizationsSuspended: "Suspended",
+  organizationsArchived: "Archived",
+  organizationsRequiringProviderAction: (count) =>
+    `${count} suspended/archived Organization(s) still have an active provider subscription: manual action required (never cancelled automatically).`,
   subscriptionsFreeRegistered: "Registered free subscriptions",
   subscriptionsPaidRegistered: "Registered paid subscriptions",
   organizationsWithoutSubscription: "Without a registered subscription",
@@ -781,6 +804,7 @@ const en: AdminCopy = {
   filterStatusAll: "All statuses",
   filterStatusActive: "Active",
   filterStatusSuspended: "Suspended",
+  filterStatusArchived: "Archived",
   resultsCount: (count) => `${count} result${count === 1 ? "" : "s"}`,
   clearFilters: "Clear filters",
   applyFilters: "Filter",
@@ -825,6 +849,8 @@ const en: AdminCopy = {
   orgDetailProvider: "Provider",
   orgDetailMismatchWarning:
     "The effective plan and the registered subscription disagree, with no active manual intervention to explain it.",
+  orgDetailProviderActionRequired:
+    "This Organization is suspended or archived, but its subscription is still linked to an active, non-cancelled provider. No automatic cancellation is performed: manual action is required.",
   orgDetailNotFound: "This Organization could not be found.",
   orgDetailActiveInterventionTitle: "Active commercial intervention",
   orgDetailNoActiveIntervention: "No active commercial intervention.",
@@ -1099,6 +1125,9 @@ const en: AdminCopy = {
   consentNo: "Not opted in",
   consentUnsubscribed: "Unsubscribed",
   noContactRecorded: "No contact record saved.",
+  colMarketingEligible: "Marketing eligible",
+  marketingEligibleYes: "Eligible",
+  marketingEligibleNo: "Not eligible",
   actionEditContact: "Edit record",
   actionGrantConsent: "Mark as opted in",
   actionUnsubscribe: "Unsubscribe",

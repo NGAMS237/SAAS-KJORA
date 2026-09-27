@@ -152,10 +152,17 @@ export function OverviewView({
             <Counter label={t.organizationsTotal} value={counters.organizationsTotal} />
             <Counter label={t.organizationsActive} value={counters.organizationsActive} />
             <Counter label={t.organizationsSuspended} value={counters.organizationsSuspended} />
+            <Counter label={t.organizationsArchived} value={counters.organizationsArchived} />
             <Counter label={t.subscriptionsFreeRegistered} value={counters.subscriptionsFree} />
             <Counter label={t.subscriptionsPaidRegistered} value={counters.subscriptionsPaid} />
             <Counter label={t.organizationsWithoutSubscription} value={counters.organizationsWithoutSubscription} />
           </div>
+
+          {counters.organizationsRequiringProviderAction > 0 ? (
+            <p className="admin-error" role="alert">
+              {t.organizationsRequiringProviderAction(counters.organizationsRequiringProviderAction)}
+            </p>
+          ) : null}
 
           <div className="admin-breakdowns">
             <Breakdown title={t.byPlan} data={counters.subscriptionsByPlan} empty={t.emptyRows} />
@@ -333,6 +340,26 @@ function FilterBar({ children, action }: { children: ReactNode; action: string }
 // Organizations
 // ---------------------------------------------------------------------------
 
+/**
+ * Complément REVENUE-LAUNCH-01 §1 — badge FR/EN par statut d'Organization,
+ * partagé entre la liste et la fiche détaillée. Un statut inconnu retombe sur
+ * le badge neutre plutôt que de ne rien afficher.
+ */
+function OrganizationStatusBadge({ status }: { status: string }) {
+  const { t } = useCopy();
+  const label =
+    status === "active" ? t.filterStatusActive
+    : status === "suspended" ? t.filterStatusSuspended
+    : status === "archived" ? t.filterStatusArchived
+    : status;
+  const modifier = status === "active" || status === "suspended" || status === "archived" ? status : null;
+  return (
+    <span className={modifier ? `admin-badge admin-badge--${modifier}` : "admin-badge"}>
+      {label}
+    </span>
+  );
+}
+
 export function OrganizationsView({
   page,
   error,
@@ -368,6 +395,10 @@ export function OrganizationsView({
             <option value="">{t.filterStatusAll}</option>
             <option value="active">{t.filterStatusActive}</option>
             <option value="suspended">{t.filterStatusSuspended}</option>
+            {/* Complément REVENUE-LAUNCH-01 §1 — une Organization archivée doit
+                rester retrouvable depuis la console Admin, jamais seulement
+                via une recherche par nom sans filtre dédié. */}
+            <option value="archived">{t.filterStatusArchived}</option>
           </select>
         </label>
         <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
@@ -418,7 +449,7 @@ export function OrganizationsView({
                           {row.name || "—"}
                         </Link>
                       </th>
-                      <td>{row.status}</td>
+                      <td><OrganizationStatusBadge status={row.status} /></td>
                       <td className="admin-table__num">{row.memberCount}</td>
                       <td>{row.plan}</td>
                       <td>{row.billingStatus}</td>
@@ -1004,6 +1035,12 @@ export function OrganizationDetailView({
         </p>
       ) : null}
 
+      {detail.providerActionRequired ? (
+        <p className="admin-error" role="alert">
+          {t.orgDetailProviderActionRequired}
+        </p>
+      ) : null}
+
       <section className="admin-section">
         <h2>{t.overviewTitle}</h2>
         <dl className="admin-detail-grid">
@@ -1161,7 +1198,7 @@ export function OrganizationDetailView({
       <section className="admin-section">
         <h2>{t.lifecycleSectionTitle}</h2>
         <p>
-          {t.lifecycleCurrentStatus}: <span className="admin-badge">{detail.status}</span>
+          {t.lifecycleCurrentStatus}: <OrganizationStatusBadge status={detail.status} />
         </p>
         <div className="admin-actions-menu">
           {detail.status === "active" ? (
@@ -2101,18 +2138,20 @@ export function ContactsView({
               <thead>
                 <tr>
                   <th scope="col">{t.colName}</th>
+                  <th scope="col">{t.colStatus}</th>
                   <th scope="col">{t.orgDetailOwnerEmail}</th>
                   <th scope="col">{t.colPhone}</th>
                   <th scope="col">{t.colCountry}</th>
                   <th scope="col">{t.colLanguage}</th>
                   <th scope="col">{t.colConsent}</th>
+                  <th scope="col">{t.colMarketingEligible}</th>
                   <th scope="col">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="admin-table__muted">
+                    <td colSpan={9} className="admin-table__muted">
                       {t.emptyRows}
                     </td>
                   </tr>
@@ -2127,12 +2166,21 @@ export function ContactsView({
                           {row.organizationName || "—"}
                         </Link>
                       </th>
+                      <td><OrganizationStatusBadge status={row.organizationStatus} /></td>
                       <td>{row.ownerEmail ?? "—"}</td>
                       <td>{row.phone ?? "—"}</td>
                       <td>{row.country ?? t.noContactRecorded}</td>
                       <td>{row.language ?? "—"}</td>
                       <td>
                         <span className="admin-badge">{consentLabel(row)}</span>
+                      </td>
+                      <td>
+                        {/* Complément REVENUE-LAUNCH-01 §4 — jamais recalculé
+                            côté client : reflète tel quel marketing_eligible
+                            calculé par admin_list_commercial_contacts. */}
+                        <span className={row.marketingEligible ? "admin-badge admin-badge--active" : "admin-badge"}>
+                          {row.marketingEligible ? t.marketingEligibleYes : t.marketingEligibleNo}
+                        </span>
                       </td>
                       <td>
                         <div className="admin-actions-menu">

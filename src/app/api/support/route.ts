@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
-import { loadOrganizationContext } from "@/core/organization/load-organization-context";
+import { loadAnyMembershipOrganization } from "@/core/organization/load-organization-context";
 import { isSupportCategory, isValidSupportMessage } from "@/core/support/model";
 import { isSupportEmailConfigured, sendSupportRequestEmail } from "@/core/support/support-email";
 
 // =============================================================================
 // API Support — bêta Découverte
 // =============================================================================
-// • Exige une session authentifiée et une Organization active.
+// • Exige une session authentifiée et une appartenance active à une Organization.
 // • L'Organization transmise est celle résolue côté serveur : le client ne peut
 //   pas déclarer une organisation à laquelle il n'appartient pas.
 // • Aucune persistance : la demande part par email.
+//
+// REVENUE-LAUNCH-01 — Complément (§5) : résolution DÉLIBÉRÉMENT indépendante du
+// statut de l'Organization (loadAnyMembershipOrganization, jamais
+// loadOrganizationContext ici) — le mandat exige que l'aide/support reste
+// accessible à une Organization suspendue ou archivée, précisément le cas où
+// l'utilisateur en a le plus besoin. Aucune capacité métier n'est requise pour
+// envoyer une demande de support ; seule l'appartenance (active) compte.
 // =============================================================================
 
 function sameOrigin(request: Request) {
@@ -43,8 +50,8 @@ export async function POST(request: Request) {
   }
 
   // L'organisation et le rôle proviennent du contexte serveur, jamais du client.
-  const context = await loadOrganizationContext();
-  const active = context.activeOrganization;
+  const context = await loadAnyMembershipOrganization();
+  const active = context.organization;
   if (!active) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }

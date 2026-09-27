@@ -37,12 +37,18 @@ export async function GET() {
   }
 
   const rows = (Array.isArray(data) ? data : []) as Record<string, unknown>[];
+  // Complément REVENUE-LAUNCH-01 §4 — organization_status et marketing_eligible
+  // ajoutés par admin_list_commercial_contacts_for_export : jamais d'export
+  // silencieusement en retard sur la console (mêmes colonnes que la liste,
+  // voir platform-admin/views.tsx).
   const headers = [
-    "organization_name", "owner_email", "phone", "country", "language",
+    "organization_name", "organization_status", "owner_email", "phone", "country", "language",
     "marketing_consent", "marketing_consent_at", "consent_source", "unsubscribed_at",
+    "marketing_eligible",
   ];
   const csvRows = rows.map((r) => [
     r.organization_name ?? "",
+    r.organization_status ?? "",
     r.owner_email ?? "",
     r.phone ?? "",
     r.country ?? "",
@@ -51,6 +57,7 @@ export async function GET() {
     r.marketing_consent_at ?? "",
     r.consent_source ?? "",
     r.unsubscribed_at ?? "",
+    r.marketing_eligible === true ? "true" : "false",
   ]);
   const bytes = buildCsvDocument(headers, csvRows);
 

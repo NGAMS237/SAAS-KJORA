@@ -29,6 +29,13 @@ export type PlatformCounters = {
   organizationsActive: number;
   organizationsSuspended: number;
   /**
+   * Complément REVENUE-LAUNCH-01 §2 — sans cette clé, une Organization
+   * archivée restait comptée dans organizationsTotal mais dans aucune
+   * ventilation par statut : organizationsTotal doit toujours égaler
+   * organizationsActive + organizationsSuspended + organizationsArchived.
+   */
+  organizationsArchived: number;
+  /**
    * ADMIN-01.1 — abonnements RÉELLEMENT enregistrés (organization_subscriptions)
    * uniquement. Une Organization sans ligne de facturation n'est comptée ni
    * gratuite ni payante : voir `organizationsWithoutSubscription`.
@@ -38,6 +45,13 @@ export type PlatformCounters = {
   organizationsWithoutSubscription: number;
   /** Forfait effectif (organization_plans) en désaccord avec la facturation enregistrée. */
   planBillingMismatches: number;
+  /**
+   * Complément REVENUE-LAUNCH-01 §3 — Organizations suspendues/archivées dont
+   * l'abonnement reste lié à un provider réel non annulé : jamais annulé
+   * automatiquement (aucun appel fournisseur réel), ce compteur signale
+   * l'incohérence pour une action manuelle.
+   */
+  organizationsRequiringProviderAction: number;
   subscriptionsByStatus: Record<string, number>;
   subscriptionsByPlan: Record<string, number>;
   generatedAt: string | null;
@@ -147,6 +161,13 @@ export type OrganizationDetail = {
     provider: string | null;
   };
   planBillingMismatch: boolean;
+  /**
+   * Complément REVENUE-LAUNCH-01 §3 — vrai uniquement si cette Organization
+   * est suspendue/archivée ET que son abonnement reste lié à un provider réel
+   * non annulé. Jamais résolu automatiquement (aucun appel fournisseur réel) :
+   * signale seulement qu'une action manuelle est requise.
+   */
+  providerActionRequired: boolean;
   activeIntervention: ActiveIntervention | null;
   recentAdminEvents: AdminCommercialEvent[];
 };
@@ -225,6 +246,7 @@ export async function getOrganizationDetail(
         provider: sub.provider ? String(sub.provider) : null,
       },
       planBillingMismatch: payload.planBillingMismatch === true,
+      providerActionRequired: payload.providerActionRequired === true,
       activeIntervention: mapActiveIntervention(payload.activeIntervention),
       recentAdminEvents: mapRecentEvents(payload.recentAdminEvents),
     },
@@ -289,10 +311,12 @@ export async function getPlatformCounters(): Promise<ReadResult<PlatformCounters
       organizationsTotal: toNumber(payload.organizations_total),
       organizationsActive: toNumber(payload.organizations_active),
       organizationsSuspended: toNumber(payload.organizations_suspended),
+      organizationsArchived: toNumber(payload.organizations_archived),
       subscriptionsFree: toNumber(payload.subscriptions_free),
       subscriptionsPaid: toNumber(payload.subscriptions_paid),
       organizationsWithoutSubscription: toNumber(payload.organizations_without_subscription),
       planBillingMismatches: toNumber(payload.plan_billing_mismatches),
+      organizationsRequiringProviderAction: toNumber(payload.organizations_requiring_provider_action),
       subscriptionsByStatus: toCountRecord(payload.subscriptions_by_status),
       subscriptionsByPlan: toCountRecord(payload.subscriptions_by_plan),
       generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
@@ -816,6 +840,8 @@ export async function getOrganizationLifecycle(
 export type AdminCommercialContactRow = {
   organizationId: string;
   organizationName: string;
+  /** Complément REVENUE-LAUNCH-01 §4 — jamais absent de la liste ni de l'export. */
+  organizationStatus: string;
   ownerEmail: string | null;
   phone: string | null;
   country: string | null;
@@ -824,6 +850,12 @@ export type AdminCommercialContactRow = {
   marketingConsentAt: string | null;
   consentSource: string | null;
   unsubscribedAt: string | null;
+  /**
+   * Complément REVENUE-LAUNCH-01 §4 — organization.status = 'active' ET
+   * consentement positif ET preuve (source) présente ET jamais désabonnée.
+   * Calculé côté base (admin_list_commercial_contacts), jamais recalculé ici.
+   */
+  marketingEligible: boolean;
 };
 
 export type CommercialContactFilters = {
@@ -834,6 +866,7 @@ function mapAdminCommercialContactRow(r: Record<string, unknown>): AdminCommerci
   return {
     organizationId: String(r.organization_id ?? ""),
     organizationName: String(r.organization_name ?? ""),
+    organizationStatus: String(r.organization_status ?? ""),
     ownerEmail: r.owner_email ? String(r.owner_email) : null,
     phone: r.phone ? String(r.phone) : null,
     country: r.country ? String(r.country) : null,
@@ -842,6 +875,7 @@ function mapAdminCommercialContactRow(r: Record<string, unknown>): AdminCommerci
     marketingConsentAt: r.marketing_consent_at ? String(r.marketing_consent_at) : null,
     consentSource: r.consent_source ? String(r.consent_source) : null,
     unsubscribedAt: r.unsubscribed_at ? String(r.unsubscribed_at) : null,
+    marketingEligible: r.marketing_eligible === true,
   };
 }
 

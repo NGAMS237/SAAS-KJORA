@@ -5130,6 +5130,10 @@ a.portfolio-metric:hover {
   border: 1px solid var(--border);
 }
 .admin-badge--archived { background: var(--warning-soft); color: var(--warning); }
+/* Complément REVENUE-LAUNCH-01 §1 — badge de statut Organization (actif/suspendu),
+   même palette que le reste de la console (succès/danger). */
+.admin-badge--active { background: var(--success-soft); color: var(--success); }
+.admin-badge--suspended { background: var(--danger-soft); color: var(--danger); }
 
 /* ADMIN-BILLING-OPS-01 — actions administratives (Accorder / Prolonger / Révoquer) */
 .admin-actions-menu { display: flex; gap: 10px; flex-wrap: wrap; }
