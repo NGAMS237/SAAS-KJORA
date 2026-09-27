@@ -61,7 +61,10 @@ test("les décalages de rappel canoniques (model.ts) correspondent exactement au
   assert.match(compute, /values \(7\),\(3\),\(1\)/);
   assert.match(compute, /values \(1\),\(3\),\(6\)/);
   assert.match(compute, /values \(30\),\(7\)/);
-  assert.match(compute, /i\.period_end - p_as_of = 3/);
+  // v3 : l'échéance est billing_invoices.due_on (repli period_end pour une
+  // facture antérieure à REVENUE-01B).
+  assert.match(compute, /coalesce\(i\.due_on, i\.period_end\) - p_as_of = 3/);
+  assert.match(compute, /coalesce\(i\.due_on, i\.period_end\) < p_as_of/);
 });
 
 // ---------------------------------------------------------------------------
@@ -126,8 +129,15 @@ test("le dry-run est le comportement par défaut de la RPC (p_dry_run boolean de
   assert.match(MIGRATION, /p_dry_run boolean default true/);
 });
 
-test("billing_reminder_log porte une contrainte unique garantissant l'absence de double rappel", () => {
-  assert.match(MIGRATION, /constraint billing_reminder_log_unique unique \(organization_id, reminder_type, target_date\)/);
+test("billing_reminder_log interdit tout double rappel, avec un dédoublonnage PAR FACTURE (v3)", () => {
+  // Rappel de facture : unique par (invoice_id, reminder_type) — deux factures
+  // distinctes de même échéance reçoivent chacune leur rappel.
+  assert.match(MIGRATION, /create unique index if not exists billing_reminder_log_invoice_unique\s+on public\.billing_reminder_log \(invoice_id, reminder_type\)\s+where invoice_id is not null/);
+  // Rappel d'abonnement : unique par (organization_id, reminder_type, target_date).
+  assert.match(MIGRATION, /create unique index if not exists billing_reminder_log_subscription_unique\s+on public\.billing_reminder_log \(organization_id, reminder_type, target_date\)\s+where invoice_id is null/);
+  // L'ancienne clé par Organization, qui supprimait un rappel légitime, n'existe plus.
+  assert.doesNotMatch(MIGRATION, /constraint billing_reminder_log_unique unique/);
+  assert.match(sqlFunctionBody("public.admin_run_billing_reminders"), /on conflict do nothing/);
 });
 
 test("billing_reminder_log ne contient aucune colonne de contenu sensible (email, montant, référence)", () => {

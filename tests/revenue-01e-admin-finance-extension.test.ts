@@ -32,15 +32,29 @@ const VIEWS = read("../src/modules/platform-admin/views.tsx");
 const PAGE = read("../src/app/administration/finances/page.tsx");
 const COPY = read("../src/modules/platform-admin/copy.ts");
 
+// Corps de la seule fonction NOUVELLE de ce lot (hors remplacement ciblé de
+// admin_finance_summary, section 0 — voir le test dédié ci-dessous).
+const EXTENSION_BODY = EXTENSION_MIGRATION.slice(
+  EXTENSION_MIGRATION.indexOf("create or replace function public.admin_finance_billing_extension("),
+);
+
 // ---------------------------------------------------------------------------
 // 1. FINANCE-ADMIN-01 n'est ni modifié ni remplacé
 // ---------------------------------------------------------------------------
 
-test("la RPC FINANCE-ADMIN-01 (admin_finance_summary / admin_finance_recent_events) n'est pas redéfinie par ce lot", () => {
-  assert.doesNotMatch(EXTENSION_MIGRATION, /create or replace function public\.admin_finance_summary/);
+test("FINANCE-ADMIN-01 : seul le revenu attendu change (Organizations archivées exclues, comptées à part) — v3", () => {
+  // Décision REVENUE-LAUNCH-01 : une Organization archivée n'est jamais un
+  // revenu futur normal. admin_finance_summary est remplacée UNE fois, ici ;
+  // admin_finance_recent_events n'est jamais touchée.
   assert.doesNotMatch(EXTENSION_MIGRATION, /create or replace function public\.admin_finance_recent_events/);
-  // Le fichier FINANCE-ADMIN-01 original lui-même reste totalement inchangé.
+  const start = EXTENSION_MIGRATION.indexOf("create or replace function public.admin_finance_summary(");
+  assert.ok(start >= 0);
+  const body = EXTENSION_MIGRATION.slice(start, EXTENSION_MIGRATION.indexOf("create or replace function public.admin_finance_billing_extension("));
+  assert.match(body, /and o\.status <> 'archived'/);
+  assert.match(body, /'excluded_archived_subscriptions', archived_excluded_count/);
+  // Le fichier FINANCE-ADMIN-01 original reste inchangé (historique immuable).
   assert.match(FINANCE_ADMIN_01_MIGRATION, /create or replace function public\.admin_finance_summary/);
+  assert.doesNotMatch(FINANCE_ADMIN_01_MIGRATION, /archived/);
 });
 
 test("la nouvelle RPC est bien admin_finance_billing_extension, une fonction distincte", () => {
@@ -70,8 +84,8 @@ test("admin_finance_billing_extension est révoquée pour public/anon et accord�
 // ---------------------------------------------------------------------------
 
 test("les paiements manuels confirmés (REVENUE-01B) restent un domaine distinct de commercial_interventions", () => {
-  assert.doesNotMatch(sansCommentaires(EXTENSION_MIGRATION), /commercial_interventions/);
-  assert.match(EXTENSION_MIGRATION, /manual_payment_confirmed_at is not null/);
+  assert.doesNotMatch(sansCommentaires(EXTENSION_BODY), /commercial_interventions/);
+  assert.match(EXTENSION_BODY, /manual_payment_confirmed_at is not null/);
 });
 
 test("aucune somme CAD+XAF : les agrégats monétaires restent groupés par devise (jsonb_object_agg)", () => {
@@ -92,8 +106,18 @@ test("factures dues et en retard sont un état courant, jamais borné par la pé
   assert.doesNotMatch(overdueBlock, /bounds\.period_start/);
 });
 
-test("aucun nom de fournisseur de paiement n'apparaît dans la migration 01E", () => {
-  assert.doesNotMatch(sansCommentaires(EXTENSION_MIGRATION), /\bstripe\b|\bflutterwave\b|\bcampay\b|\belyonpay\b|\bnotchpay\b|\bpayunit\b/i);
+test("aucun nom de fournisseur de paiement n'apparaît dans la nouvelle RPC 01E", () => {
+  // admin_finance_summary (section 0) reproduit à l'identique ses clés
+  // FINANCE-ADMIN-01 préexistantes (connecteurs « non connectés ») ; la
+  // fonction nouvelle de ce lot, elle, n'en mentionne aucun.
+  assert.doesNotMatch(sansCommentaires(EXTENSION_BODY), /\bstripe\b|\bflutterwave\b|\bcampay\b|\belyonpay\b|\bnotchpay\b|\bpayunit\b/i);
+});
+
+test("les factures ouvertes d'Organizations archivées sortent des encours et sont comptées à part (v3)", () => {
+  assert.match(EXTENSION_BODY, /where i\.status = 'open' and o\.status <> 'archived'/);
+  assert.match(EXTENSION_BODY, /where i\.status = 'open' and o\.status = 'archived'/);
+  assert.match(EXTENSION_BODY, /'archived_open_by_currency', archived_open_by_currency/);
+  assert.match(EXTENSION_BODY, /coalesce\(i\.due_on, i\.period_end\) < current_date/);
 });
 
 // ---------------------------------------------------------------------------

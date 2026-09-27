@@ -9,10 +9,16 @@
 // Bilingue FR/EN. Ne mentionne jamais un nom de provider (Stripe, Flutterwave,
 // CamPay, ElyonPay...) : un règlement manuel n'a et ne doit avoir aucun
 // fournisseur associé — voir REVENUE-LAUNCH-01, décision verrouillée.
+//
+// Émetteur : JAMAIS codé en dur (le marchand légal n'est pas tranché). Il est
+// fourni par l'appelant depuis la configuration serveur
+// (`legal-identity.ts`) ; son absence est affichée comme « émetteur légal non
+// configuré — document provisoire », jamais remplacée par une entité supposée.
 // =============================================================================
 
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { isReceiptAvailable, type InvoiceStatus } from "./model.ts";
+import { legalIdentityLines, type BillingLegalIdentity } from "./legal-identity.ts";
 import type { PlanSlug } from "../entitlements/model.ts";
 
 export type InvoiceDocumentLanguage = "fr" | "en";
@@ -28,10 +34,14 @@ export type BillingInvoicePdfInput = {
   amountMinor: number;
   periodStart: string;
   periodEnd: string;
+  /** Échéance de paiement ; null pour une facture antérieure (repli : fin de période). */
+  dueOn: string | null;
   issuedOn: string;
   status: InvoiceStatus;
   paidAt: string | null;
   manualReference: string | null;
+  /** Émetteur légal configuré, ou null (document provisoire). */
+  issuer: BillingLegalIdentity | null;
   language: InvoiceDocumentLanguage;
 };
 
@@ -119,6 +129,10 @@ export async function generateBillingInvoicePdf(input: BillingInvoicePdfInput): 
   row(page, regular, bold, y, fr ? "Période" : "Period",
     `${date(input.periodStart, input.language)} - ${date(input.periodEnd, input.language)}`); y -= 34;
   row(page, regular, bold, y, fr ? "Émise le" : "Issued on", date(input.issuedOn, input.language)); y -= 34;
+  if (!isReceiptAvailable(input.status)) {
+    row(page, regular, bold, y, fr ? "Échéance" : "Due on",
+      date(input.dueOn ?? input.periodEnd, input.language)); y -= 34;
+  }
   row(page, regular, bold, y, fr ? "Montant" : "Amount", money(input.amountMinor)); y -= 34;
 
   if (isReceiptAvailable(input.status)) {
@@ -129,14 +143,23 @@ export async function generateBillingInvoicePdf(input: BillingInvoicePdfInput): 
     }
   }
 
-  y -= 40;
+  // Émetteur : identité configurée, jamais une entité codée en dur.
+  y -= 18;
+  page.drawText(text(fr ? "Émetteur" : "Issuer"), { x: PAGE.margin, y, size: 9, font: bold, color: INK });
+  y -= 14;
+  for (const issuerLine of legalIdentityLines(input.issuer, input.language)) {
+    page.drawText(text(issuerLine), { x: PAGE.margin, y, size: 9, font: regular, color: MUTED });
+    y -= 12;
+  }
+
+  y -= 22;
   const note = isReceiptAvailable(input.status)
     ? (fr
       ? "Ce reçu atteste un règlement manuel enregistré par un administrateur KJORA. Aucun fournisseur de paiement en ligne n'est associé à ce règlement."
       : "This receipt confirms a manual payment recorded by a KJORA administrator. No online payment provider is associated with this payment.")
     : (fr
-      ? "Cette facture correspond à un abonnement KJORA émis par STE VERALUZ SARL, à régler hors ligne (Mobile Money, virement, espèces). Elle ne constitue pas un reçu tant qu'aucun règlement n'a été confirmé."
-      : "This invoice corresponds to a KJORA subscription issued by STE VERALUZ SARL, to be settled offline (Mobile Money, bank transfer, cash). It is not a receipt until a payment has been confirmed.");
+      ? "Cette facture correspond à un abonnement KJORA, à régler hors ligne (Mobile Money, virement, espèces). Elle ne constitue pas un reçu tant qu'aucun règlement n'a été confirmé."
+      : "This invoice corresponds to a KJORA subscription, to be settled offline (Mobile Money, bank transfer, cash). It is not a receipt until a payment has been confirmed.");
   const words = text(note).split(/\s+/);
   let line = "";
   for (const word of words) {

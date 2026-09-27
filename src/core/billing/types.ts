@@ -74,6 +74,8 @@ export type BillingInvoice = {
   amountMinor: number;
   periodStart: string;
   periodEnd: string;
+  /** REVENUE-01B : échéance de paiement (null pour une facture antérieure : repli sur periodEnd). */
+  dueOn: string | null;
   status: InvoiceStatus;
   issuedOn: string;
   paidAt: string | null;

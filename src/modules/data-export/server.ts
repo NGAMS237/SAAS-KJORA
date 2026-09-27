@@ -30,6 +30,42 @@ import {
 
 type DateRange = { from: string | null; to: string | null };
 
+/**
+ * REVENUE-LAUNCH-01 v3 — source de lecture de l'export.
+ *   • "rls"              : Organization active, EXPORT-01 inchangé (RLS de
+ *                          chaque table, client de l'utilisateur).
+ *   • "restricted_owner" : Owner actif d'une Organization SUSPENDUE. La RLS
+ *                          métier reste fermée (has_capability strict) ; les
+ *                          lignes sont lues par la RPC dédiée
+ *                          export_restricted_owner_source (garde étroite en
+ *                          base, lecture seule), avec le client de
+ *                          l'utilisateur — jamais un client service-role.
+ * Les deux sources renvoient exactement les mêmes colonnes ; la mise en forme
+ * (en-têtes, ordre, transformations) est strictement commune.
+ */
+export type ExportBackend = "rls" | "restricted_owner";
+
+/** Scopes lisibles par le propriétaire d'une Organization suspendue (jamais les PDF). */
+export const RESTRICTED_OWNER_EXPORT_SCOPES: readonly ExportScope[] = [
+  "properties", "units", "tenants", "leases", "dues", "payments",
+  "payment_allocations", "credits", "deposits", "account_statements",
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
+async function restrictedRows(organizationId: string, source: string, range: DateRange = { from: null, to: null }): Promise<Row[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("export_restricted_owner_source", {
+    target_organization_id: organizationId,
+    target_source: source,
+    target_range_from: range.from,
+    target_range_to: range.to,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? (data as Row[]) : [];
+}
+
 type ScopeData = { headers: string[]; rows: unknown[][] };
 type ContractSummaryRow = {
   id: string;
@@ -64,90 +100,125 @@ function iso(value: string | null): string {
   return value ?? "";
 }
 
-async function readProperties(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("properties")
-    .select("id, name, locality, type, status, created_at")
-    .eq("organization_id", organizationId).order("created_at");
-  if (error) throw error;
+async function readProperties(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "properties");
+  else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.from("properties")
+      .select("id, name, locality, type, status, created_at")
+      .eq("organization_id", organizationId).order("created_at");
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "nom", "localite", "type", "statut", "cree_le"],
     rows: (data ?? []).map((p) => [p.id, p.name, p.locality, p.type, p.status, iso(p.created_at)]),
   };
 }
 
-async function readUnits(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("units")
-    .select("id, property_id, label, type, area_sqm, status, reference_rent_xaf, created_at")
-    .eq("organization_id", organizationId).order("created_at");
-  if (error) throw error;
+async function readUnits(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "units");
+  else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.from("units")
+      .select("id, property_id, label, type, area_sqm, status, reference_rent_xaf, created_at")
+      .eq("organization_id", organizationId).order("created_at");
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "bien_id", "libelle", "type", "surface_m2", "statut", "loyer_reference_xaf", "cree_le"],
     rows: (data ?? []).map((u) => [u.id, u.property_id, u.label, u.type, u.area_sqm, u.status, u.reference_rent_xaf, iso(u.created_at)]),
   };
 }
 
-async function readTenants(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("list_tenants_for_export", {
-    target_organization_id: organizationId,
-  });
-  if (error) throw error;
+async function readTenants(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "tenants");
+  else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.rpc("list_tenants_for_export", {
+      target_organization_id: organizationId,
+    });
+    if (result.error) throw result.error;
+    data = (result.data ?? []) as Row[];
+  }
   return {
     headers: ["id", "nom_complet", "telephone", "email", "langue", "cree_le"],
     rows: ((data ?? []) as TenantExportRow[]).map((t) => [t.id, t.full_name, t.phone, t.email, t.preferred_language, iso(t.created_at)]),
   };
 }
 
-async function readLeases(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("leases")
-    .select("id, property_id, unit_id, tenant_id, status, start_date, end_date, base_rent_xaf, recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, billing_frequency, due_day, created_at")
-    .eq("organization_id", organizationId).order("created_at");
-  if (error) throw error;
+async function readLeases(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "leases");
+  else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.from("leases")
+      .select("id, property_id, unit_id, tenant_id, status, start_date, end_date, base_rent_xaf, recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, billing_frequency, due_day, created_at")
+      .eq("organization_id", organizationId).order("created_at");
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "bien_id", "logement_id", "locataire_id", "statut", "date_debut", "date_fin", "loyer_base_xaf", "charges_recurrentes_xaf", "total_periodique_xaf", "depot_garantie_xaf", "frequence_paiement", "jour_echeance", "cree_le"],
     rows: (data ?? []).map((l) => [l.id, l.property_id, l.unit_id, l.tenant_id, l.status, iso(l.start_date), iso(l.end_date), l.base_rent_xaf, l.recurring_charges_xaf, l.periodic_total_xaf, l.security_deposit_xaf, l.billing_frequency, l.due_day, iso(l.created_at)]),
   };
 }
 
-async function readDues(organizationId: string, range: DateRange): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  let query = supabase.from("dues_with_status")
-    .select("id, lease_id, tenant_id, kind, reference, period_start, period_end, due_date, rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, adjustment_direction, expected_amount_xaf, remaining_amount_xaf, derived_status, created_at")
-    .eq("organization_id", organizationId).order("due_date");
-  if (range.from) query = query.gte("due_date", range.from);
-  if (range.to) query = query.lte("due_date", range.to);
-  const { data, error } = await query;
-  if (error) throw error;
+async function readDues(organizationId: string, range: DateRange, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "dues", range);
+  else {
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.from("dues_with_status")
+      .select("id, lease_id, tenant_id, kind, reference, period_start, period_end, due_date, rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, adjustment_direction, expected_amount_xaf, remaining_amount_xaf, derived_status, created_at")
+      .eq("organization_id", organizationId).order("due_date");
+    if (range.from) query = query.gte("due_date", range.from);
+    if (range.to) query = query.lte("due_date", range.to);
+    const result = await query;
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "location_id", "locataire_id", "type", "reference", "periode_debut", "periode_fin", "date_echeance", "loyer_xaf", "charges_xaf", "depot_xaf", "ajustement_xaf", "sens_ajustement", "montant_attendu_xaf", "montant_restant_xaf", "statut", "cree_le"],
     rows: (data ?? []).map((d) => [d.id, d.lease_id, d.tenant_id, d.kind, d.reference, iso(d.period_start), iso(d.period_end), iso(d.due_date), d.rent_amount_xaf, d.recurring_charges_amount_xaf, d.deposit_amount_xaf, d.adjustment_amount_xaf, d.adjustment_direction, d.expected_amount_xaf, d.remaining_amount_xaf, d.derived_status, iso(d.created_at)]),
   };
 }
 
-async function readPayments(organizationId: string, range: DateRange): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  let query = supabase.from("payments")
-    .select("id, lease_id, tenant_id, reference, amount_xaf, currency, payment_date, method, status, created_at")
-    .eq("organization_id", organizationId).order("payment_date");
-  if (range.from) query = query.gte("payment_date", range.from);
-  if (range.to) query = query.lte("payment_date", range.to);
-  const { data, error } = await query;
-  if (error) throw error;
+async function readPayments(organizationId: string, range: DateRange, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "payments", range);
+  else {
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.from("payments")
+      .select("id, lease_id, tenant_id, reference, amount_xaf, currency, payment_date, method, status, created_at")
+      .eq("organization_id", organizationId).order("payment_date");
+    if (range.from) query = query.gte("payment_date", range.from);
+    if (range.to) query = query.lte("payment_date", range.to);
+    const result = await query;
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "location_id", "locataire_id", "reference", "montant_xaf", "devise", "date_paiement", "methode", "statut", "cree_le"],
     rows: (data ?? []).map((p) => [p.id, p.lease_id, p.tenant_id, p.reference, p.amount_xaf, p.currency, iso(p.payment_date), p.method, p.status, iso(p.created_at)]),
   };
 }
 
-async function readPaymentAllocations(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("payment_allocations")
-    .select("id, payment_id, due_id, lease_id, tenant_id, amount_xaf, rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, created_at")
-    .eq("organization_id", organizationId).order("created_at");
-  if (error) throw error;
+async function readPaymentAllocations(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "payment_allocations");
+  else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.from("payment_allocations")
+      .select("id, payment_id, due_id, lease_id, tenant_id, amount_xaf, rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, created_at")
+      .eq("organization_id", organizationId).order("created_at");
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "paiement_id", "echeance_id", "location_id", "locataire_id", "montant_xaf", "part_loyer_xaf", "part_charges_xaf", "part_depot_xaf", "part_ajustement_xaf", "cree_le"],
     rows: (data ?? []).map((a) => [a.id, a.payment_id, a.due_id, a.lease_id, a.tenant_id, a.amount_xaf, a.rent_amount_xaf, a.recurring_charges_amount_xaf, a.deposit_amount_xaf, a.adjustment_amount_xaf, iso(a.created_at)]),
@@ -158,16 +229,21 @@ async function readPaymentAllocations(organizationId: string): Promise<ScopeData
 // (crédit d'ouverture IMPORT-01/6C1, ou crédit d'un paiement) — jamais un
 // Payment lui-même (voir IMPORT-01 §2 : le crédit d'ouverture n'est pas un
 // paiement historique).
-async function readCredits(organizationId: string, range: DateRange): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  let query = supabase.from("ledger_entries")
-    .select("id, lease_id, tenant_id, entry_type, reference, occurred_on, credit_xaf, created_at")
-    .eq("organization_id", organizationId).gt("credit_xaf", 0)
-    .in("entry_type", ["opening_credit", "payment"]).order("occurred_on");
-  if (range.from) query = query.gte("occurred_on", range.from);
-  if (range.to) query = query.lte("occurred_on", range.to);
-  const { data, error } = await query;
-  if (error) throw error;
+async function readCredits(organizationId: string, range: DateRange, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "credits", range);
+  else {
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.from("ledger_entries")
+      .select("id, lease_id, tenant_id, entry_type, reference, occurred_on, credit_xaf, created_at")
+      .eq("organization_id", organizationId).gt("credit_xaf", 0)
+      .in("entry_type", ["opening_credit", "payment"]).order("occurred_on");
+    if (range.from) query = query.gte("occurred_on", range.from);
+    if (range.to) query = query.lte("occurred_on", range.to);
+    const result = await query;
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   return {
     headers: ["id", "location_id", "locataire_id", "type", "reference", "survenu_le", "montant_credit_xaf", "cree_le"],
     rows: (data ?? []).map((c) => [c.id, c.lease_id, c.tenant_id, c.entry_type, c.reference, iso(c.occurred_on), c.credit_xaf, iso(c.created_at)]),
@@ -177,22 +253,31 @@ async function readCredits(organizationId: string, range: DateRange): Promise<Sc
 // "Dépôts" : la Due de dépôt elle-même, plus les Dues d'ajustement qui la
 // ciblent explicitement (dépôt déjà partiellement/totalement payé — voir
 // IMPORT-01 §3, même mécanisme que `cancel_lease_future_dues`).
-async function readDeposits(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const deposits = await supabase.from("dues")
-    .select("id, lease_id, tenant_id, deposit_amount_xaf, due_date, created_at")
-    .eq("organization_id", organizationId).eq("kind", "deposit").order("created_at");
-  if (deposits.error) throw deposits.error;
-  const depositIds = (deposits.data ?? []).map((d) => d.id);
-  const adjustments = depositIds.length
-    ? await supabase.from("dues")
-      .select("id, lease_id, tenant_id, adjusted_due_id, adjustment_amount_xaf, adjustment_direction, created_at")
-      .eq("organization_id", organizationId).eq("kind", "adjustment").in("adjusted_due_id", depositIds)
-    : { data: [], error: null };
-  if (adjustments.error) throw adjustments.error;
+async function readDeposits(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let depositRows: Row[];
+  let adjustmentRows: Row[];
+  if (backend === "restricted_owner") {
+    depositRows = await restrictedRows(organizationId, "deposit_dues");
+    adjustmentRows = await restrictedRows(organizationId, "deposit_adjustments");
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const deposits = await supabase.from("dues")
+      .select("id, lease_id, tenant_id, deposit_amount_xaf, due_date, created_at")
+      .eq("organization_id", organizationId).eq("kind", "deposit").order("created_at");
+    if (deposits.error) throw deposits.error;
+    const depositIds = (deposits.data ?? []).map((d) => d.id);
+    const adjustments = depositIds.length
+      ? await supabase.from("dues")
+        .select("id, lease_id, tenant_id, adjusted_due_id, adjustment_amount_xaf, adjustment_direction, created_at")
+        .eq("organization_id", organizationId).eq("kind", "adjustment").in("adjusted_due_id", depositIds)
+      : { data: [], error: null };
+    if (adjustments.error) throw adjustments.error;
+    depositRows = deposits.data ?? [];
+    adjustmentRows = adjustments.data ?? [];
+  }
   const rows: unknown[][] = [
-    ...(deposits.data ?? []).map((d) => [d.id, d.lease_id, d.tenant_id, "depot_exige", null, d.deposit_amount_xaf, iso(d.due_date), iso(d.created_at)]),
-    ...(adjustments.data ?? []).map((a) => [a.id, a.lease_id, a.tenant_id, "ajustement", a.adjusted_due_id, a.adjustment_direction === "credit" ? a.adjustment_amount_xaf : -a.adjustment_amount_xaf, null, iso(a.created_at)]),
+    ...depositRows.map((d) => [d.id, d.lease_id, d.tenant_id, "depot_exige", null, d.deposit_amount_xaf, iso(d.due_date), iso(d.created_at)]),
+    ...adjustmentRows.map((a) => [a.id, a.lease_id, a.tenant_id, "ajustement", a.adjusted_due_id, a.adjustment_direction === "credit" ? a.adjustment_amount_xaf : -a.adjustment_amount_xaf, null, iso(a.created_at)]),
   ];
   return {
     headers: ["id", "location_id", "locataire_id", "type", "depot_id_cible", "montant_xaf", "date_echeance", "cree_le"],
@@ -203,12 +288,17 @@ async function readDeposits(organizationId: string): Promise<ScopeData> {
 // "Situation des comptes" : agrégat par Location, dérivé de dues_with_status
 // (aucun recalcul de règle métier ici — simple somme des colonnes déjà
 // calculées par la vue existante).
-async function readAccountStatements(organizationId: string): Promise<ScopeData> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("dues_with_status")
-    .select("lease_id, tenant_id, expected_amount_xaf, remaining_amount_xaf, derived_status")
-    .eq("organization_id", organizationId).neq("kind", "deposit");
-  if (error) throw error;
+async function readAccountStatements(organizationId: string, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  let data: Row[];
+  if (backend === "restricted_owner") data = await restrictedRows(organizationId, "account_statement_dues");
+  else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.from("dues_with_status")
+      .select("lease_id, tenant_id, expected_amount_xaf, remaining_amount_xaf, derived_status")
+      .eq("organization_id", organizationId).neq("kind", "deposit");
+    if (result.error) throw result.error;
+    data = result.data ?? [];
+  }
   const byLease = new Map<string, { leaseId: string; tenantId: string; expected: number; remaining: number; overdueCount: number; totalCount: number }>();
   for (const row of data ?? []) {
     const key = row.lease_id as string;
@@ -268,18 +358,23 @@ async function readContractsSummary(organizationId: string): Promise<{ data: Sco
   };
 }
 
-async function readScope(organizationId: string, scope: ExportScope, range: DateRange): Promise<ScopeData> {
+async function readScope(organizationId: string, scope: ExportScope, range: DateRange, backend: ExportBackend = "rls"): Promise<ScopeData> {
+  if (backend === "restricted_owner" && !RESTRICTED_OWNER_EXPORT_SCOPES.includes(scope)) {
+    // Documents PDF et contrats : jamais pendant une suspension (lecture de
+    // stockage et matérialisation = hors « lecture seule » stricte).
+    throw new Error("scope_unavailable_while_suspended");
+  }
   switch (scope) {
-    case "properties": return readProperties(organizationId);
-    case "units": return readUnits(organizationId);
-    case "tenants": return readTenants(organizationId);
-    case "leases": return readLeases(organizationId);
-    case "dues": return readDues(organizationId, range);
-    case "payments": return readPayments(organizationId, range);
-    case "payment_allocations": return readPaymentAllocations(organizationId);
-    case "credits": return readCredits(organizationId, range);
-    case "deposits": return readDeposits(organizationId);
-    case "account_statements": return readAccountStatements(organizationId);
+    case "properties": return readProperties(organizationId, backend);
+    case "units": return readUnits(organizationId, backend);
+    case "tenants": return readTenants(organizationId, backend);
+    case "leases": return readLeases(organizationId, backend);
+    case "dues": return readDues(organizationId, range, backend);
+    case "payments": return readPayments(organizationId, range, backend);
+    case "payment_allocations": return readPaymentAllocations(organizationId, backend);
+    case "credits": return readCredits(organizationId, range, backend);
+    case "deposits": return readDeposits(organizationId, backend);
+    case "account_statements": return readAccountStatements(organizationId, backend);
     case "financial_documents": return (await readFinancialDocumentsSummary(organizationId)).data;
     case "contracts": return (await readContractsSummary(organizationId)).data;
     default: throw new Error(`unknown_export_scope: ${scope satisfies never}`);
@@ -287,26 +382,26 @@ async function readScope(organizationId: string, scope: ExportScope, range: Date
 }
 
 /** Compte les lignes de chaque scope demandé, pour l'aperçu avant génération (§4 UI : taille estimée). */
-export async function estimateExportRowCounts(organizationId: string, scopes: ExportScope[], range: DateRange): Promise<ExportRowCounts> {
+export async function estimateExportRowCounts(organizationId: string, scopes: ExportScope[], range: DateRange, backend: ExportBackend = "rls"): Promise<ExportRowCounts> {
   const counts: ExportRowCounts = {};
   for (const scope of scopes) {
-    const { rows } = await readScope(organizationId, scope, range);
+    const { rows } = await readScope(organizationId, scope, range, backend);
     counts[scope] = rows.length;
   }
   return counts;
 }
 
 /** Génère un CSV pour un seul scope. */
-export async function buildCsvExport(organizationId: string, scope: ExportScope, range: DateRange): Promise<Buffer> {
-  const { headers, rows } = await readScope(organizationId, scope, range);
+export async function buildCsvExport(organizationId: string, scope: ExportScope, range: DateRange, backend: ExportBackend = "rls"): Promise<Buffer> {
+  const { headers, rows } = await readScope(organizationId, scope, range, backend);
   return buildCsvDocument(headers, rows);
 }
 
 /** Génère le classeur XLSX multi-feuilles standard (Essentiel+, §2). */
-export async function buildXlsxExport(organizationId: string, range: DateRange, scopes: ExportScope[] = XLSX_STANDARD_SCOPES): Promise<Buffer> {
+export async function buildXlsxExport(organizationId: string, range: DateRange, scopes: ExportScope[] = XLSX_STANDARD_SCOPES, backend: ExportBackend = "rls"): Promise<Buffer> {
   const sheets: ExportSheet[] = [];
   for (const scope of scopes) {
-    const { headers, rows } = await readScope(organizationId, scope, range);
+    const { headers, rows } = await readScope(organizationId, scope, range, backend);
     sheets.push({ title: SHEET_TITLES[scope], headers, rows });
   }
   return buildExportWorkbook(sheets);

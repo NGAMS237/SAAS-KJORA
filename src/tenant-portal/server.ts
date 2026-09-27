@@ -53,7 +53,26 @@ export async function loadPortalContext() {
   const accesses = ((data ?? []) as Record<string, unknown>[]).map(accessOption);
   const requested = (await cookies()).get(ACTIVE_PORTAL_ACCESS_COOKIE)?.value;
   const activeAccess = accesses.find((access) => access.accessId === requested) ?? accesses[0] ?? null;
-  return { userId: claimsData.claims.sub, userEmail: String(claimsData.claims.email ?? ""), accesses, activeAccess };
+  // REVENUE-LAUNCH-01 v3 — portail fermé pour une Organization suspendue ou
+  // archivée (private.has_active_tenant_portal_access) : on sait seulement
+  // lesquelles, pour afficher un message clair (nom + statut, jamais un motif).
+  let unavailableOrganizations: { name: string; status: string }[] = [];
+  if (!activeAccess) {
+    const unavailable = await supabase.rpc("list_my_unavailable_tenant_portal_organizations");
+    unavailableOrganizations = unavailable.error || !Array.isArray(unavailable.data)
+      ? []
+      : (unavailable.data as Record<string, unknown>[]).map((row) => ({
+        name: String(row.organization_name ?? ""),
+        status: String(row.organization_status ?? ""),
+      }));
+  }
+  return {
+    userId: claimsData.claims.sub,
+    userEmail: String(claimsData.claims.email ?? ""),
+    accesses,
+    activeAccess,
+    unavailableOrganizations,
+  };
 }
 
 export async function getPortalHome(accessId: string): Promise<PortalHome> {

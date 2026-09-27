@@ -22,7 +22,13 @@ function sansCommentaires(source: string): string {
 }
 
 const BILLING_VIEW = read("../src/core/billing/billing-view.tsx");
-const DOWNLOAD_ROUTE = read("../src/app/api/billing/invoices/[invoiceId]/download/route.ts");
+// v3 : la génération est partagée (core/billing/invoice-download.ts) entre la
+// route Owner et le contexte limité d'une Organization suspendue — la route
+// garde la vérification de capacité, l'aide partagée garde le reste.
+const DOWNLOAD_ROUTE =
+  read("../src/app/api/billing/invoices/[invoiceId]/download/route.ts") +
+  "\n" +
+  read("../src/core/billing/invoice-download.ts");
 const SERVER = read("../src/core/billing/server.ts");
 
 // ---------------------------------------------------------------------------

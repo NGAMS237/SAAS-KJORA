@@ -110,6 +110,7 @@ function parseBillingInvoiceRow(row: Record<string, unknown>): BillingInvoice | 
     amountMinor: Number(row.amount_minor ?? 0),
     periodStart: str(row.period_start) ?? "",
     periodEnd: str(row.period_end) ?? "",
+    dueOn: str(row.due_on),
     status: isInvoiceStatus(row.status) ? row.status : "draft",
     issuedOn: str(row.issued_on) ?? "",
     paidAt: str(row.paid_at),

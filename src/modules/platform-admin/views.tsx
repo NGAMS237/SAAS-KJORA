@@ -26,6 +26,7 @@ import type {
   PlatformCounters,
 } from "./server";
 import { FINANCE_PERIOD_FILTERS } from "./finance-periods";
+import { MARKETING_CONSENT_VERSION, isValidConsentEvidence } from "./marketing-consent";
 import { formatMinorAmount as formatMoneyMinorAmount, minorToMajor } from "./money";
 import {
   extendCommercialInterventionAction,
@@ -1728,6 +1729,7 @@ export function FinancesView({
             <h2 id="finance-counters-heading">{t.financeSectionCounters}</h2>
             <div className="admin-counters">
               <Counter label={t.financeCounterOrganizations} value={summary.counters.organizationsTotal} />
+              <Counter label={t.financeExcludedArchivedSubscriptions} value={summary.excludedArchivedSubscriptions} />
               <Counter label={t.financeCounterFreeSubs} value={summary.counters.subscriptionsFree} />
               <Counter label={t.financeCounterPaidSubs} value={summary.counters.subscriptionsPaid} />
               <Counter
@@ -1897,6 +1899,10 @@ export function FinancesView({
               value={extension.manualInvoicing.overdueByCurrency.XAF ?? 0}
             />
             <Counter
+              label={t.financeArchivedOpenInvoicesXaf}
+              value={extension.manualInvoicing.archivedOpenByCurrency.XAF ?? 0}
+            />
+            <Counter
               label={t.financeManualPaymentsConfirmed}
               value={extension.manualInvoicing.paymentsConfirmedCount}
             />
@@ -2015,6 +2021,8 @@ export function ContactsView({
 
   const [consentTarget, setConsentTarget] = useState<{ row: AdminCommercialContactRow; grant: boolean } | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
+  // v3 — preuve obligatoire pour un accord (décision immuable côté base).
+  const [consentEvidence, setConsentEvidence] = useState("");
 
   const hasFilters = search !== "";
   const extraParams: Record<string, string> = {};
@@ -2030,6 +2038,7 @@ export function ContactsView({
     setEditConfirmed(false);
     setConsentTarget(null);
     setConsentConfirmed(false);
+    setConsentEvidence("");
     setDialogFeedback(null);
   }
 
@@ -2072,10 +2081,16 @@ export function ContactsView({
     startTransition(async () => {
       // Seule source possible aujourd'hui : aucun formulaire public de
       // consentement n'existe encore (voir la migration REVENUE-01I).
+      if (consentTarget.grant && !isValidConsentEvidence(consentEvidence)) {
+        setDialogFeedback(t.consentEvidenceRequired);
+        return;
+      }
       const result = await setMarketingConsentAction(
         consentTarget.row.organizationId,
         consentTarget.grant,
         "admin_manual_entry",
+        MARKETING_CONSENT_VERSION,
+        consentEvidence,
       );
       if (result.ok) {
         closeDialogs();
@@ -2269,6 +2284,17 @@ export function ContactsView({
         feedback={dialogFeedback}
       >
         <p>{consentTarget?.grant ? t.grantConsentConfirmText : t.unsubscribeConfirmText}</p>
+        <p className="admin-table__muted">{t.consentVersionLabel(MARKETING_CONSENT_VERSION)}</p>
+        <label className="admin-dialog__field">
+          <span>{consentTarget?.grant ? t.consentEvidenceLabel : t.consentEvidenceOptionalLabel}</span>
+          <textarea
+            value={consentEvidence}
+            onChange={(e) => setConsentEvidence(e.target.value)}
+            maxLength={500}
+            rows={3}
+            required={consentTarget?.grant === true}
+          />
+        </label>
       </ConfirmDialog>
     </div>
   );

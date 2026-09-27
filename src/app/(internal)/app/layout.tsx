@@ -8,6 +8,8 @@ import { getNotifications } from "@/modules/documents/server";
 import { getOperationalDashboard } from "@/modules/operations/server";
 import { dashboardPeriod } from "@/modules/operations/model";
 import { resolveUserContext, destinationFor } from "@/core/routing/context-resolver";
+import { listMyRestrictedOrganizations } from "@/core/organization/restricted-organizations";
+import { RestrictedOrganizationsBanner } from "@/core/organization/restricted-organizations-banner";
 
 export default async function InternalLayout({ children }: { children: ReactNode }) {
   const context = await loadOrganizationContext();
@@ -26,6 +28,9 @@ export default async function InternalLayout({ children }: { children: ReactNode
     ? await getOperationalDashboard(context.activeOrganization.id, dashboardPeriod(null)).catch(() => null)
     : null;
   const paymentAttention = (dashboard?.overdueCount ?? 0) + (dashboard?.partialCount ?? 0);
+  // REVENUE-LAUNCH-01 v3 — Organizations suspendues/archivées signalées à part,
+  // l'Organization active restant sélectionnée normalement.
+  const restrictedOrganizations = await listMyRestrictedOrganizations();
   const navigationBadges = {
     ...(paymentAttention > 0 ? { "/app/paiements": { count: paymentAttention, tone: "danger" as const } } : {}),
   };
@@ -41,6 +46,7 @@ export default async function InternalLayout({ children }: { children: ReactNode
         notifications={notifications}
         navigationBadges={navigationBadges}
       >
+        <RestrictedOrganizationsBanner organizations={restrictedOrganizations} />
         {children}
       </InternalShell>
     </PinLockProvider>

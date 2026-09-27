@@ -56,11 +56,21 @@ test("l'API support exige une session et une Organization active", () => {
 });
 
 test("l'API support ne fait jamais confiance à l'organisation déclarée par le client", () => {
-  // L'organisation provient de loadOrganizationContext, pas du corps de requête
-  assert.match(supportApi, /loadOrganizationContext/);
+  // REVENUE-LAUNCH-01 v3 : l'Organization est résolue par
+  // loadAnyMembershipOrganization (aussi pour une Organization suspendue ou
+  // archivée, afin que l'aide reste joignable). Un identifiant fourni par le
+  // contexte limité n'est qu'une PRÉFÉRENCE : il n'est retenu que s'il figure
+  // parmi les appartenances actives de l'utilisateur, lues en base. Le rôle,
+  // le nom et l'identifiant transmis au support viennent toujours du serveur.
+  assert.match(supportApi, /loadAnyMembershipOrganization\(requestedOrganizationId\)/);
   assert.doesNotMatch(supportApi, /body\.organization_id/);
-  assert.doesNotMatch(supportApi, /body\.organizationId/);
   assert.doesNotMatch(supportApi, /body\.role/);
+  assert.match(supportApi, /organizationId: active\.id/);
+  assert.match(supportApi, /role: active\.role/);
+  const loader = readFileSync(new URL("../src/core/organization/load-organization-context.ts", import.meta.url), "utf8");
+  const body = loader.slice(loader.indexOf("export async function loadAnyMembershipOrganization"));
+  assert.match(body, /requestedOrganizationId && membershipByOrganization\.has\(requestedOrganizationId\)/);
+  assert.match(body, /\.eq\("status", "active"\)/, "seules les appartenances actives comptent");
 });
 
 test("l'API support est protégée contre le CSRF et valide le message", () => {

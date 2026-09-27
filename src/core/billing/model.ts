@@ -358,11 +358,26 @@ export function graceReminderDates(graceStartedOn: string): string[] {
 export const PAYMENT_METHOD_EXPIRY_OFFSETS = [30, 7] as const;
 
 /**
- * Seuil « facture Afrique arrivant à échéance » : J-3 avant la fin de période
- * facturée. Choix documenté ici (non explicité par le mandat), à ajuster si
- * l'usage réel Afrique montre qu'il est trop court ou trop long.
+ * Seuil « facture Afrique arrivant à échéance » : J-3 avant l'échéance de
+ * paiement (`billing_invoices.due_on`, repli sur la fin de période pour une
+ * facture antérieure à REVENUE-01B).
  */
 export const INVOICE_DUE_SOON_OFFSET_DAYS = 3;
+
+/**
+ * Délai de paiement par défaut d'une facture manuelle (REVENUE-01B) : 7 jours
+ * après le début de période (ou après la date d'émission si la période a déjà
+ * commencé), borné à la fin de période. Miroir exact de
+ * `admin_issue_manual_invoice` (SQL).
+ */
+export const MANUAL_INVOICE_PAYMENT_TERM_DAYS = 7;
+
+/** Échéance par défaut d'une facture manuelle — même règle que le SQL. */
+export function defaultManualInvoiceDueOn(periodStart: string, periodEnd: string, today: string): string {
+  const start = periodStart > today ? periodStart : today;
+  const candidate = addDays(start, MANUAL_INVOICE_PAYMENT_TERM_DAYS);
+  return candidate < periodEnd ? candidate : periodEnd;
+}
 
 // ---------------------------------------------------------------------------
 // Factures

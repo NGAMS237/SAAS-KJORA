@@ -41,7 +41,7 @@ export type OrganizationSummary = {
   id: string;
   name: string;
   role: InternalRole;
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "archived";
 };
 
 export type ResolvedContext =
@@ -65,8 +65,13 @@ export type ResolvedContext =
   | { kind: "tenant_only" }
   /** À la fois membre interne et locataire : sélecteur de contexte */
   | { kind: "owner_and_tenant"; organizations: OrganizationSummary[]; lastActiveId: string | null }
-  /** Toutes les Organizations de l'utilisateur sont suspendues */
-  | { kind: "organization_suspended" };
+  /**
+   * Toutes les Organizations de l'utilisateur sont suspendues ou archivées :
+   * contexte limité (identité, statut, aide/support, facturation et export
+   * du propriétaire pour une suspension) — jamais une application vide, jamais
+   * l'onboarding d'une nouvelle Organization.
+   */
+  | { kind: "organization_suspended"; hasPortalIdentity: boolean };
 
 // ---------------------------------------------------------------------------
 // Destinations
@@ -79,7 +84,9 @@ export const ROUTE_ONBOARDING = "/onboarding/organization";
 export const ROUTE_MEMBERSHIP_INVITATION = "/invitation/accepter";
 export const ROUTE_PORTAL_INVITATION = "/portal/invitation/accepter";
 export const ROUTE_CONTEXT_SELECTOR = "/app";
-export const ROUTE_SUSPENDED = "/connexion?reason=organization-suspended";
+// REVENUE-LAUNCH-01 v3 — page dédiée du contexte limité (plus un simple
+// message sur l'écran de connexion d'un utilisateur déjà connecté).
+export const ROUTE_SUSPENDED = "/organisation-suspendue";
 
 /**
  * Destination canonique pour un contexte résolu.
@@ -205,10 +212,11 @@ export async function resolveUserContext(): Promise<ResolvedContext> {
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
-  // Toutes les Organizations sont suspendues
+  // Toutes les Organizations sont suspendues ou archivées : contexte limité,
+  // même si l'utilisateur a aussi une identité portail (la page propose alors
+  // un lien vers son espace locataire). Jamais l'onboarding, jamais /app vide.
   if (organizations.length === 0) {
-    if (hasPortalIdentity) return { kind: "tenant_only" };
-    return { kind: "organization_suspended" };
+    return { kind: "organization_suspended", hasPortalIdentity };
   }
 
   // Onboarding inachevé sur l'Organization créée

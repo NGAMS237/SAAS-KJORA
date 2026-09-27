@@ -5202,3 +5202,33 @@ a.portfolio-metric:hover {
   .admin-filters__field { min-width: 0; }
   .admin-filters__clear { align-self: flex-start; }
 }
+
+/* REVENUE-LAUNCH-01 v3 — contexte limité d'une Organization suspendue/archivée */
+.suspended-page {
+  max-width: 880px; margin: 0 auto; padding: 32px 16px 56px;
+  display: flex; flex-direction: column; gap: 18px; color: var(--text);
+}
+.suspended-page__controls { display: flex; justify-content: flex-end; }
+.suspended-page__header h1 { margin: 6px 0 8px; font-size: clamp(1.4rem, 3vw, 1.9rem); }
+.suspended-page__header p { margin: 0 0 10px; color: var(--text-muted); }
+.suspended-page__card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 18px 20px;
+}
+.suspended-page__card h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.suspended-page__card ul { margin: 0 0 10px; padding-left: 18px; }
+.suspended-page__muted { color: var(--text-muted); font-size: 0.9rem; }
+.suspended-page__switcher { display: flex; flex-wrap: wrap; gap: 8px; }
+.suspended-page__switch {
+  padding: 6px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border);
+  text-decoration: none; color: var(--text); font-size: 0.85rem;
+}
+.suspended-page__switch[aria-current="page"] { border-color: var(--text); font-weight: 700; }
+.suspended-page__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.suspended-page__links { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; }
+.restricted-org-banner {
+  margin: 0 0 16px; padding: 10px 14px; border-radius: 12px;
+  background: var(--warning-soft); color: var(--warning); font-size: 0.88rem;
+}
+.restricted-org-banner p { margin: 0; }
+.restricted-org-banner p + p { margin-top: 4px; }

@@ -139,19 +139,18 @@ test("private.is_active_member et private.is_organization_owner ne sont PAS modi
 // 6. Révocation de session — best effort, jamais bloquant
 // ---------------------------------------------------------------------------
 
-test("private.best_effort_revoke_sessions absorbe toute exception et ne bloque jamais admin_disable_member", () => {
-  const start = MIGRATION_CLEAN.indexOf("create or replace function private.best_effort_revoke_sessions");
-  assert.notEqual(start, -1);
-  const body = MIGRATION_CLEAN.slice(start, MIGRATION_CLEAN.indexOf("$$;", start) + 3);
-  assert.match(body, /delete from auth\.sessions where user_id = target_user_id/);
-  assert.match(body, /exception when others then/);
-  assert.match(body, /return false/);
+test("aucune écriture dans auth.sessions : la désactivation repose sur memberships.status (v3)", () => {
+  // Décision v3 : aucune suppression directe dans auth.sessions dans les
+  // migrations finales. La fonction best-effort a disparu ; la désactivation
+  // coupe l'accès par le statut du membership, lu à chaque requête.
+  assert.doesNotMatch(MIGRATION_CLEAN, /best_effort_revoke_sessions/);
+  assert.doesNotMatch(MIGRATION_CLEAN, /delete\s+from\s+auth\./i);
+  assert.doesNotMatch(MIGRATION_CLEAN, /(update|insert into)\s+auth\.sessions/i);
 
   const disableStart = MIGRATION_CLEAN.indexOf("create or replace function public.admin_disable_member");
   const disableBody = MIGRATION_CLEAN.slice(disableStart, MIGRATION_CLEAN.indexOf("$$;", disableStart) + 3);
-  assert.match(disableBody, /private\.best_effort_revoke_sessions\(membership\.user_id\)/);
-  // Le statut, pas la session, reste la source de vérité de la désactivation.
-  assert.match(disableBody, /status = 'revoked'/);
+  assert.match(disableBody, /update public\.memberships set status = 'revoked', revoked_at = now\(\) where id = membership\.id;/);
+  assert.doesNotMatch(disableBody, /sessionsRevoked/);
 });
 
 // ---------------------------------------------------------------------------
@@ -190,9 +189,9 @@ test("chaque RPC d'action REVENUE-01H valide un motif non vide (jamais un motif 
   assert.equal(reasonChecks.length, 7);
 });
 
-test("aucune suppression de donnée applicative : la seule `delete from` de ce lot cible auth.sessions (révocation best-effort)", () => {
+test("aucune suppression de donnée : ce lot ne contient aucun `delete from` (v3)", () => {
   const deletes = MIGRATION_CLEAN.match(/delete from [^\s;]+/gi) ?? [];
-  assert.deepEqual(deletes, ["delete from auth.sessions"]);
+  assert.deepEqual(deletes, []);
 });
 
 // ---------------------------------------------------------------------------
@@ -246,11 +245,13 @@ test("les onze nouvelles RPC sont révoquées de public/anon et accordées à au
 // ---------------------------------------------------------------------------
 
 test("les RPC self-service et Admin déjà livrées ne sont jamais redéfinies par ce lot", () => {
+  // Exception documentée (v3, nettoyage) : admin_platform_counters et
+  // admin_get_organization_detail sont remplacées UNE fois, ici, là où naît
+  // le statut 'archived' (section 11) — voir le test dédié.
   const CLOSED_RPCS = [
     "public.revoke_membership(",
     "public.transfer_organization_ownership(",
     "public.change_membership_role(",
-    "public.admin_get_organization_detail(",
     "public.admin_grant_commercial_intervention(",
     "public.admin_finance_billing_extension(",
   ];
@@ -263,17 +264,51 @@ test("les RPC self-service et Admin déjà livrées ne sont jamais redéfinies p
   }
 });
 
+test("console Admin : compteur organizations_archived et signal providerActionRequired définis ici une seule fois (v3)", () => {
+  assert.equal((MIGRATION_CLEAN.match(/create or replace function public\.admin_platform_counters\(/g) ?? []).length, 1);
+  assert.equal((MIGRATION_CLEAN.match(/create or replace function public\.admin_get_organization_detail\(/g) ?? []).length, 1);
+  assert.match(MIGRATION_CLEAN, /'organizations_archived',\s*\(select count\(\*\) from public\.organizations where status = 'archived'\)/);
+  assert.match(MIGRATION_CLEAN, /provider_action_required := org\.status <> 'active'/);
+});
+
+test("portail locataire fermé pour une Organization non active, par son point d'entrée unique (v3)", () => {
+  const start = MIGRATION_CLEAN.indexOf("create or replace function private.has_active_tenant_portal_access(");
+  assert.ok(start >= 0);
+  const body = MIGRATION_CLEAN.slice(start, MIGRATION_CLEAN.indexOf("$$;", start));
+  assert.match(body, /join public\.organizations o on o\.id = a\.organization_id/);
+  assert.match(body, /and o\.status = 'active'/);
+});
+
+test("export d'une Organization suspendue : RPC dédiée, garde étroite, jamais le ZIP (v3)", () => {
+  const start = MIGRATION_CLEAN.indexOf("create or replace function public.export_restricted_owner_source(");
+  assert.ok(start >= 0);
+  const body = MIGRATION_CLEAN.slice(start, MIGRATION_CLEAN.indexOf("$$;", start));
+  assert.match(body, /private\.has_restricted_capability\(target_organization_id, 'data_export\.manage'\)/);
+  assert.doesNotMatch(body, /\b(insert|update|delete)\b/i);
+  const request = MIGRATION_CLEAN.slice(MIGRATION_CLEAN.indexOf("create or replace function public.request_data_export("));
+  assert.match(request, /org_status = 'suspended' and target_format = 'zip'/);
+  assert.match(request, /private\.can_export_organization_data\(target_organization_id\)/);
+});
+
+test("le contexte limité n'expose jamais le motif interne (status_reason)", () => {
+  const start = MIGRATION_CLEAN.indexOf("create or replace function public.list_my_restricted_organizations(");
+  assert.ok(start >= 0);
+  const body = MIGRATION_CLEAN.slice(start, MIGRATION_CLEAN.indexOf("$$;", start));
+  assert.doesNotMatch(body, /status_reason|admin_organization_notes/);
+});
+
 // ---------------------------------------------------------------------------
 // 11. src/core/authorization/server.ts — deuxième barrière, applicative
 // ---------------------------------------------------------------------------
 
-test("isOrganizationActive lit organizations.status et ne bloque jamais sur une erreur réseau", () => {
+test("isOrganizationActive lit organizations.status et refuse l'accès sur erreur (fail-closed, v3)", () => {
   const start = AUTH_SERVER.indexOf("export async function isOrganizationActive");
   assert.notEqual(start, -1);
   const body = AUTH_SERVER.slice(start, AUTH_SERVER.indexOf("\n}", start));
   assert.match(body, /from\("organizations"\)/);
   assert.match(body, /\.select\("status"\)/);
-  assert.match(body, /if \(error \|\| !data\) return true;/);
+  assert.match(body, /if \(error \|\| !data\) return false;/);
+  assert.doesNotMatch(body, /return true;/);
   assert.match(body, /return data\.status === "active";/);
 });
 

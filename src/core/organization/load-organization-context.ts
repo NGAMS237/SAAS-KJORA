@@ -114,7 +114,7 @@ export async function loadOrganizationContext() {
  * d'une Organization suspendue peut donc toujours lire `organizations.status`
  * et `organization_profiles.name`.
  */
-export async function loadAnyMembershipOrganization(): Promise<{
+export async function loadAnyMembershipOrganization(requestedOrganizationId?: string | null): Promise<{
   user: Awaited<ReturnType<typeof requireUser>>;
   organization: { id: string; name: string; status: string; role: InternalRole } | null;
 }> {
@@ -158,9 +158,14 @@ export async function loadAnyMembershipOrganization(): Promise<{
     ]),
   );
 
+  // L'identifiant demandé (formulaire du contexte limité) puis le cookie
+  // d'Organization active ne sont que des préférences : ils ne sont retenus
+  // que s'ils figurent parmi les appartenances actives de l'utilisateur.
   const cookieStore = await cookies();
-  const requestedId = cookieStore.get(ACTIVE_ORGANIZATION_COOKIE)?.value;
-  const selectedId = requestedId && membershipByOrganization.has(requestedId) ? requestedId : ids[0];
+  const cookieId = cookieStore.get(ACTIVE_ORGANIZATION_COOKIE)?.value;
+  const selectedId = requestedOrganizationId && membershipByOrganization.has(requestedOrganizationId)
+    ? requestedOrganizationId
+    : cookieId && membershipByOrganization.has(cookieId) ? cookieId : ids[0];
   const role = membershipByOrganization.get(selectedId);
   const status = statusById.get(selectedId);
   if (!role || !status) return { user, organization: null };

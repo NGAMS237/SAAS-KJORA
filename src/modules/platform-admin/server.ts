@@ -558,6 +558,8 @@ export type FinanceSummary = {
   mobileMoneyConnected: boolean;
   /** Unités mineures, par devise — état courant, indépendant de la période. */
   expectedRevenueByCurrency: Record<string, number>;
+  /** v3 — abonnements d'Organizations archivées exclus du revenu attendu (jamais perdus en silence). */
+  excludedArchivedSubscriptions: number;
   generatedAt: string | null;
 };
 
@@ -621,6 +623,7 @@ export async function getFinanceSummary(
       stripeConnected: collected.stripe_connected === true,
       mobileMoneyConnected: collected.mobile_money_connected === true,
       expectedRevenueByCurrency: toCountRecord(expected.by_currency),
+      excludedArchivedSubscriptions: toNumber(expected.excluded_archived_subscriptions),
       generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
     },
   };
@@ -675,6 +678,11 @@ export type FinanceBillingExtension = {
     /** Unités mineures... non : un COMPTE de factures, par devise. Jamais une somme entre devises. */
     dueByCurrency: Record<string, number>;
     overdueByCurrency: Record<string, number>;
+    /**
+     * v3 — factures ouvertes d'Organizations ARCHIVÉES : exclues des encours
+     * normaux (due/overdue), comptées ici pour ne jamais disparaître en silence.
+     */
+    archivedOpenByCurrency: Record<string, number>;
     paymentsConfirmedCount: number;
     /** Unités mineures encaissées via facturation manuelle (REVENUE-01B), par devise. */
     paymentsConfirmedByCurrency: Record<string, number>;
@@ -710,6 +718,7 @@ export async function getFinanceBillingExtension(
       manualInvoicing: {
         dueByCurrency: toCountRecord(manualInvoicing.due_by_currency),
         overdueByCurrency: toCountRecord(manualInvoicing.overdue_by_currency),
+        archivedOpenByCurrency: toCountRecord(manualInvoicing.archived_open_by_currency),
         paymentsConfirmedCount: toNumber(manualInvoicing.payments_confirmed_count),
         paymentsConfirmedByCurrency: toCountRecord(manualInvoicing.payments_confirmed_by_currency),
       },
@@ -849,6 +858,8 @@ export type AdminCommercialContactRow = {
   marketingConsent: boolean;
   marketingConsentAt: string | null;
   consentSource: string | null;
+  /** v3 — version du texte de consentement de la dernière décision. */
+  consentVersion: string | null;
   unsubscribedAt: string | null;
   /**
    * Complément REVENUE-LAUNCH-01 §4 — organization.status = 'active' ET
@@ -874,6 +885,7 @@ function mapAdminCommercialContactRow(r: Record<string, unknown>): AdminCommerci
     marketingConsent: r.marketing_consent === true,
     marketingConsentAt: r.marketing_consent_at ? String(r.marketing_consent_at) : null,
     consentSource: r.consent_source ? String(r.consent_source) : null,
+    consentVersion: r.consent_version ? String(r.consent_version) : null,
     unsubscribedAt: r.unsubscribed_at ? String(r.unsubscribed_at) : null,
     marketingEligible: r.marketing_eligible === true,
   };

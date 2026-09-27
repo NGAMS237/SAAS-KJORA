@@ -1,24 +1,31 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(60);
 
 -- =============================================================================
--- REVENUE-LAUNCH-01 — Complément — Cohérence globale du cycle de vie
+-- REVENUE-LAUNCH-01 v3 — Matrice du cycle de vie Organization — Tests pgTAP
 -- =============================================================================
--- Même convention que les 5 fichiers pgTAP Revenue (01B/01C/01E/01H/01I) :
--- transaction annulée (rollback), rien ne survit.
+-- Transaction annulée (rollback), rien ne survit. RÉELLEMENT EXÉCUTÉ sur un
+-- cluster PostgreSQL 16 local éphémère avec pgtap réel (jamais Supabase
+-- distant) — le verdict officiel reste la CI Supabase éphémère.
 --
--- RÉELLEMENT EXÉCUTÉ (cluster PostgreSQL 16 local éphémère avec extension
--- pgtap réelle — jamais Supabase distant) : PASS confirmé, `select plan(41)`
--- vérifié contre le nombre réel d'assertions.
+-- Scénarios réels (jamais une lecture du texte source) :
+--   §2 compteurs (total = active + suspended + archived) ;
+--   §3 effets financiers (aucune facture/rappel hors Organization active,
+--      signal fournisseur sans annulation automatique, historique intact) ;
+--   §4 éligibilité marketing (statut exposé, archivée jamais éligible) ;
+--   §5 matrice d'accès d'une Organization suspendue (11 domaines coupés,
+--      identité minimale lisible) ;
+--   §6 multi-Organizations (désactivation strictement locale, aucune
+--      suppression dans auth.sessions, exactement un propriétaire actif) ;
+--   §7 exceptions étroites v3 : Owner d'une Organization suspendue
+--      (facturation + export lecture seule, jamais le ZIP), collaborateur
+--      (aucune exception), Organization archivée (aucune exception),
+--      locataire (portail fermé, message d'indisponibilité), utilisateur
+--      multi-Organizations (actif normal + suspendue restreinte), et aucune
+--      fuite de motif interne.
 --
--- Couvre les scénarios réels du complément (§2 compteurs, §3 effets
--- financiers, §4 éligibilité marketing, §5 matrice d'accès, §6 invariants
--- multi-Organizations) contre
--- 20260927200000_revenue_complement_01_lifecycle_coherence.sql — jamais
--- seulement une lecture statique du texte source.
---
--- Isolation des identifiants : préfixe `d0` (Complément), réservé à ce fichier.
+-- Isolation des identifiants : préfixe `d0`, réservé à ce fichier.
 -- =============================================================================
 
 insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at) values
@@ -60,6 +67,40 @@ insert into public.memberships (organization_id, user_id, role, status) values
   ('d0100000-0000-4000-8000-00000000000e', 'd0000000-0000-4000-8000-000000000005', 'viewer', 'active'),
   ('d0100000-0000-4000-8000-00000000000f', 'd0000000-0000-4000-8000-000000000002', 'organization_owner', 'active'),
   ('d0100000-0000-4000-8000-00000000000f', 'd0000000-0000-4000-8000-000000000006', 'manager', 'active');
+
+-- §7 — Collaborateur (manager) de l'Organization suspendue ; Organization
+-- active supplémentaire du même Owner (multi-Organizations) ; locataire
+-- disposant d'un accès portail dans l'Organization suspendue ET dans une
+-- Organization active.
+insert into auth.users (id, aud, role, email, email_confirmed_at, created_at, updated_at) values
+  ('d0000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'collab-suspended-d0@kjora.test', now(), now(), now()),
+  ('d0000000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'tenant-d0@kjora.test', now(), now(), now());
+
+insert into public.organizations (id, created_by, status) values
+  ('d0100000-0000-4000-8000-000000000010', 'd0000000-0000-4000-8000-000000000003', 'active');
+insert into public.organization_profiles (organization_id, name) values
+  ('d0100000-0000-4000-8000-000000000010', 'D0 Org Owner Second Active');
+
+insert into public.memberships (organization_id, user_id, role, status) values
+  ('d0100000-0000-4000-8000-00000000000b', 'd0000000-0000-4000-8000-000000000007', 'manager', 'active'),
+  ('d0100000-0000-4000-8000-000000000010', 'd0000000-0000-4000-8000-000000000003', 'organization_owner', 'active');
+
+update public.organizations set status_reason = 'Motif interne confidentiel D0'
+ where id = 'd0100000-0000-4000-8000-00000000000b';
+
+-- Plan Essentiel pour Org S : l'export (exports_standard) reste soumis à son
+-- entitlement habituel, la suspension n'accorde aucun droit de plan en plus.
+select private.assign_organization_plan('d0100000-0000-4000-8000-00000000000b', 'essentiel');
+
+insert into public.tenants (id, organization_id, full_name, email, preferred_language, created_by) values
+  ('d0200000-0000-4000-8000-00000000000b', 'd0100000-0000-4000-8000-00000000000b', 'Locataire D0 S', 'tenant-d0@kjora.test', 'fr', 'd0000000-0000-4000-8000-000000000003'),
+  ('d0200000-0000-4000-8000-00000000000a', 'd0100000-0000-4000-8000-00000000000a', 'Locataire D0 A', 'tenant-d0@kjora.test', 'fr', 'd0000000-0000-4000-8000-000000000002');
+insert into public.tenant_portal_accesses (id, organization_id, tenant_id, user_id, status, invited_email, preferred_language, invited_by, accepted_at) values
+  ('d0300000-0000-4000-8000-00000000000b', 'd0100000-0000-4000-8000-00000000000b', 'd0200000-0000-4000-8000-00000000000b', 'd0000000-0000-4000-8000-000000000008', 'active', 'tenant-d0@kjora.test', 'fr', 'd0000000-0000-4000-8000-000000000003', now()),
+  ('d0300000-0000-4000-8000-00000000000a', 'd0100000-0000-4000-8000-00000000000a', 'd0200000-0000-4000-8000-00000000000a', 'd0000000-0000-4000-8000-000000000008', 'active', 'tenant-d0@kjora.test', 'fr', 'd0000000-0000-4000-8000-000000000002', now());
+insert into public.tenant_portal_sessions (organization_id, access_id, tenant_id, user_id, auth_session_id, expires_at) values
+  ('d0100000-0000-4000-8000-00000000000b', 'd0300000-0000-4000-8000-00000000000b', 'd0200000-0000-4000-8000-00000000000b', 'd0000000-0000-4000-8000-000000000008', 'session-d0-tenant', now() + interval '1 day'),
+  ('d0100000-0000-4000-8000-00000000000a', 'd0300000-0000-4000-8000-00000000000a', 'd0200000-0000-4000-8000-00000000000a', 'd0000000-0000-4000-8000-000000000008', 'session-d0-tenant', now() + interval '1 day');
 
 -- Récupère UNE FOIS les id de membership nécessaires en paramètre RPC pendant
 -- l'accès superuser initial (avant tout basculement `authenticated`) — même
@@ -242,7 +283,7 @@ select is(
   'fiche contact créée pour Org A (active)'
 );
 select is(
-  (select public.admin_set_marketing_consent('d0100000-0000-4000-8000-00000000000a', true, 'admin_manual_entry') ->> 'outcome'),
+  (select public.admin_set_marketing_consent('d0100000-0000-4000-8000-00000000000a', true, 'admin_manual_entry', 'kjora-marketing-v1', 'Accord signé, formulaire D0-A') ->> 'outcome'),
   'consent_updated',
   'consentement positif enregistré pour Org A (active)'
 );
@@ -253,7 +294,7 @@ select is(
   'fiche contact créée pour Org R (archivée)'
 );
 select is(
-  (select public.admin_set_marketing_consent('d0100000-0000-4000-8000-00000000000c', true, 'admin_manual_entry') ->> 'outcome'),
+  (select public.admin_set_marketing_consent('d0100000-0000-4000-8000-00000000000c', true, 'admin_manual_entry', 'kjora-marketing-v1', 'Accord signé, formulaire D0-R') ->> 'outcome'),
   'consent_updated',
   'consentement positif enregistré pour Org R (archivée) : la fiche existe, seule l''éligibilité en tient compte'
 );
@@ -410,6 +451,119 @@ select is(
   'exactement un propriétaire actif subsiste dans Org Transfer après le transfert'
 );
 set local role authenticated;
+select set_config('request.jwt.claim.sub', 'd0000000-0000-4000-8000-000000000001', true);
+
+-- ---------------------------------------------------------------------------
+-- §7 — Exceptions étroites v3 (Owner, collaborateur, archivée, locataire,
+-- multi-Organizations)
+-- ---------------------------------------------------------------------------
+
+-- Owner de l'Organization suspendue S (user 03), aussi Owner d'une
+-- Organization active (multi-Organizations).
+select set_config('request.jwt.claim.sub', 'd0000000-0000-4000-8000-000000000003', true);
+
+select ok(
+  (select private.can_read_billing('d0100000-0000-4000-8000-00000000000b')),
+  'Owner d''une Organization suspendue : lecture de facturation accordée (régularisation)'
+);
+select is(
+  (select public.get_billing_overview('d0100000-0000-4000-8000-00000000000b') ->> 'organizationId'),
+  'd0100000-0000-4000-8000-00000000000b',
+  'Owner d''une Organization suspendue : get_billing_overview répond'
+);
+select ok(
+  (select private.can_export_organization_data('d0100000-0000-4000-8000-00000000000b')),
+  'Owner d''une Organization suspendue : export autorisé'
+);
+select is(
+  (select public.export_restricted_owner_source('d0100000-0000-4000-8000-00000000000b', 'tenants') -> 0 ->> 'full_name'),
+  'Locataire D0 S',
+  'Owner d''une Organization suspendue : la source d''export dédiée renvoie ses propres données'
+);
+select is(
+  (select jsonb_array_length(public.export_restricted_owner_source('d0100000-0000-4000-8000-00000000000b', 'tenants'))),
+  1,
+  'la source d''export dédiée reste strictement bornée à cette Organization'
+);
+select ok(
+  (select public.request_data_export('d0100000-0000-4000-8000-00000000000b', 'xlsx', array['properties']) is not null),
+  'Owner d''une Organization suspendue : un export XLSX est journalisé'
+);
+select throws_ok(
+  $$select public.request_data_export('d0100000-0000-4000-8000-00000000000b', 'zip', array['properties'])$$,
+  '22023', 'export_format_unavailable_while_suspended',
+  'Owner d''une Organization suspendue : le ZIP (matérialisation de PDF) est refusé'
+);
+select ok(
+  not (select private.has_capability('d0100000-0000-4000-8000-00000000000b', 'billing.manage')),
+  'Owner d''une Organization suspendue : aucune mutation de facturation (billing.manage coupé)'
+);
+select ok(
+  (select private.has_capability('d0100000-0000-4000-8000-000000000010', 'property.view')),
+  'multi-Organizations : l''Organization active du même Owner reste pleinement accessible'
+);
+select is(
+  (select count(*)::int from public.list_my_restricted_organizations()),
+  1,
+  'multi-Organizations : seule l''Organization suspendue apparaît dans le contexte limité'
+);
+select is(
+  (select count(*)::int from public.list_my_restricted_organizations() r
+    where to_jsonb(r)::text like '%confidentiel%'),
+  0,
+  'le contexte limité n''expose jamais le motif interne de suspension'
+);
+
+-- Collaborateur (manager) de l'Organization suspendue : aucune exception.
+select set_config('request.jwt.claim.sub', 'd0000000-0000-4000-8000-000000000007', true);
+select ok(
+  not (select private.can_read_billing('d0100000-0000-4000-8000-00000000000b')),
+  'collaborateur d''une Organization suspendue : aucune lecture de facturation'
+);
+select throws_ok(
+  $$select public.export_restricted_owner_source('d0100000-0000-4000-8000-00000000000b', 'properties')$$,
+  '42501', null,
+  'collaborateur d''une Organization suspendue : aucun export'
+);
+
+-- Owner de l'Organization archivée R : aucune exception.
+select set_config('request.jwt.claim.sub', 'd0000000-0000-4000-8000-000000000004', true);
+select throws_ok(
+  $$select public.get_billing_overview('d0100000-0000-4000-8000-00000000000c')$$,
+  '42501', null,
+  'Organization archivée : aucune lecture de facturation self-service'
+);
+select throws_ok(
+  $$select public.request_data_export('d0100000-0000-4000-8000-00000000000c', 'xlsx', array['properties'])$$,
+  '42501', null,
+  'Organization archivée : aucun export self-service (restauration préalable)'
+);
+
+-- Locataire : portail fermé pour l'Organization suspendue, ouvert pour
+-- l'Organization active ; message d'indisponibilité ; aucune exception.
+select set_config('request.jwt.claim.sub', 'd0000000-0000-4000-8000-000000000008', true);
+select set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000008","role":"authenticated","session_id":"session-d0-tenant"}', true);
+select throws_ok(
+  $$select public.get_tenant_portal_home('d0300000-0000-4000-8000-00000000000b')$$,
+  '42501', 'not_found',
+  'locataire : le portail d''une Organization suspendue est fermé'
+);
+select is(
+  (select public.get_tenant_portal_home('d0300000-0000-4000-8000-00000000000a') ->> 'organizationName'),
+  'D0 Org Active',
+  'locataire : le portail d''une Organization active reste ouvert'
+);
+select is(
+  (select organization_status from public.list_my_unavailable_tenant_portal_organizations()
+    where organization_name = 'D0 Org Suspended'),
+  'suspended',
+  'locataire : l''indisponibilité est signalée (nom + statut, jamais un motif)'
+);
+select ok(
+  not (select private.can_export_organization_data('d0100000-0000-4000-8000-00000000000b')),
+  'locataire : aucune exception d''export'
+);
+select set_config('request.jwt.claims', '', true);
 select set_config('request.jwt.claim.sub', 'd0000000-0000-4000-8000-000000000001', true);
 
 select * from finish();

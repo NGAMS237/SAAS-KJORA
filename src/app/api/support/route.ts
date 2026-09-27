@@ -50,7 +50,8 @@ export async function POST(request: Request) {
   }
 
   // L'organisation et le rôle proviennent du contexte serveur, jamais du client.
-  const context = await loadAnyMembershipOrganization();
+  const requestedOrganizationId = typeof body.organizationId === "string" ? body.organizationId : null;
+  const context = await loadAnyMembershipOrganization(requestedOrganizationId);
   const active = context.organization;
   if (!active) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });

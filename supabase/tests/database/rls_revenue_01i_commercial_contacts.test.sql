@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(24);
 
 -- =============================================================================
 -- REVENUE-LAUNCH-01 — Sous-lot 01I — Tests RLS/RPC exécutables
@@ -10,7 +10,7 @@ select plan(17);
 --
 -- RÉELLEMENT EXÉCUTÉ (Complément REVENUE-LAUNCH-01, cluster PostgreSQL 16
 -- local éphémère avec extension pgtap réelle — jamais Supabase distant) :
--- PASS confirmé, `select plan(17)` vérifié contre le nombre réel
+-- PASS confirmé, `select plan(24)` vérifié contre le nombre réel
 -- d'assertions. Corrigé après cette exécution réelle : les lectures de
 -- vérification interne (pays, consentement, désabonnement) passaient par un
 -- `select ... from public.organization_commercial_contacts` direct, alors
@@ -109,10 +109,30 @@ select is(
   'une source de consentement hors liste fermée est refusée'
 );
 
+-- Consentement versionné et prouvé (v3) : un accord sans version connue ou
+-- sans preuve est refusé, jamais enregistré à moitié.
 select is(
-  (select public.admin_set_marketing_consent('09100000-0000-4000-8000-00000000000a', true, 'admin_manual_entry') ->> 'outcome'),
+  (select public.admin_set_marketing_consent('09100000-0000-4000-8000-00000000000a', true, 'admin_manual_entry', 'marketing-v0', 'Accord écrit reçu par courriel') ->> 'outcome'),
+  'invalid_consent_version',
+  'un accord avec une version de texte inconnue est refusé'
+);
+
+select is(
+  (select public.admin_set_marketing_consent('09100000-0000-4000-8000-00000000000a', true, 'admin_manual_entry', 'kjora-marketing-v1', null) ->> 'outcome'),
+  'consent_evidence_required',
+  'un accord sans preuve est refusé'
+);
+
+select is(
+  (select public.admin_set_marketing_consent('09100000-0000-4000-8000-00000000000a', true, 'admin_manual_entry', 'kjora-marketing-v1', 'Accord écrit reçu par courriel le 2026-09-27') ->> 'outcome'),
   'consent_updated',
-  'admin_set_marketing_consent enregistre un accord valide'
+  'admin_set_marketing_consent enregistre un accord valide (version + preuve)'
+);
+
+select is(
+  (select consent_version from public.admin_list_commercial_contacts_for_export() where organization_name = 'REVENUE-01I Org A'),
+  'kjora-marketing-v1',
+  'la version du texte de consentement est exposée dans l''export'
 );
 
 select is(
@@ -132,6 +152,34 @@ select is(
   'consent_updated',
   'admin_set_marketing_consent enregistre un désabonnement'
 );
+
+-- Journal immuable : chaque décision (y compris le retrait) est une ligne,
+-- dans l'ordre, jamais réécrite.
+select is(
+  (select count(*)::int from public.admin_list_marketing_consent_history('09100000-0000-4000-8000-00000000000a')),
+  2,
+  'l''historique contient les deux décisions (accord puis retrait), jamais écrasées'
+);
+
+select is(
+  (select consent from public.admin_list_marketing_consent_history('09100000-0000-4000-8000-00000000000a') limit 1),
+  false,
+  'la décision la plus récente de l''historique est le retrait'
+);
+
+reset role;
+select throws_ok(
+  $$update public.organization_marketing_consent_events set consent = true where organization_id = '09100000-0000-4000-8000-00000000000a'$$,
+  '42501', null,
+  'une décision de consentement ne peut jamais être modifiée, même par le propriétaire des tables'
+);
+select throws_ok(
+  $$delete from public.organization_marketing_consent_events where organization_id = '09100000-0000-4000-8000-00000000000a'$$,
+  '42501', null,
+  'une décision de consentement ne peut jamais être supprimée'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '09000000-0000-4000-8000-000000000001', true);
 
 -- Deux assertions distinctes plutôt qu'un tuple stringifié : `is()` ne sait
 -- pas comparer un type composite anonyme (row(...)) directement à un texte.

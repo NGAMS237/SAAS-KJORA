@@ -248,6 +248,8 @@ export type AdminCopy = {
   financeSectionManualInvoicing: string;
   financeManualInvoicesDueXaf: string;
   financeManualInvoicesOverdueXaf: string;
+  financeArchivedOpenInvoicesXaf: string;
+  financeExcludedArchivedSubscriptions: string;
   financeManualPaymentsConfirmed: string;
   financeManualPaymentsCollectedXaf: string;
   financeManualPaymentsCollectedCad: string;
@@ -307,6 +309,11 @@ export type AdminCopy = {
   colMarketingEligible: string;
   marketingEligibleYes: string;
   marketingEligibleNo: string;
+  // REVENUE-LAUNCH-01 v3 — consentement versionné et prouvé
+  consentVersionLabel: (version: string) => string;
+  consentEvidenceLabel: string;
+  consentEvidenceOptionalLabel: string;
+  consentEvidenceRequired: string;
   actionEditContact: string;
   actionGrantConsent: string;
   actionUnsubscribe: string;
@@ -555,6 +562,9 @@ const fr: AdminCopy = {
     invalid_consent: "Valeur de consentement invalide.",
     invalid_source: "Source de consentement invalide.",
     consent_updated: "Consentement marketing mis à jour.",
+    invalid_consent_version: "Version du texte de consentement inconnue.",
+    consent_evidence_required: "Un accord exige une preuve décrite.",
+    invalid_consent_evidence: "Preuve trop longue (500 caractères maximum).",
   },
 
   navFinances: "Finances",
@@ -624,6 +634,8 @@ const fr: AdminCopy = {
   financeSectionManualInvoicing: "Facturation manuelle Afrique & rappels",
   financeManualInvoicesDueXaf: "Factures dues (XAF)",
   financeManualInvoicesOverdueXaf: "Factures en retard (XAF)",
+  financeArchivedOpenInvoicesXaf: "Factures ouvertes d'Organizations archivées (XAF, hors encours)",
+  financeExcludedArchivedSubscriptions: "Abonnements d'Organizations archivées exclus du revenu attendu",
   financeManualPaymentsConfirmed: "Paiements manuels confirmés (période)",
   financeManualPaymentsCollectedXaf: "Encaissé facturation manuelle (XAF)",
   financeManualPaymentsCollectedCad: "Encaissé facturation manuelle (CAD)",
@@ -654,7 +666,7 @@ const fr: AdminCopy = {
   actionReactivateMember: "Réactiver",
   actionTransferOwnership: "Transférer la propriété",
   memberDisableConfirmText:
-    "Ce membre sera désactivé : il perd immédiatement tout accès (une tentative de révocation de ses sessions actives sera effectuée, sans garantie).",
+    "Ce membre sera désactivé dans cette Organization uniquement : il perd immédiatement tout accès à celle-ci. Son compte et ses accès aux autres Organizations ne sont pas modifiés.",
   memberReactivateConfirmText: "Ce membre redevient actif et retrouve ses accès habituels.",
   transferOwnershipConfirmText:
     "La propriété de cette Organization sera transférée à ce membre. Le propriétaire actuel devient gestionnaire.",
@@ -717,6 +729,10 @@ const fr: AdminCopy = {
   colMarketingEligible: "Éligible marketing",
   marketingEligibleYes: "Éligible",
   marketingEligibleNo: "Non éligible",
+  consentVersionLabel: (version) => `Version du texte de consentement : ${version}`,
+  consentEvidenceLabel: "Preuve du consentement (obligatoire) — canal, date, référence du formulaire signé…",
+  consentEvidenceOptionalLabel: "Précision sur le retrait (facultatif)",
+  consentEvidenceRequired: "Décrivez la preuve du consentement (au moins 3 caractères).",
   actionEditContact: "Modifier la fiche",
   actionGrantConsent: "Marquer consentant",
   actionUnsubscribe: "Désabonner",
@@ -966,6 +982,9 @@ const en: AdminCopy = {
     invalid_consent: "Invalid consent value.",
     invalid_source: "Invalid consent source.",
     consent_updated: "Marketing consent updated.",
+    invalid_consent_version: "Unknown consent wording version.",
+    consent_evidence_required: "An opt-in requires a described proof.",
+    invalid_consent_evidence: "Proof too long (500 characters maximum).",
   },
 
   navFinances: "Finances",
@@ -1035,6 +1054,8 @@ const en: AdminCopy = {
   financeSectionManualInvoicing: "Manual Africa invoicing & reminders",
   financeManualInvoicesDueXaf: "Invoices due (XAF)",
   financeManualInvoicesOverdueXaf: "Overdue invoices (XAF)",
+  financeArchivedOpenInvoicesXaf: "Open invoices of archived Organizations (XAF, excluded)",
+  financeExcludedArchivedSubscriptions: "Archived Organizations' subscriptions excluded from expected revenue",
   financeManualPaymentsConfirmed: "Manual payments confirmed (period)",
   financeManualPaymentsCollectedXaf: "Collected via manual invoicing (XAF)",
   financeManualPaymentsCollectedCad: "Collected via manual invoicing (CAD)",
@@ -1065,7 +1086,7 @@ const en: AdminCopy = {
   actionReactivateMember: "Reactivate",
   actionTransferOwnership: "Transfer ownership",
   memberDisableConfirmText:
-    "This member will be disabled: they immediately lose all access (an attempt will be made to revoke their active sessions, without guarantee).",
+    "This member will be disabled in this Organization only: they immediately lose all access to it. Their account and access to other Organizations are unchanged.",
   memberReactivateConfirmText: "This member becomes active again and regains their usual access.",
   transferOwnershipConfirmText:
     "Ownership of this Organization will be transferred to this member. The current owner becomes a manager.",
@@ -1128,6 +1149,10 @@ const en: AdminCopy = {
   colMarketingEligible: "Marketing eligible",
   marketingEligibleYes: "Eligible",
   marketingEligibleNo: "Not eligible",
+  consentVersionLabel: (version) => `Consent wording version: ${version}`,
+  consentEvidenceLabel: "Proof of consent (required) — channel, date, signed form reference…",
+  consentEvidenceOptionalLabel: "Note about the withdrawal (optional)",
+  consentEvidenceRequired: "Describe the proof of consent (at least 3 characters).",
   actionEditContact: "Edit record",
   actionGrantConsent: "Mark as opted in",
   actionUnsubscribe: "Unsubscribe",

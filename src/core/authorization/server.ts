@@ -93,9 +93,17 @@ export async function isOrganizationBillingBlocked(organizationId: string): Prom
 // ALIGN-03 ci-dessus : celui-ci laisse délibérément `billing.*` accessible
 // pour permettre à l'Organization de régulariser elle-même sa situation ; une
 // suspension Admin est un gel décidé par la plateforme (abus, litige…), donc
-// n'accorde aucune exception — y compris pour la facturation. La colonne
-// `status` est déjà lisible par `authenticated` (lot_5b) : aucun nouveau
-// grant n'est nécessaire ici.
+// ne rouvre aucune capacité métier. Les seules exceptions décidées (lecture
+// de facturation, export lecture seule du seul Owner) passent par des
+// chemins dédiés et étroits (private.has_restricted_capability), jamais par
+// cette garde. La colonne `status` est déjà lisible par `authenticated`
+// (lot_5b) : aucun nouveau grant n'est nécessaire ici.
+//
+// FAIL-CLOSED (REVENUE-LAUNCH-01 v3) : une erreur de lecture, une ligne
+// absente ou un statut inattendu refusent l'accès. Une garde d'autorisation
+// ne doit jamais s'ouvrir parce qu'elle n'a pas pu vérifier — la base
+// (has_capability) reste une seconde barrière, pas une excuse pour ouvrir
+// la première.
 export async function isOrganizationActive(organizationId: string): Promise<boolean> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -103,9 +111,7 @@ export async function isOrganizationActive(organizationId: string): Promise<bool
     .select("status")
     .eq("id", organizationId)
     .maybeSingle();
-  // En cas d'erreur, ne pas bloquer : private.has_capability (base, REVENUE-01H)
-  // reste la barrière ultime, comme pour isOrganizationBillingBlocked ci-dessus.
-  if (error || !data) return true;
+  if (error || !data) return false;
   return data.status === "active";
 }
 

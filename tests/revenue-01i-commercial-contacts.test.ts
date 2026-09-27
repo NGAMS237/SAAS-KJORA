@@ -92,11 +92,20 @@ test("contrainte : consentement et désabonnement sont mutuellement exclusifs", 
   );
 });
 
-test("contrainte : marketing_consent_at et consent_source sont toujours renseignés ensemble, jamais l'un sans l'autre", () => {
+test("contrainte : horodatage, source, version et décision justificative sont renseignés ensemble (v3)", () => {
   assert.match(
     MIGRATION_CLEAN,
-    /constraint organization_commercial_contacts_consent_pair check \(\s*\(marketing_consent_at is null\) = \(consent_source is null\)\s*\)/,
+    /constraint organization_commercial_contacts_consent_pair check \(\s*\(marketing_consent_at is null\) = \(consent_source is null\)\s*and \(marketing_consent_at is null\) = \(consent_version is null\)\s*and \(marketing_consent_at is null\) = \(consent_event_id is null\)\s*\)/,
   );
+});
+
+test("consentement versionné et auditable : journal append-only avec source, version, preuve, auteur (v3)", () => {
+  assert.match(MIGRATION_CLEAN, /create table public\.organization_marketing_consent_events \(/);
+  assert.match(MIGRATION_CLEAN, /consent_version text not null check \(consent_version in \('kjora-marketing-v1'\)\)/);
+  assert.match(MIGRATION_CLEAN, /constraint organization_marketing_consent_events_grant_has_evidence check \(\s*not consent or evidence is not null\s*\)/);
+  assert.match(MIGRATION_CLEAN, /recorded_by uuid not null references auth\.users \(id\)/);
+  assert.match(MIGRATION_CLEAN, /create trigger organization_marketing_consent_events_append_only\s*\nbefore update or delete on public\.organization_marketing_consent_events/);
+  assert.match(MIGRATION_CLEAN, /revoke all on public\.organization_marketing_consent_events from anon, authenticated/);
 });
 
 test("organization_commercial_contacts : RLS activée, aucun accès direct accordé, aucune policy (même schéma que admin_organization_notes)", () => {
@@ -116,8 +125,13 @@ test("organization_commercial_contacts réutilise le trigger touch_updated_at (l
 });
 
 test("aucun trigger ne crée automatiquement une fiche contact (jamais d'inscription automatique à une newsletter)", () => {
-  const triggerCount = (MIGRATION_CLEAN.match(/create trigger/gi) ?? []).length;
-  assert.equal(triggerCount, 1, "un seul trigger attendu (touch_updated_at), jamais un trigger de création automatique");
+  // Deux triggers seulement : touch_updated_at et la protection append-only du
+  // journal de consentement (v3) — jamais un trigger de création automatique.
+  const triggers = MIGRATION_CLEAN.match(/create trigger \w+/gi) ?? [];
+  assert.deepEqual(triggers, [
+    "create trigger organization_commercial_contacts_touch_updated_at",
+    "create trigger organization_marketing_consent_events_append_only",
+  ]);
   assert.doesNotMatch(MIGRATION_CLEAN, /after insert on public\.organizations/);
   assert.doesNotMatch(MIGRATION_CLEAN, /after insert on public\.memberships/);
 });
@@ -175,20 +189,26 @@ test("admin_upsert_organization_contact garde par assert_platform_admin, valide 
   assert.match(body, /private\.write_administrative_audit\(\s*target_organization_id, 'contact\.updated'/);
 });
 
-test("admin_set_marketing_consent exige une fiche existante, valide la source, met à jour horodatage/désabonnement en une seule RPC", () => {
+test("admin_set_marketing_consent exige une fiche, une source, une version et une preuve pour un accord ; écrit une décision immuable (v3)", () => {
   const start = MIGRATION_CLEAN.indexOf("create or replace function public.admin_set_marketing_consent(");
   assert.notEqual(start, -1);
   const body = MIGRATION_CLEAN.slice(start, MIGRATION_CLEAN.indexOf("$$;", start) + 3);
   assert.match(body, /perform private\.assert_platform_admin\(\);/);
   assert.match(body, /security definer/);
   assert.match(body, /set search_path = ''/);
-  for (const outcome of ["contact_not_found", "invalid_consent", "invalid_source", "consent_updated"]) {
+  for (const outcome of [
+    "contact_not_found", "invalid_consent", "invalid_source", "invalid_consent_version",
+    "consent_evidence_required", "invalid_consent_evidence", "consent_updated",
+  ]) {
     assert.ok(body.includes(`'${outcome}'`), `issue manquante : ${outcome}`);
   }
-  // Une seule RPC gère les deux sens de la décision (accord et retrait).
-  assert.match(body, /marketing_consent_at = now\(\)/);
-  assert.match(body, /unsubscribed_at = case when p_consent then null else now\(\) end/);
+  assert.match(body, /insert into public\.organization_marketing_consent_events/);
+  assert.match(body, /consent_event_id = new_event_id/);
+  assert.match(body, /unsubscribed_at = case when p_consent then null else decided_at end/);
   assert.match(body, /private\.write_administrative_audit\(\s*target_organization_id, 'contact\.marketing_consent_changed'/);
+  // La preuve (texte libre) n'est jamais recopiée dans l'historique administratif.
+  const auditCall = body.slice(body.indexOf("private.write_administrative_audit("));
+  assert.doesNotMatch(auditCall.slice(0, auditCall.indexOf(");")), /evidence/);
 });
 
 test("aucune suppression de donnée dans ce lot : pas de `delete from` dans la migration 01I", () => {
@@ -234,12 +254,13 @@ test("l'export ne réutilise jamais le couple RPC/table EXPORT-01 (data_exports,
 // 7. Droits d'exécution
 // ---------------------------------------------------------------------------
 
-test("les quatre nouvelles RPC sont révoquées de public/anon et accordées à authenticated", () => {
+test("les cinq nouvelles RPC sont révoquées de public/anon et accordées à authenticated", () => {
   const ALL_NEW_RPCS = [
     "admin_upsert_organization_contact(uuid, text, text, text)",
-    "admin_set_marketing_consent(uuid, boolean, text)",
+    "admin_set_marketing_consent(uuid, boolean, text, text, text)",
     "admin_list_commercial_contacts(integer, integer, text)",
     "admin_list_commercial_contacts_for_export()",
+    "admin_list_marketing_consent_history(uuid)",
   ];
   for (const signature of ALL_NEW_RPCS) {
     const fnName = signature.split("(")[0];

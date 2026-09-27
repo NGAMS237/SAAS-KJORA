@@ -6,7 +6,19 @@ import { SUPPORT_CATEGORIES, SUPPORT_CATEGORY_LABELS, type SupportCategory } fro
 
 type Etat = "saisie" | "envoi" | "recu";
 
-export function SupportForm({ contactEmail }: { contactEmail: string | null }) {
+/**
+ * `organizationId` (facultatif) : Organization à laquelle rattacher la
+ * demande — utilisé par le contexte limité d'une Organization suspendue ou
+ * archivée. Jamais une autorisation : le serveur ne le retient que si
+ * l'utilisateur en est membre actif (voir /api/support).
+ */
+export function SupportForm({
+  contactEmail,
+  organizationId,
+}: {
+  contactEmail: string | null;
+  organizationId?: string;
+}) {
   const [etat, setEtat] = useState<Etat>("saisie");
   const [category, setCategory] = useState<SupportCategory>("connexion");
   const [message, setMessage] = useState("");
@@ -20,7 +32,7 @@ export function SupportForm({ contactEmail }: { contactEmail: string | null }) {
     const response = await fetch("/api/support", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ category, message: message.trim() }),
+      body: JSON.stringify({ category, message: message.trim(), ...(organizationId ? { organizationId } : {}) }),
     });
 
     if (response.ok) {

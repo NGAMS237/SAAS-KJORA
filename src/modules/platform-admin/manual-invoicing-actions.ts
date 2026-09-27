@@ -6,9 +6,15 @@
 // Même double barrière que commercial-ops-actions.ts (ADMIN-BILLING-OPS-01) :
 // vérification platform_admin côté serveur avant tout appel RPC, puis la RPC
 // la revérifie elle-même. error.message n'est jamais renvoyé tel quel.
+//
+// Idempotence réelle (v3) : le jeton est OBLIGATOIRE et fourni par le
+// formulaire (newManualInvoicingIdempotencyKeyAction, généré une fois à
+// l'ouverture). Il n'est plus jamais remplacé par un jeton aléatoire à chaque
+// appel — ce qui rendait toute resoumission non idempotente.
 // =============================================================================
 
 import { randomUUID } from "node:crypto";
+import { isValidManualBillingIdempotencyKey } from "@/core/billing/manual-billing-outcomes";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -61,7 +67,11 @@ export async function issueManualInvoiceAction(
   periodStart: string,
   periodEnd: string,
   idempotencyKey: string,
+  dueOn: string | null = null,
 ): Promise<ManualInvoicingActionResult> {
+  if (!isValidManualBillingIdempotencyKey(idempotencyKey)) {
+    return { ok: true, outcome: "invalid_idempotency_key" };
+  }
   return callAdminInvoicingRpc(
     "admin_issue_manual_invoice",
     {
@@ -70,7 +80,8 @@ export async function issueManualInvoiceAction(
       p_cycle: cycle,
       p_period_start: periodStart,
       p_period_end: periodEnd,
-      p_idempotency_key: idempotencyKey || randomUUID(),
+      p_idempotency_key: idempotencyKey,
+      p_due_on: dueOn,
     },
     organizationId,
   );
@@ -86,6 +97,9 @@ export async function confirmManualInvoicePaymentAction(
   note: string,
   idempotencyKey: string,
 ): Promise<ManualInvoicingActionResult> {
+  if (!isValidManualBillingIdempotencyKey(idempotencyKey)) {
+    return { ok: true, outcome: "invalid_idempotency_key" };
+  }
   return callAdminInvoicingRpc(
     "admin_confirm_manual_invoice_payment",
     {
@@ -94,7 +108,7 @@ export async function confirmManualInvoicePaymentAction(
       p_amount_minor: amountMinor,
       p_manual_reference: manualReference,
       p_note: note,
-      p_idempotency_key: idempotencyKey || randomUUID(),
+      p_idempotency_key: idempotencyKey,
     },
     organizationId,
   );

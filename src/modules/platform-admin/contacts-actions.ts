@@ -60,14 +60,24 @@ export async function upsertOrganizationContactAction(
   });
 }
 
+/**
+ * Enregistre une décision de consentement marketing (v3 : versionnée et
+ * prouvée). Chaque appel écrit une décision IMMUABLE côté base
+ * (organization_marketing_consent_events). Un accord exige la version du
+ * texte présenté et une preuve ; un retrait n'est jamais entravé.
+ */
 export async function setMarketingConsentAction(
   organizationId: string,
   consent: boolean,
   source: string,
+  consentVersion: string,
+  evidence: string | null,
 ): Promise<ContactActionResult> {
   return callAdminContactRpc("admin_set_marketing_consent", {
     target_organization_id: organizationId,
     p_consent: consent,
     p_source: source,
+    p_consent_version: consentVersion,
+    p_evidence: evidence && evidence.trim() ? evidence.trim() : null,
   });
 }

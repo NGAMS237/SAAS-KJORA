@@ -87,21 +87,34 @@ begin;
 --     écran cassé, mais perd tout accès aux capacités métier (property.*,
 --     tenant.*, lease.*, billing.*, member.*…) tant qu'elle n'est pas
 --     réactivée.
---   • Non exécutable localement (pas de Postgres éphémère dans ce bac à
---     sable) : ce changement est livré comme « terminé, non vérifié
---     empiriquement » dans le rapport final, comme le reste de ce mandat.
+--   • Vérifié par exécution réelle (PostgreSQL 16 + pgtap, cluster local
+--     éphémère, jamais Supabase distant) : voir
+--     supabase/tests/database/rls_revenue_01h_admin_lifecycle.test.sql et
+--     rls_revenue_lifecycle_matrix.test.sql.
+--
+-- Exceptions ÉTROITES d'une Organization SUSPENDUE (décision REVENUE-LAUNCH-01
+-- v3), jamais par has_capability — voir private.has_restricted_capability
+-- (REVENUE-01B, section 0) :
+--   • facturation en lecture (billing.view) pour régulariser ;
+--   • export en lecture seule pour le SEUL Owner actif (section 13) — CSV/XLSX
+--     uniquement, jamais le ZIP (qui matérialise des PDF, donc écrit) ;
+--   • aide/support et identité minimale (statut, nom) : déjà servies par
+--     is_active_member (lot_5b) et par list_my_restricted_organizations
+--     (section 12), qui n'expose JAMAIS status_reason ni une note Admin.
+-- Organization ARCHIVÉE : aucune exception (restauration Admin préalable).
+-- Portail locataire : fermé pour une Organization suspendue ou archivée
+-- (section 14) — aucune exception pour les locataires.
+--
+-- Sessions : ce lot ne touche JAMAIS auth.sessions (aucune suppression,
+-- aucune écriture dans le schéma interne de Supabase Auth). La désactivation
+-- d'un membre coupe l'accès immédiatement par memberships.status = 'revoked'
+-- (has_capability / is_active_member lisent ce statut à chaque requête),
+-- indépendamment de la validité d'un jeton déjà émis ; une révocation de
+-- session, si elle devient nécessaire, relève de l'API Admin Auth depuis du
+-- code serveur. Désactiver un membre n'affecte ni son compte auth.users ni
+-- ses memberships dans d'autres Organizations.
 --
 -- Volontairement DIFFÉRÉ, hors périmètre de ce sous-lot :
---   • Aucune UI self-service (Owner/locataire) n'est modifiée pour afficher
---     un message dédié « Organization suspendue » — seul le statut brut,
---     déjà lisible par `authenticated` depuis lot_5b, change de valeur.
---   • La révocation de session (auth.sessions) reste un « best effort » :
---     jamais testée contre un Postgres réel dans ce bac à sable, elle échoue
---     silencieusement (sans jamais bloquer la désactivation du membre) si le
---     rôle propriétaire des fonctions n'a pas les privilèges nécessaires sur
---     le schéma `auth`. Le cœur de la désactivation — memberships.status
---     ='revoked', qui coupe immédiatement has_capability — ne dépend jamais
---     de la réussite de cette étape annexe.
 --   • Restaurer une Organization archivée la ramène toujours à 'active'
 --     (jamais à 'suspended', même si c'était son statut juste avant
 --     l'archivage) : une simplification délibérée — un Admin qui veut la
@@ -203,31 +216,8 @@ as $$
 $$;
 
 -- -----------------------------------------------------------------------------
--- 5. Révocation de session — best effort, jamais bloquant
+-- 5. Sessions — aucune écriture dans le schéma auth (voir l'en-tête)
 -- -----------------------------------------------------------------------------
--- Non vérifiable localement (pas de Postgres exécutable dans ce bac à sable) :
--- si le rôle propriétaire de cette fonction n'a pas les privilèges nécessaires
--- sur le schéma `auth`, l'exception est absorbée et la fonction renvoie
--- simplement `false` — la désactivation du membre (memberships.status
--- ='revoked', qui coupe immédiatement has_capability) n'en dépend jamais.
-
-create or replace function private.best_effort_revoke_sessions(target_user_id uuid)
-returns boolean
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  begin
-    delete from auth.sessions where user_id = target_user_id;
-    return true;
-  exception when others then
-    return false;
-  end;
-end;
-$$;
-
-revoke all on function private.best_effort_revoke_sessions(uuid) from public, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 6. RPC Admin — cycle de vie Organization
@@ -434,7 +424,6 @@ set search_path = ''
 as $$
 declare
   membership public.memberships%rowtype;
-  sessions_revoked boolean;
 begin
   perform private.assert_platform_admin();
 
@@ -467,17 +456,17 @@ begin
     return jsonb_build_object('outcome', 'owner_transfer_required');
   end if;
 
+  -- Une seule ligne memberships (cette Organization) : jamais le compte
+  -- auth.users, jamais les memberships de l'utilisateur ailleurs, jamais le
+  -- schéma auth.
   update public.memberships set status = 'revoked', revoked_at = now() where id = membership.id;
-
-  -- Best effort, jamais bloquant — voir §5 et la note en tête de fichier.
-  sessions_revoked := private.best_effort_revoke_sessions(membership.user_id);
 
   perform private.write_administrative_audit(
     target_organization_id, 'member.disabled_by_admin', membership.user_id, membership.id, null,
-    jsonb_build_object('role', membership.role, 'reason', trim(p_reason), 'sessionsRevoked', sessions_revoked)
+    jsonb_build_object('role', membership.role, 'reason', trim(p_reason))
   );
 
-  return jsonb_build_object('outcome', 'disabled', 'sessionsRevoked', sessions_revoked);
+  return jsonb_build_object('outcome', 'disabled');
 end;
 $$;
 
@@ -758,5 +747,531 @@ grant execute on function public.admin_add_organization_note(uuid, text) to auth
 grant execute on function public.admin_list_organization_members(uuid) to authenticated;
 grant execute on function public.admin_list_administrative_audit(uuid, integer) to authenticated;
 grant execute on function public.admin_list_organization_notes(uuid) to authenticated;
+
+
+-- -----------------------------------------------------------------------------
+-- 11. Console Admin — compteurs et fiche Organization (versions finales)
+-- -----------------------------------------------------------------------------
+-- Fonctions ADMIN-01.1 / ADMIN-BILLING-OPS-01 remplacées UNE seule fois dans
+-- toute la série REVENUE-LAUNCH-01, ici, là où le statut 'archived' naît :
+--   • admin_platform_counters : + organizations_archived (total = active +
+--     suspended + archived, jamais une Organization perdue en silence) et
+--     organizations_requiring_provider_action ;
+--   • admin_get_organization_detail : + providerActionRequired — signal
+--     d'incohérence (Organization gelée, abonnement fournisseur non annulé),
+--     jamais une annulation automatique (aucun appel fournisseur réel).
+
+create or replace function public.admin_platform_counters()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  perform private.assert_platform_admin();
+
+  select jsonb_build_object(
+    'organizations_total',     (select count(*) from public.organizations),
+    'organizations_active',    (select count(*) from public.organizations where status = 'active'),
+    'organizations_suspended', (select count(*) from public.organizations where status = 'suspended'),
+    -- REVENUE-LAUNCH-01 : sans cette clé, une Organization
+    -- archivée restait comptée dans organizations_total mais dans AUCUNE
+    -- ventilation par statut — total = active + suspended + archived est
+    -- désormais vérifiable, et vérifié par pgTAP (§8).
+    'organizations_archived',  (select count(*) from public.organizations where status = 'archived'),
+
+    -- Abonnements RÉELLEMENT enregistrés uniquement (organization_subscriptions).
+    'subscriptions_free', (select count(*) from public.organization_subscriptions where plan = 'decouverte'),
+    'subscriptions_paid', (select count(*) from public.organization_subscriptions where plan <> 'decouverte'),
+
+    -- Ni gratuite ni payante : aucune ligne de facturation n'existe pour elle.
+    'organizations_without_subscription', (
+      select count(*) from public.organizations o
+      where not exists (
+        select 1 from public.organization_subscriptions s where s.organization_id = o.id
+      )
+    ),
+
+    -- Incohérence RÉELLEMENT mesurée : une Organization a une ligne
+    -- organization_subscriptions ET son classement gratuit/payant n'y
+    -- correspond pas à celui de son forfait effectif (organization_plans).
+    'plan_billing_mismatches', (
+      select count(*)
+      from public.organization_subscriptions s
+      join public.organization_plans p on p.organization_id = s.organization_id
+      where (p.plan = 'decouverte') <> (s.plan = 'decouverte')
+    ),
+
+    -- REVENUE-LAUNCH-01 : Organizations suspendues/archivées
+    -- dont l'abonnement est encore lié à un provider réel non annulé — jamais
+    -- annulé automatiquement (aucun appel fournisseur réel n'est autorisé),
+    -- ce compteur EXPOSE l'incohérence pour une action manuelle. Un abonnement
+    -- 'free' n'a jamais de provider (contrainte subscription_free_has_no_provider,
+    -- ALIGN-03) : sans intérêt ici par construction.
+    'organizations_requiring_provider_action', (
+      select count(*)
+      from public.organizations o
+      join public.organization_subscriptions s on s.organization_id = o.id
+      where o.status <> 'active'
+        and s.provider is not null
+        and s.status <> 'cancelled'
+    ),
+
+    'subscriptions_by_status', coalesce((
+      select jsonb_object_agg(status, n)
+      from (
+        select status, count(*) as n
+        from public.organization_subscriptions
+        group by status
+      ) s
+    ), '{}'::jsonb),
+    'subscriptions_by_plan', coalesce((
+      select jsonb_object_agg(plan, n)
+      from (
+        select plan, count(*) as n
+        from public.organization_subscriptions
+        group by plan
+      ) p
+    ), '{}'::jsonb),
+    'generated_at', now()
+  )
+  into result;
+
+  return result;
+end;
+$$;
+
+revoke all on function public.admin_platform_counters() from public, anon;
+grant execute on function public.admin_platform_counters() to authenticated;
+
+create or replace function public.admin_get_organization_detail(
+  target_organization_id uuid
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  org      public.organizations;
+  profile  public.organization_profiles;
+  sub      public.organization_subscriptions;
+  eff_plan text;
+  owner_email text;
+  active_members int;
+  properties_count int;
+  units_count int;
+  active_intervention jsonb;
+  recent_events jsonb;
+  fallback_plan text;
+  mismatch boolean;
+  provider_action_required boolean;
+begin
+  perform private.assert_platform_admin();
+
+  select * into org from public.organizations where id = target_organization_id;
+  if org.id is null then
+    return jsonb_build_object('found', false);
+  end if;
+
+  select * into profile from public.organization_profiles where organization_id = target_organization_id;
+  select * into sub from public.organization_subscriptions where organization_id = target_organization_id;
+
+  select coalesce(op.plan, 'decouverte') into eff_plan
+  from public.organization_plans op where op.organization_id = target_organization_id;
+  eff_plan := coalesce(eff_plan, 'decouverte');
+
+  select u.email::text into owner_email
+  from public.memberships m
+  join auth.users u on u.id = m.user_id
+  where m.organization_id = target_organization_id
+    and m.role = 'organization_owner' and m.status = 'active'
+  order by m.created_at asc
+  limit 1;
+
+  select count(*) into active_members
+  from public.memberships where organization_id = target_organization_id and status = 'active';
+
+  select count(*) into properties_count
+  from public.properties where organization_id = target_organization_id and status = 'active';
+
+  select count(*) into units_count
+  from public.units where organization_id = target_organization_id and status = 'active';
+
+  select jsonb_build_object(
+    'interventionId', ci.id,
+    'interventionType', ci.intervention_type,
+    'reasonCode', ci.reason_code,
+    'adminNote', ci.admin_note,
+    'grantedPlan', ci.granted_plan,
+    'startsOn', ci.starts_on,
+    'endsOn', ci.ends_on,
+    'currency', ci.currency,
+    'amountMinor', ci.amount_minor,
+    'manualReference', ci.manual_reference,
+    'createdByEmail', (select email::text from auth.users where id = ci.created_by),
+    'createdAt', ci.created_at,
+    'extensionCount', ci.extension_count,
+    'effectivelyExpired', (ci.ends_on is not null and ci.ends_on < current_date)
+  )
+  into active_intervention
+  from public.commercial_interventions ci
+  where ci.organization_id = target_organization_id and ci.status = 'active'
+  order by ci.created_at desc
+  limit 1;
+
+  select coalesce(jsonb_agg(row_to_json(e)), '[]'::jsonb) into recent_events
+  from (
+    select
+      be.id as event_id,
+      be.event_type,
+      be.payload,
+      be.created_at,
+      u.email::text as actor_email
+    from public.billing_events be
+    left join auth.users u on u.id = be.actor_user_id
+    where be.organization_id = target_organization_id
+      and be.event_type like 'admin_commercial_%'
+    order by be.created_at desc
+    limit 20
+  ) e;
+
+  fallback_plan := coalesce(sub.plan, 'decouverte');
+  mismatch := (eff_plan <> fallback_plan) and (active_intervention is null);
+
+  -- REVENUE-LAUNCH-01 : signal d'incohérence, jamais une
+  -- annulation automatique. Vrai uniquement si l'Organization est
+  -- suspendue/archivée ET que son abonnement est encore lié à un provider réel
+  -- non annulé (voir admin_platform_counters, même formule).
+  provider_action_required := org.status <> 'active'
+    and sub.provider is not null
+    and sub.status <> 'cancelled';
+
+  return jsonb_build_object(
+    'found', true,
+    'organizationId', org.id,
+    'name', coalesce(profile.name, ''),
+    'status', org.status,
+    'createdAt', org.created_at,
+    'ownerEmail', owner_email,
+    'activeMemberCount', active_members,
+    'propertiesCount', properties_count,
+    'unitsCount', units_count,
+    'effectivePlan', eff_plan,
+    'subscription', case when sub.organization_id is null then
+      jsonb_build_object('exists', false, 'status', 'free', 'plan', 'decouverte',
+        'billingCycle', 'monthly', 'currency', 'XAF', 'provider', null)
+    else
+      jsonb_build_object(
+        'exists', true,
+        'status', sub.status,
+        'plan', sub.plan,
+        'billingCycle', sub.billing_cycle,
+        'currency', sub.currency,
+        'currentPeriodEnd', sub.current_period_end,
+        'renewalDate', sub.renewal_date,
+        'provider', sub.provider)
+    end,
+    'planBillingMismatch', mismatch,
+    'providerActionRequired', provider_action_required,
+    'activeIntervention', active_intervention,
+    'recentAdminEvents', recent_events
+  );
+end;
+$$;
+
+revoke all on function public.admin_get_organization_detail(uuid) from public, anon;
+grant execute on function public.admin_get_organization_detail(uuid) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 12. Contexte limité — Organizations suspendues/archivées de l'appelant
+-- -----------------------------------------------------------------------------
+-- Sert l'écran « Organization suspendue » : identité minimale (nom), statut
+-- et droits restreints effectifs. Ne renvoie JAMAIS status_reason, une note
+-- Admin, un auteur ou une date d'action Admin. Uniquement les appartenances
+-- ACTIVES de l'appelant lui-même (aucun paramètre : impossible de sonder une
+-- autre Organization).
+
+create or replace function public.list_my_restricted_organizations()
+returns table (
+  organization_id uuid,
+  organization_name text,
+  organization_status text,
+  role text,
+  can_view_billing boolean,
+  can_export boolean
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select o.id,
+         coalesce(p.name, '')::text,
+         o.status::text,
+         m.role::text,
+         private.has_restricted_capability(o.id, 'billing.view'),
+         private.has_restricted_capability(o.id, 'data_export.manage')
+    from public.memberships m
+    join public.organizations o on o.id = m.organization_id
+    left join public.organization_profiles p on p.organization_id = o.id
+   where m.user_id = (select auth.uid())
+     and m.status = 'active'
+     and o.status in ('suspended', 'archived')
+   order by p.name nulls last, o.id;
+$$;
+
+revoke all on function public.list_my_restricted_organizations() from public, anon;
+grant execute on function public.list_my_restricted_organizations() to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 13. Export du propriétaire d'une Organization suspendue — lecture seule
+-- -----------------------------------------------------------------------------
+-- Politique décidée (REVENUE-LAUNCH-01 v3) :
+--   • active     : export selon les droits normaux (EXPORT-01, inchangé) ;
+--   • suspendue  : SEUL l'organization_owner actif, lecture seule, CSV/XLSX ;
+--                  collaborateurs et locataires : aucune exception ;
+--   • archivée   : aucun export self-service (restauration Admin préalable).
+--
+-- Les lectures EXPORT-01 d'une Organization active passent par la RLS de
+-- chaque table (has_capability), volontairement inchangée — elle reste
+-- fermée pour une Organization suspendue. Le propriétaire d'une Organization
+-- suspendue lit donc ses données par une RPC DÉDIÉE et nommée comme telle,
+-- export_restricted_owner_source, qui ne sert que ce cas : garde
+-- has_restricted_capability('data_export.manage') (Owner actif + statut
+-- 'suspended'), entitlement exports_standard, filtre organization_id
+-- explicite sur chaque source, aucune écriture.
+--
+-- Le ZIP (documents PDF) est refusé pour une Organization suspendue : il
+-- matérialise des PDF en stockage (écriture) — incompatible avec « strictement
+-- en lecture seule ».
+
+drop policy if exists "authorized owners read data exports" on public.data_exports;
+create policy "authorized owners read data exports"
+on public.data_exports for select to authenticated
+using ((select private.can_export_organization_data(organization_id)));
+
+create or replace function public.request_data_export(
+  target_organization_id uuid,
+  target_format text,
+  target_scope text[],
+  target_row_counts jsonb default '{}'::jsonb,
+  target_range_from date default null,
+  target_range_to date default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  required_feature text;
+  current_plan text;
+  export_id uuid;
+  org_status text;
+begin
+  if not (select private.can_export_organization_data(target_organization_id)) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  if target_format not in ('csv', 'xlsx', 'zip') then
+    raise exception 'invalid_export_format' using errcode = '22023';
+  end if;
+  select status into org_status from public.organizations where id = target_organization_id;
+  if org_status = 'suspended' and target_format = 'zip' then
+    raise exception 'export_format_unavailable_while_suspended' using errcode = '22023';
+  end if;
+  if target_scope is null or array_length(target_scope, 1) is null or array_length(target_scope, 1) > 20 then
+    raise exception 'invalid_export_scope' using errcode = '22023';
+  end if;
+  if target_range_to is not null and target_range_from is not null and target_range_to < target_range_from then
+    raise exception 'invalid_export_range' using errcode = '22023';
+  end if;
+
+  required_feature := case when target_format = 'zip' then 'exports_advanced' else 'exports_standard' end;
+  select plan into current_plan from private.get_org_plan(target_organization_id);
+  if not (select private.check_plan_feature(target_organization_id, required_feature)) then
+    raise exception 'PLAN_FEATURE_NOT_AVAILABLE' using errcode = 'P0001',
+      detail = json_build_object('plan', coalesce(current_plan, 'decouverte'), 'quota', null, 'current', 0)::text;
+  end if;
+
+  insert into public.data_exports (organization_id, requested_by, format, scope, plan_feature, row_counts, range_from, range_to)
+  values (target_organization_id, (select auth.uid()), target_format, target_scope, required_feature, coalesce(target_row_counts, '{}'::jsonb), target_range_from, target_range_to)
+  returning id into export_id;
+  return export_id;
+end;
+$$;
+
+create or replace function public.record_data_export_download(target_export_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare selected public.data_exports%rowtype;
+begin
+  select * into selected from public.data_exports where id = target_export_id;
+  if selected.id is null or not (select private.can_export_organization_data(selected.organization_id)) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  update public.data_exports
+    set downloaded_at = now(), downloaded_count = downloaded_count + 1
+    where id = target_export_id;
+end;
+$$;
+
+revoke all on function public.request_data_export(uuid, text, text[], jsonb, date, date) from public, anon;
+grant execute on function public.request_data_export(uuid, text, text[], jsonb, date, date) to authenticated;
+revoke all on function public.record_data_export_download(uuid) from public, anon;
+grant execute on function public.record_data_export_download(uuid) to authenticated;
+
+create or replace function public.export_restricted_owner_source(
+  target_organization_id uuid,
+  target_source text,
+  target_range_from date default null,
+  target_range_to date default null
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  -- Garde étroite : Owner actif d'une Organization SUSPENDUE uniquement. Une
+  -- Organization active passe par EXPORT-01 (RLS) ; une archivée n'a rien.
+  if not (select private.has_restricted_capability(target_organization_id, 'data_export.manage')) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  if not (select private.check_plan_feature(target_organization_id, 'exports_standard')) then
+    raise exception 'PLAN_FEATURE_NOT_AVAILABLE' using errcode = 'P0001',
+      detail = json_build_object('plan', null, 'quota', null, 'current', 0)::text;
+  end if;
+
+  if target_source = 'properties' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select id, name, locality, type, status, created_at
+        from public.properties where organization_id = target_organization_id) r;
+  elsif target_source = 'units' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select id, property_id, label, type, area_sqm, status, reference_rent_xaf, created_at
+        from public.units where organization_id = target_organization_id) r;
+  elsif target_source = 'tenants' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select id, full_name, phone, email, preferred_language, created_at
+        from public.tenants where organization_id = target_organization_id) r;
+  elsif target_source = 'leases' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select id, property_id, unit_id, tenant_id, status, start_date, end_date, base_rent_xaf,
+             recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, billing_frequency,
+             due_day, created_at
+        from public.leases where organization_id = target_organization_id) r;
+  elsif target_source = 'dues' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.due_date, r.id), '[]'::jsonb) into result from (
+      select id, lease_id, tenant_id, kind, reference, period_start, period_end, due_date,
+             rent_amount_xaf, recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf,
+             adjustment_direction, expected_amount_xaf, remaining_amount_xaf, derived_status, created_at
+        from public.dues_with_status
+       where organization_id = target_organization_id
+         and (target_range_from is null or due_date >= target_range_from)
+         and (target_range_to is null or due_date <= target_range_to)) r;
+  elsif target_source = 'payments' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.payment_date, r.id), '[]'::jsonb) into result from (
+      select id, lease_id, tenant_id, reference, amount_xaf, currency, payment_date, method, status, created_at
+        from public.payments
+       where organization_id = target_organization_id
+         and (target_range_from is null or payment_date >= target_range_from)
+         and (target_range_to is null or payment_date <= target_range_to)) r;
+  elsif target_source = 'payment_allocations' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select id, payment_id, due_id, lease_id, tenant_id, amount_xaf, rent_amount_xaf,
+             recurring_charges_amount_xaf, deposit_amount_xaf, adjustment_amount_xaf, created_at
+        from public.payment_allocations where organization_id = target_organization_id) r;
+  elsif target_source = 'credits' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.occurred_on, r.id), '[]'::jsonb) into result from (
+      select id, lease_id, tenant_id, entry_type, reference, occurred_on, credit_xaf, created_at
+        from public.ledger_entries
+       where organization_id = target_organization_id and credit_xaf > 0
+         and entry_type in ('opening_credit', 'payment')
+         and (target_range_from is null or occurred_on >= target_range_from)
+         and (target_range_to is null or occurred_on <= target_range_to)) r;
+  elsif target_source = 'deposit_dues' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select id, lease_id, tenant_id, deposit_amount_xaf, due_date, created_at
+        from public.dues where organization_id = target_organization_id and kind = 'deposit') r;
+  elsif target_source = 'deposit_adjustments' then
+    select coalesce(jsonb_agg(to_jsonb(r) order by r.created_at, r.id), '[]'::jsonb) into result from (
+      select a.id, a.lease_id, a.tenant_id, a.adjusted_due_id, a.adjustment_amount_xaf,
+             a.adjustment_direction, a.created_at
+        from public.dues a
+       where a.organization_id = target_organization_id and a.kind = 'adjustment'
+         and a.adjusted_due_id in (
+           select d.id from public.dues d
+            where d.organization_id = target_organization_id and d.kind = 'deposit')) r;
+  elsif target_source = 'account_statement_dues' then
+    select coalesce(jsonb_agg(to_jsonb(r)), '[]'::jsonb) into result from (
+      select lease_id, tenant_id, expected_amount_xaf, remaining_amount_xaf, derived_status
+        from public.dues_with_status
+       where organization_id = target_organization_id and kind <> 'deposit') r;
+  else
+    raise exception 'invalid_export_source' using errcode = '22023';
+  end if;
+
+  return result;
+end;
+$$;
+
+revoke all on function public.export_restricted_owner_source(uuid, text, date, date) from public, anon;
+grant execute on function public.export_restricted_owner_source(uuid, text, date, date) to authenticated;
+
+comment on function public.export_restricted_owner_source(uuid, text, date, date) is
+  'REVENUE-LAUNCH-01 v3 : lecture seule des données d''une Organization SUSPENDUE, pour son seul Owner actif (export CSV/XLSX). Jamais utilisable pour une Organization active (EXPORT-01/RLS) ni archivée.';
+
+-- -----------------------------------------------------------------------------
+-- 14. Portail locataire — fermé pour une Organization suspendue ou archivée
+-- -----------------------------------------------------------------------------
+-- private.has_active_tenant_portal_access (lot_6e) est l'unique point d'entrée
+-- de toutes les RPC du portail (accueil, échéances, paiements, documents,
+-- contrats, notifications, chemins de stockage). Y ajouter le statut de
+-- l'Organization ferme le portail uniformément — aucune exception pour les
+-- locataires — et le rouvre dès la réactivation/restauration, sans toucher à
+-- aucune donnée ni à l'accès lui-même (tenant_portal_accesses inchangé).
+
+create or replace function private.has_active_tenant_portal_access(target_access_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1
+    from public.tenant_portal_accesses a
+    join public.tenant_portal_sessions s
+      on s.organization_id = a.organization_id and s.access_id = a.id and s.tenant_id = a.tenant_id
+    join public.organizations o on o.id = a.organization_id
+    where a.id = target_access_id and a.status = 'active' and a.user_id = (select auth.uid())
+      and o.status = 'active'
+      and s.user_id = (select auth.uid()) and s.auth_session_id = (select private.current_portal_auth_session_id())
+      and s.revoked_at is null and s.expires_at > now()
+  );
+$$;
+
+-- Message clair côté portail : les Organizations dont l'espace est
+-- temporairement indisponible pour ce locataire (nom + statut uniquement,
+-- jamais un motif). Aucun paramètre : l'appelant ne voit que ses accès.
+create or replace function public.list_my_unavailable_tenant_portal_organizations()
+returns table (organization_name text, organization_status text)
+language sql stable security definer set search_path = '' as $$
+  select distinct coalesce(p.name, '')::text, o.status::text
+    from public.tenant_portal_accesses a
+    join public.organizations o on o.id = a.organization_id
+    left join public.organization_profiles p on p.organization_id = a.organization_id
+   where a.user_id = (select auth.uid()) and a.status = 'active'
+     and o.status <> 'active';
+$$;
+
+revoke all on function public.list_my_unavailable_tenant_portal_organizations() from public, anon;
+grant execute on function public.list_my_unavailable_tenant_portal_organizations() to authenticated;
 
 commit;
