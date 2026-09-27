@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { isProviderName } from "@/core/billing/provider-capabilities";
 import { getBillingProvider } from "@/core/billing/provider";
-import { isProviderConfigured, providerMode } from "@/core/billing/provider-config";
+import { isProviderConfigured, isProviderKillSwitched, providerMode } from "@/core/billing/provider-config";
 import { decideWebhook, type WebhookContext } from "@/core/billing/webhook-rules";
 
 // =============================================================================
@@ -47,6 +47,13 @@ export async function POST(
   if (!isProviderConfigured(provider)) {
     // Non configuré : on ne prétend pas traiter. 503 invite le provider à
     // rejouer plus tard plutôt qu'à considérer l'événement comme livré.
+    return NextResponse.json({ received: false }, { status: 503 });
+  }
+  if (isProviderKillSwitched(provider)) {
+    // REVENUE-01F — coupe-circuit : traité exactement comme "non configuré",
+    // délibérément indiscernable de l'extérieur. Un rejeu ultérieur, une fois
+    // le coupe-circuit levé, est traité normalement (aucun état n'est perdu :
+    // rien n'a été journalisé pendant que le provider était coupé).
     return NextResponse.json({ received: false }, { status: 503 });
   }
 

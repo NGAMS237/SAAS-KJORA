@@ -99,6 +99,23 @@ export type PaymentMethodSummary = {
   kind: PaymentMethodKind;
 };
 
+// REVENUE-01F — Portail client hébergé par le provider (gérer son moyen de
+// paiement, consulter son historique côté provider, se désabonner). Onzième
+// opération du contrat : absente d'ALIGN-04A, ajoutée ici sans toucher aux
+// dix premières ni aux déclarations de capacités déjà revues par provider.
+export type CustomerPortalRequest = {
+  organizationId: string;
+  providerCustomerRef: ProviderRef;
+  /** Chemin interne de retour, déjà validé par safeNextPath côté appelant. */
+  returnPath: string;
+  idempotencyKey: string;
+};
+
+export type CustomerPortalSession = {
+  redirectUrl: string;
+  expiresAt: string;
+};
+
 export type WebhookVerification =
   | {
       valid: true;
@@ -142,6 +159,8 @@ export type BillingProviderAdapter = {
   fetchPaymentStatus?(ref: ProviderRef): Promise<PaymentOutcome>;
   fetchPaymentMethod?(ref: ProviderRef): Promise<PaymentMethodSummary>;
   refund?(ref: ProviderRef, amountMinor: number, idempotencyKey: string): Promise<void>;
+  /** REVENUE-01F. Absent d'ALIGN-04A : aucun provider ne le déclare encore. */
+  openCustomerPortal?(request: CustomerPortalRequest): Promise<CustomerPortalSession>;
 };
 
 /** Vérifie qu'un adaptateur expose bien l'opération demandée. */

@@ -62,9 +62,38 @@ export function isProviderConfigured(name: ProviderName): boolean {
   return readSecret(keys.secret) !== null && readSecret(keys.webhook) !== null;
 }
 
-/** Liste réellement configurée, à passer au routage. */
+// ---------------------------------------------------------------------------
+// REVENUE-01F — Coupe-circuit (kill switch)
+// ---------------------------------------------------------------------------
+// Un levier d'urgence, lu depuis l'environnement, pour arrêter le routage
+// checkout ET la réception de webhooks d'un provider (ou de tous) sans
+// toucher ni retirer ses secrets. Absent tant qu'aucune variable n'est
+// positionnée : ce lot construit le mécanisme, il ne l'active pas — aucune
+// de ces variables n'existe dans Vercel à ce stade (aucune modification de
+// Vercel ou de ses variables n'est faite par ce mandat).
+//
+//   • BILLING_KILL_SWITCH_ALL=1                  coupe tous les providers.
+//   • BILLING_KILL_SWITCH_<PROVIDER_EN_MAJ>=1    coupe un seul provider
+//     (ex. BILLING_KILL_SWITCH_FLUTTERWAVE=1).
+//
+// Une valeur absente ou différente de "1" laisse le provider intact : le
+// comportement par défaut, sans aucune variable positionnée, est identique
+// à avant ce lot (aucun test existant ne doit changer de résultat).
+
+function isKillSwitchOn(key: string): boolean {
+  return process.env[key]?.trim() === "1";
+}
+
+export function isProviderKillSwitched(name: ProviderName): boolean {
+  if (isKillSwitchOn("BILLING_KILL_SWITCH_ALL")) return true;
+  return isKillSwitchOn(`BILLING_KILL_SWITCH_${name.toUpperCase()}`);
+}
+
+/** Liste réellement configurée ET non coupée, à passer au routage. */
 export function configuredProviders(): ProviderName[] {
-  return (Object.keys(PROVIDER_ENV_KEYS) as ProviderName[]).filter(isProviderConfigured);
+  return (Object.keys(PROVIDER_ENV_KEYS) as ProviderName[]).filter(
+    (name) => isProviderConfigured(name) && !isProviderKillSwitched(name),
+  );
 }
 
 /**

@@ -27,7 +27,12 @@ export function isProviderName(value: unknown): value is ProviderName {
   return typeof value === "string" && (PROVIDER_NAMES as readonly string[]).includes(value);
 }
 
-/** Les 10 opérations du contrat. Aucun provider n'est tenu de toutes les offrir. */
+/**
+ * Les 11 opérations du contrat. Aucun provider n'est tenu de toutes les
+ * offrir. `openCustomerPortal` (REVENUE-01F) est la plus récente : aucun des
+ * six providers étudiés ne la déclare encore ci-dessous — son support réel
+ * n'a jamais été vérifié documentation en main, donc rien n'est deviné.
+ */
 export type ProviderOperation =
   | "createCheckout"
   | "createSubscription"
@@ -38,12 +43,13 @@ export type ProviderOperation =
   | "fetchPaymentStatus"
   | "fetchPaymentMethod"
   | "verifyWebhook"
-  | "refund";
+  | "refund"
+  | "openCustomerPortal";
 
 export const PROVIDER_OPERATIONS: readonly ProviderOperation[] = [
   "createCheckout", "createSubscription", "updateSubscription", "cancelSubscription",
   "chargeRecurring", "retryPayment", "fetchPaymentStatus", "fetchPaymentMethod",
-  "verifyWebhook", "refund",
+  "verifyWebhook", "refund", "openCustomerPortal",
 ] as const;
 
 export type PaymentMethodKind = "card" | "mtn_momo" | "orange_money" | "bank_transfer" | "other_wallet";
