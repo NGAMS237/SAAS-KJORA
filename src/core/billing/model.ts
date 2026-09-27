@@ -343,6 +343,27 @@ export function renewalReminderDates(renewalOn: string): string[] {
   return RENEWAL_REMINDER_OFFSETS.map((offset) => addDays(renewalOn, -offset));
 }
 
+/** Relances pendant la tolérance : J+1, J+3, J+6 après le début de la grâce (REVENUE-01C). */
+export const GRACE_REMINDER_OFFSETS = [1, 3, 6] as const;
+
+export function graceReminderDates(graceStartedOn: string): string[] {
+  return GRACE_REMINDER_OFFSETS.map((offset) => addDays(graceStartedOn, offset));
+}
+
+/**
+ * Expiration du moyen de paiement : J-30, J-7 (REVENUE-01C, ALIGN-00 §6.2).
+ * Ne produit un rappel que si le provider expose cette information — aucun
+ * n'est branché aujourd'hui, donc cette liste ne trouve encore aucun candidat.
+ */
+export const PAYMENT_METHOD_EXPIRY_OFFSETS = [30, 7] as const;
+
+/**
+ * Seuil « facture Afrique arrivant à échéance » : J-3 avant la fin de période
+ * facturée. Choix documenté ici (non explicité par le mandat), à ajuster si
+ * l'usage réel Afrique montre qu'il est trop court ou trop long.
+ */
+export const INVOICE_DUE_SOON_OFFSET_DAYS = 3;
+
 // ---------------------------------------------------------------------------
 // Factures
 // ---------------------------------------------------------------------------

@@ -411,13 +411,14 @@ test("les rappels de renouvellement tombent à J-7, J-3 et J-1", () => {
   assert.equal(daysBetween("2026-09-01", "2026-10-01"), 30);
 });
 
-test("les 15 événements de facturation sont définis, sans envoi si canal absent", () => {
-  assert.equal(BILLING_EVENTS.length, 15);
+test("les 17 événements de facturation sont définis, sans envoi si canal absent", () => {
+  assert.equal(BILLING_EVENTS.length, 17);
   for (const attendu of ["renewal_reminder_j7", "renewal_reminder_j3", "renewal_reminder_j1",
     "payment_succeeded", "payment_failed", "grace_started",
     "grace_reminder_j1", "grace_reminder_j3", "grace_reminder_j6",
     "block_imminent", "billing_blocked", "cancellation_scheduled", "reactivated",
-    "payment_method_expiring_j30", "payment_method_expiring_j7"]) {
+    "payment_method_expiring_j30", "payment_method_expiring_j7",
+    "invoice_due_soon", "invoice_overdue"]) {
     assert.ok((BILLING_EVENTS as readonly string[]).includes(attendu), `événement absent : ${attendu}`);
   }
   assert.equal(isBillingEmailChannelConfigured({}), false);

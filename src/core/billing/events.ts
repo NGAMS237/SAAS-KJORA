@@ -29,6 +29,9 @@ export const BILLING_EVENTS = [
   // le provider expose cette information — aucun n'est branché aujourd'hui.
   "payment_method_expiring_j30",
   "payment_method_expiring_j7",
+  // Factures Afrique (REVENUE-01B/01C) : rappel avant échéance et retard.
+  "invoice_due_soon",
+  "invoice_overdue",
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENTS)[number];
@@ -54,6 +57,8 @@ export const BILLING_EVENT_LABELS: Record<BillingEventType, string> = {
   reactivated: "Abonnement réactivé",
   payment_method_expiring_j30: "Votre moyen de paiement expire dans 30 jours",
   payment_method_expiring_j7: "Votre moyen de paiement expire dans 7 jours",
+  invoice_due_soon: "Une facture arrive à échéance",
+  invoice_overdue: "Une facture est en retard",
 };
 
 /** Un événement doit-il déclencher un email lorsque le canal est configuré ? */
@@ -73,6 +78,8 @@ export const BILLING_EVENT_EMAILS: Record<BillingEventType, boolean> = {
   reactivated: true,
   payment_method_expiring_j30: true,
   payment_method_expiring_j7: true,
+  invoice_due_soon: true,
+  invoice_overdue: true,
 };
 
 // Le contrôle du canal d'envoi vit dans `channel.ts`, côté serveur uniquement :
