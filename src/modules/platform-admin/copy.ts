@@ -235,6 +235,18 @@ export type AdminCopy = {
   connectorStateNotConnected: string;
 
   financeApplyFilter: string;
+
+  // REVENUE-01E — Extension Admin Finances (facturation manuelle Afrique,
+  // rappels automatiques, échecs de paiement). Section distincte de B/C/D.
+  financeSectionManualInvoicing: string;
+  financeManualInvoicesDueXaf: string;
+  financeManualInvoicesOverdueXaf: string;
+  financeManualPaymentsConfirmed: string;
+  financeManualPaymentsCollectedXaf: string;
+  financeManualPaymentsCollectedCad: string;
+  financeRemindersSent: string;
+  financeRemindersDueNow: string;
+  financePaymentFailures: string;
 };
 
 const fr: AdminCopy = {
@@ -501,6 +513,16 @@ const fr: AdminCopy = {
   connectorStateNotConnected: "NON CONNECTÉ",
 
   financeApplyFilter: "Appliquer",
+
+  financeSectionManualInvoicing: "Facturation manuelle Afrique & rappels",
+  financeManualInvoicesDueXaf: "Factures dues (XAF)",
+  financeManualInvoicesOverdueXaf: "Factures en retard (XAF)",
+  financeManualPaymentsConfirmed: "Paiements manuels confirmés (période)",
+  financeManualPaymentsCollectedXaf: "Encaissé facturation manuelle (XAF)",
+  financeManualPaymentsCollectedCad: "Encaissé facturation manuelle (CAD)",
+  financeRemindersSent: "Rappels envoyés (période)",
+  financeRemindersDueNow: "Rappels à envoyer (aujourd'hui)",
+  financePaymentFailures: "Échecs de paiement (période)",
 };
 
 const en: AdminCopy = {
@@ -767,6 +789,16 @@ const en: AdminCopy = {
   connectorStateNotConnected: "NOT CONNECTED",
 
   financeApplyFilter: "Apply",
+
+  financeSectionManualInvoicing: "Manual Africa invoicing & reminders",
+  financeManualInvoicesDueXaf: "Invoices due (XAF)",
+  financeManualInvoicesOverdueXaf: "Overdue invoices (XAF)",
+  financeManualPaymentsConfirmed: "Manual payments confirmed (period)",
+  financeManualPaymentsCollectedXaf: "Collected via manual invoicing (XAF)",
+  financeManualPaymentsCollectedCad: "Collected via manual invoicing (CAD)",
+  financeRemindersSent: "Reminders sent (period)",
+  financeRemindersDueNow: "Reminders due (today)",
+  financePaymentFailures: "Payment failures (period)",
 };
 
 export const ADMIN_COPY = { fr, en } as const;

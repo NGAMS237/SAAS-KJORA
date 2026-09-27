@@ -634,3 +634,67 @@ export async function listFinanceRecentEvents(
     data: parsePagedPayload(data, mapFinanceEventRow, limit, offset),
   };
 }
+
+// ---------------------------------------------------------------------------
+// REVENUE-01E — Extension Admin Finances (facturation manuelle Afrique,
+// rappels automatiques, échecs de paiement). Second appel RPC, distinct de
+// `getFinanceSummary` : voir supabase/migrations/
+// 20260927170000_revenue_01e_admin_finance_extension.sql — la RPC
+// FINANCE-ADMIN-01 n'est ni modifiée ni dupliquée.
+// ---------------------------------------------------------------------------
+
+export type FinanceBillingExtension = {
+  periodKey: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  manualInvoicing: {
+    /** Unités mineures... non : un COMPTE de factures, par devise. Jamais une somme entre devises. */
+    dueByCurrency: Record<string, number>;
+    overdueByCurrency: Record<string, number>;
+    paymentsConfirmedCount: number;
+    /** Unités mineures encaissées via facturation manuelle (REVENUE-01B), par devise. */
+    paymentsConfirmedByCurrency: Record<string, number>;
+  };
+  reminders: {
+    sentInPeriod: number;
+    dueNow: number;
+  };
+  paymentFailuresInPeriod: number;
+  generatedAt: string | null;
+};
+
+export async function getFinanceBillingExtension(
+  periodFilter: FinancePeriodFilter = "last_30_days",
+): Promise<ReadResult<FinanceBillingExtension>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_finance_billing_extension", {
+    period_filter: periodFilter,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  const payload = data as Record<string, unknown>;
+  const period = (payload.period ?? {}) as Record<string, unknown>;
+  const manualInvoicing = (payload.manual_invoicing ?? {}) as Record<string, unknown>;
+  const reminders = (payload.reminders ?? {}) as Record<string, unknown>;
+
+  return {
+    ok: true,
+    data: {
+      periodKey: String(period.key ?? periodFilter),
+      periodStart: period.start ? String(period.start) : null,
+      periodEnd: period.end ? String(period.end) : null,
+      manualInvoicing: {
+        dueByCurrency: toCountRecord(manualInvoicing.due_by_currency),
+        overdueByCurrency: toCountRecord(manualInvoicing.overdue_by_currency),
+        paymentsConfirmedCount: toNumber(manualInvoicing.payments_confirmed_count),
+        paymentsConfirmedByCurrency: toCountRecord(manualInvoicing.payments_confirmed_by_currency),
+      },
+      reminders: {
+        sentInPeriod: toNumber(reminders.sent_in_period),
+        dueNow: toNumber(reminders.due_now),
+      },
+      paymentFailuresInPeriod: toNumber(payload.payment_failures_in_period),
+      generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
+    },
+  };
+}

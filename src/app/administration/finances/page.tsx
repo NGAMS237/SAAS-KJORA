@@ -1,5 +1,6 @@
 import {
   DEFAULT_PAGE_SIZE,
+  getFinanceBillingExtension,
   getFinanceSummary,
   isFinancePeriodFilter,
   listFinanceRecentEvents,
@@ -35,17 +36,22 @@ export default async function AdministrationFinancesPage({
   const period = parsePeriod(params.period);
   const offset = parseOffset(params.offset);
 
-  const [summaryResult, eventsResult] = await Promise.all([
+  const [summaryResult, eventsResult, extensionResult] = await Promise.all([
     getFinanceSummary(period),
     listFinanceRecentEvents(DEFAULT_PAGE_SIZE, offset, period),
+    getFinanceBillingExtension(period),
   ]);
 
+  // L'extension REVENUE-01E n'est jamais bloquante : si elle échoue seule
+  // (RPC absente sur un environnement pas encore migré, par exemple), le
+  // reste de la page Finances continue de s'afficher normalement.
   const error = !summaryResult.ok ? summaryResult.reason : !eventsResult.ok ? eventsResult.reason : null;
 
   return (
     <FinancesView
       summary={summaryResult.ok ? summaryResult.data : null}
       events={eventsResult.ok ? eventsResult.data : null}
+      extension={extensionResult.ok ? extensionResult.data : null}
       error={error}
       period={period}
     />

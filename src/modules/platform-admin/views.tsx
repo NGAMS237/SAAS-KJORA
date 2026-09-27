@@ -14,6 +14,7 @@ import {
 import type {
   AdminOrganizationRow,
   AdminSubscriptionRow,
+  FinanceBillingExtension,
   FinanceEventRow,
   FinancePeriodFilter,
   FinanceSummary,
@@ -1261,11 +1262,14 @@ function ConnectorRow({
 export function FinancesView({
   summary,
   events,
+  extension,
   error,
   period,
 }: {
   summary: FinanceSummary | null;
   events: Paginated<FinanceEventRow> | null;
+  /** REVENUE-01E. Peut être `null` sans bloquer le reste de la page (voir page.tsx). */
+  extension: FinanceBillingExtension | null;
   error: "denied" | "failed" | null;
   period: FinancePeriodFilter;
 }) {
@@ -1475,6 +1479,46 @@ export function FinancesView({
         </>
       ) : null}
 
+      {/* REVENUE-01E — Facturation manuelle Afrique, rappels, échecs de
+          paiement. Section distincte de B/C/D ci-dessus : jamais fusionnée
+          dans les mêmes compteurs (domaines différents, voir la migration). */}
+      {extension ? (
+        <section className="admin-section" aria-labelledby="finance-revenue-launch-heading">
+          <h2 id="finance-revenue-launch-heading">{t.financeSectionManualInvoicing}</h2>
+          <div className="admin-counters">
+            <Counter
+              label={t.financeManualInvoicesDueXaf}
+              value={extension.manualInvoicing.dueByCurrency.XAF ?? 0}
+            />
+            <Counter
+              label={t.financeManualInvoicesOverdueXaf}
+              value={extension.manualInvoicing.overdueByCurrency.XAF ?? 0}
+            />
+            <Counter
+              label={t.financeManualPaymentsConfirmed}
+              value={extension.manualInvoicing.paymentsConfirmedCount}
+            />
+            <Counter label={t.financeRemindersSent} value={extension.reminders.sentInPeriod} />
+            <Counter label={t.financeRemindersDueNow} value={extension.reminders.dueNow} />
+            <Counter label={t.financePaymentFailures} value={extension.paymentFailuresInPeriod} />
+          </div>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <tbody>
+                <tr>
+                  <th scope="row">{t.financeManualPaymentsCollectedXaf}</th>
+                  <td>{formatMinorAmount(extension.manualInvoicing.paymentsConfirmedByCurrency.XAF ?? 0, "XAF", lang)}</td>
+                </tr>
+                <tr>
+                  <th scope="row">{t.financeManualPaymentsCollectedCad}</th>
+                  <td>{formatMinorAmount(extension.manualInvoicing.paymentsConfirmedByCurrency.CAD ?? 0, "CAD", lang)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       {/* F. Tableau des événements financiers récents — assaini, paginé. */}
       <section className="admin-section" aria-labelledby="finance-events-heading">
         <h2 id="finance-events-heading">{t.financeSectionEvents}</h2>
@@ -1496,7 +1540,18 @@ export function FinancesView({
                 events.rows.map((ev) => (
                   <tr key={ev.eventId}>
                     <td>{formatDateTime(ev.occurredAt, lang) ?? "—"}</td>
-                    <th scope="row">{ev.organizationName || "—"}</th>
+                    <th scope="row">
+                      {ev.organizationId ? (
+                        <Link
+                          href={`/administration/organizations/${ev.organizationId}`}
+                          className="admin-table__view-link"
+                        >
+                          {ev.organizationName || "—"}
+                        </Link>
+                      ) : (
+                        ev.organizationName || "—"
+                      )}
+                    </th>
                     <td>{ev.category}</td>
                     <td>{ev.status}</td>
                     <td>{ev.currency ?? "—"}</td>
