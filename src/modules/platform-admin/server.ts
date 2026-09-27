@@ -698,3 +698,107 @@ export async function getFinanceBillingExtension(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// REVENUE-01H — Cycle de vie Admin (Organization / membre)
+// ---------------------------------------------------------------------------
+// Trois RPC Admin dédiées (voir supabase/migrations/
+// 20260927180000_revenue_01h_admin_lifecycle.sql) — jamais les RPC
+// self-service (list_organization_members/list_administrative_audit,
+// lot_5c) : celles-ci exigent has_capability(...,'member.view'/'audit.view'),
+// donc une appartenance à l'Organization, structurellement inutilisable
+// depuis cette console.
+// ---------------------------------------------------------------------------
+
+export type AdminMemberRow = {
+  membershipId: string;
+  userId: string;
+  email: string;
+  role: string;
+  status: "active" | "revoked";
+  createdAt: string;
+  revokedAt: string | null;
+};
+
+export type AdminAuditRow = {
+  auditId: string;
+  action: string;
+  actorEmail: string | null;
+  targetEmail: string | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AdminOrganizationNote = {
+  noteId: string;
+  authorEmail: string;
+  note: string;
+  createdAt: string;
+};
+
+export type OrganizationLifecycle = {
+  members: AdminMemberRow[];
+  history: AdminAuditRow[];
+  notes: AdminOrganizationNote[];
+};
+
+function mapAdminMemberRow(r: Record<string, unknown>): AdminMemberRow {
+  return {
+    membershipId: String(r.membership_id ?? ""),
+    userId: String(r.user_id ?? ""),
+    email: String(r.email ?? ""),
+    role: String(r.role ?? ""),
+    status: r.status === "revoked" ? "revoked" : "active",
+    createdAt: String(r.created_at ?? ""),
+    revokedAt: r.revoked_at ? String(r.revoked_at) : null,
+  };
+}
+
+function mapAdminAuditRow(r: Record<string, unknown>): AdminAuditRow {
+  return {
+    auditId: String(r.audit_id ?? ""),
+    action: String(r.action ?? ""),
+    actorEmail: r.actor_email ? String(r.actor_email) : null,
+    targetEmail: r.target_email ? String(r.target_email) : null,
+    details: (r.details ?? {}) as Record<string, unknown>,
+    createdAt: String(r.created_at ?? ""),
+  };
+}
+
+function mapAdminOrganizationNote(r: Record<string, unknown>): AdminOrganizationNote {
+  return {
+    noteId: String(r.note_id ?? ""),
+    authorEmail: String(r.author_email ?? ""),
+    note: String(r.note ?? ""),
+    createdAt: String(r.created_at ?? ""),
+  };
+}
+
+/**
+ * Lecture combinée pour la section « Cycle de vie » de la fiche Organization.
+ * Non bloquante comme l'extension Finances (REVENUE-01E) : un échec ici
+ * n'empêche jamais le reste de la fiche Organization (aperçu, interventions
+ * commerciales) de s'afficher — voir son câblage en Promise.all dans la page.
+ */
+export async function getOrganizationLifecycle(
+  organizationId: string,
+): Promise<ReadResult<OrganizationLifecycle>> {
+  const supabase = await createSupabaseServerClient();
+  const [membersResult, historyResult, notesResult] = await Promise.all([
+    supabase.rpc("admin_list_organization_members", { target_organization_id: organizationId }),
+    supabase.rpc("admin_list_administrative_audit", { target_organization_id: organizationId, result_limit: 50 }),
+    supabase.rpc("admin_list_organization_notes", { target_organization_id: organizationId }),
+  ]);
+  if (membersResult.error) return { ok: false, reason: classify(membersResult.error) };
+  if (historyResult.error) return { ok: false, reason: classify(historyResult.error) };
+  if (notesResult.error) return { ok: false, reason: classify(notesResult.error) };
+
+  return {
+    ok: true,
+    data: {
+      members: ((membersResult.data ?? []) as Record<string, unknown>[]).map(mapAdminMemberRow),
+      history: ((historyResult.data ?? []) as Record<string, unknown>[]).map(mapAdminAuditRow),
+      notes: ((notesResult.data ?? []) as Record<string, unknown>[]).map(mapAdminOrganizationNote),
+    },
+  };
+}

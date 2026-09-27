@@ -5145,6 +5145,18 @@ a.portfolio-metric:hover {
 .admin-action-button--danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
 .admin-action-button--danger:hover { opacity: 0.85; }
 
+/* REVENUE-01H — actions compactes en ligne de tableau (membres) */
+.admin-action-button--small { padding: 5px 12px; font-size: 0.75rem; }
+
+/* REVENUE-01H — notes internes Admin (jamais visibles de l'Organization) */
+.admin-notes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.admin-notes-list li {
+  border: 1px solid var(--border); border-radius: var(--radius-surface);
+  padding: 10px 14px; background: var(--surface-muted);
+}
+.admin-notes-list p { margin: 0 0 4px; }
+.admin-notes-list p:last-child { margin-bottom: 0; font-size: 0.78rem; }
+
 /* ADMIN-BILLING-OPS-01 — confirmation avant validation (résumé + case à cocher explicite) */
 .admin-dialog {
   border: 1px solid var(--border); border-radius: var(--radius-surface);

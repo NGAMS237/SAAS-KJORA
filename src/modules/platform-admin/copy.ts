@@ -247,6 +247,41 @@ export type AdminCopy = {
   financeRemindersSent: string;
   financeRemindersDueNow: string;
   financePaymentFailures: string;
+
+  // REVENUE-01H — Cycle de vie Admin (Organization / membres / notes internes).
+  lifecycleSectionTitle: string;
+  lifecycleCurrentStatus: string;
+  lifecycleActionSuspend: string;
+  lifecycleActionReactivate: string;
+  lifecycleActionArchive: string;
+  lifecycleActionRestore: string;
+  lifecycleSuspendConfirmText: string;
+  lifecycleReactivateConfirmText: string;
+  lifecycleArchiveConfirmText: string;
+  lifecycleRestoreConfirmText: string;
+  lifecycleArchiveNameLabel: string;
+
+  membersSectionTitle: string;
+  colEmail: string;
+  colRole: string;
+  noMembers: string;
+  actionDisableMember: string;
+  actionReactivateMember: string;
+  actionTransferOwnership: string;
+  memberDisableConfirmText: string;
+  memberReactivateConfirmText: string;
+  transferOwnershipConfirmText: string;
+
+  notesSectionTitle: string;
+  actionAddNote: string;
+  noNotes: string;
+  formNoteLabel: string;
+
+  lifecycleHistoryTitle: string;
+  noLifecycleHistory: string;
+  colActor: string;
+  colTarget: string;
+  lifecycleActionLabels: Record<string, string>;
 };
 
 const fr: AdminCopy = {
@@ -448,6 +483,27 @@ const fr: AdminCopy = {
     invalid_idempotency_key: "Jeton de soumission invalide, réessayez.",
     reason_required: "Un motif est obligatoire.",
     not_found: "Intervention introuvable.",
+
+    // REVENUE-01H — Cycle de vie Admin.
+    suspended: "Organization suspendue.",
+    already_suspended: "Cette Organization était déjà suspendue.",
+    organization_archived: "Cette Organization est archivée : restaurez-la d'abord.",
+    already_active: "Cette Organization est déjà active.",
+    reactivated: "Organization réactivée.",
+    already_archived: "Cette Organization était déjà archivée.",
+    name_confirmation_mismatch: "Le nom saisi ne correspond pas exactement au nom de l'Organization.",
+    archived: "Organization archivée.",
+    not_archived: "Cette Organization n'est pas archivée.",
+    restored: "Organization restaurée.",
+    membership_not_found: "Membre introuvable.",
+    already_disabled: "Ce membre était déjà désactivé.",
+    owner_transfer_required: "Un propriétaire ne peut pas être désactivé directement : transférez d'abord la propriété.",
+    disabled: "Membre désactivé.",
+    no_active_owner: "Aucun propriétaire actif trouvé pour cette Organization.",
+    already_owner: "Ce membre est déjà propriétaire.",
+    verified_target_required: "Le membre ciblé doit d'abord confirmer son courriel.",
+    transferred: "Propriété transférée.",
+    note_added: "Note interne ajoutée.",
   },
 
   navFinances: "Finances",
@@ -523,6 +579,76 @@ const fr: AdminCopy = {
   financeRemindersSent: "Rappels envoyés (période)",
   financeRemindersDueNow: "Rappels à envoyer (aujourd'hui)",
   financePaymentFailures: "Échecs de paiement (période)",
+
+  lifecycleSectionTitle: "Cycle de vie de l'Organization",
+  lifecycleCurrentStatus: "Statut actuel",
+  lifecycleActionSuspend: "Suspendre",
+  lifecycleActionReactivate: "Réactiver",
+  lifecycleActionArchive: "Archiver",
+  lifecycleActionRestore: "Restaurer",
+  lifecycleSuspendConfirmText:
+    "Cette Organization sera suspendue : ses membres perdront tout accès aux fonctionnalités métier jusqu'à réactivation. Aucune donnée n'est supprimée.",
+  lifecycleReactivateConfirmText:
+    "Cette Organization redevient active : ses membres retrouvent immédiatement leurs accès habituels.",
+  lifecycleArchiveConfirmText:
+    "Cette Organization sera archivée : ses membres perdront tout accès jusqu'à restauration. Aucune donnée n'est supprimée — l'archivage reste réversible.",
+  lifecycleRestoreConfirmText: "Cette Organization redevient active et ses membres retrouvent leurs accès.",
+  lifecycleArchiveNameLabel: "Tapez le nom exact de l'Organization pour confirmer",
+
+  membersSectionTitle: "Membres",
+  colEmail: "Courriel",
+  colRole: "Rôle",
+  noMembers: "Aucun membre.",
+  actionDisableMember: "Désactiver",
+  actionReactivateMember: "Réactiver",
+  actionTransferOwnership: "Transférer la propriété",
+  memberDisableConfirmText:
+    "Ce membre sera désactivé : il perd immédiatement tout accès (une tentative de révocation de ses sessions actives sera effectuée, sans garantie).",
+  memberReactivateConfirmText: "Ce membre redevient actif et retrouve ses accès habituels.",
+  transferOwnershipConfirmText:
+    "La propriété de cette Organization sera transférée à ce membre. Le propriétaire actuel devient gestionnaire.",
+
+  notesSectionTitle: "Notes internes Admin",
+  actionAddNote: "Ajouter une note",
+  noNotes: "Aucune note interne.",
+  formNoteLabel: "Note interne (obligatoire, jamais visible de l'Organization)",
+
+  lifecycleHistoryTitle: "Journal d'audit — Organization & membres",
+  noLifecycleHistory: "Aucune action enregistrée pour cette Organization.",
+  colActor: "Auteur",
+  colTarget: "Cible",
+  lifecycleActionLabels: {
+    "member.invited": "Membre invité",
+    "member.invitation_resent": "Invitation renvoyée",
+    "member.invitation_revoked": "Invitation révoquée",
+    "member.invitation_accepted": "Invitation acceptée",
+    "member.role_changed": "Rôle modifié",
+    "member.revoked": "Membre révoqué (self-service)",
+    "owner.transferred": "Propriété transférée (self-service)",
+    "payment.reversed": "Paiement annulé",
+    "document.invalidated": "Document invalidé",
+    "tenant_portal.invited": "Portail locataire — invité",
+    "tenant_portal.invitation_resent": "Portail locataire — invitation renvoyée",
+    "tenant_portal.invitation_accepted": "Portail locataire — invitation acceptée",
+    "tenant_portal.revoked": "Portail locataire — révoqué",
+    "tenant_portal.reactivated": "Portail locataire — réactivé",
+    "contract.generated": "Contrat généré",
+    "contract.validated": "Contrat validé",
+    "contract.owner_signed": "Contrat signé (propriétaire)",
+    "contract.sent": "Contrat envoyé",
+    "contract.tenant_viewed": "Contrat consulté (locataire)",
+    "contract.tenant_signed": "Contrat signé (locataire)",
+    "contract.finalized": "Contrat finalisé",
+    "contract.cancelled": "Contrat annulé",
+    "organization.suspended": "Organization suspendue",
+    "organization.reactivated": "Organization réactivée",
+    "organization.archived": "Organization archivée",
+    "organization.restored": "Organization restaurée",
+    "member.disabled_by_admin": "Membre désactivé par un Admin",
+    "member.reactivated_by_admin": "Membre réactivé par un Admin",
+    "owner.transferred_by_admin": "Propriété transférée par un Admin",
+    "admin.note_added": "Note interne ajoutée",
+  },
 };
 
 const en: AdminCopy = {
@@ -724,6 +850,27 @@ const en: AdminCopy = {
     invalid_idempotency_key: "Invalid submission token, please retry.",
     reason_required: "A reason is required.",
     not_found: "Intervention not found.",
+
+    // REVENUE-01H — Admin lifecycle.
+    suspended: "Organization suspended.",
+    already_suspended: "This Organization was already suspended.",
+    organization_archived: "This Organization is archived: restore it first.",
+    already_active: "This Organization is already active.",
+    reactivated: "Organization reactivated.",
+    already_archived: "This Organization was already archived.",
+    name_confirmation_mismatch: "The name entered does not exactly match the Organization's name.",
+    archived: "Organization archived.",
+    not_archived: "This Organization is not archived.",
+    restored: "Organization restored.",
+    membership_not_found: "Member not found.",
+    already_disabled: "This member was already disabled.",
+    owner_transfer_required: "An owner cannot be disabled directly: transfer ownership first.",
+    disabled: "Member disabled.",
+    no_active_owner: "No active owner found for this Organization.",
+    already_owner: "This member is already the owner.",
+    verified_target_required: "The targeted member must confirm their email first.",
+    transferred: "Ownership transferred.",
+    note_added: "Internal note added.",
   },
 
   navFinances: "Finances",
@@ -799,6 +946,76 @@ const en: AdminCopy = {
   financeRemindersSent: "Reminders sent (period)",
   financeRemindersDueNow: "Reminders due (today)",
   financePaymentFailures: "Payment failures (period)",
+
+  lifecycleSectionTitle: "Organization lifecycle",
+  lifecycleCurrentStatus: "Current status",
+  lifecycleActionSuspend: "Suspend",
+  lifecycleActionReactivate: "Reactivate",
+  lifecycleActionArchive: "Archive",
+  lifecycleActionRestore: "Restore",
+  lifecycleSuspendConfirmText:
+    "This Organization will be suspended: its members will lose all access to business features until reactivated. No data is deleted.",
+  lifecycleReactivateConfirmText:
+    "This Organization becomes active again: its members immediately regain their usual access.",
+  lifecycleArchiveConfirmText:
+    "This Organization will be archived: its members will lose all access until restored. No data is deleted — archiving remains reversible.",
+  lifecycleRestoreConfirmText: "This Organization becomes active again and its members regain their access.",
+  lifecycleArchiveNameLabel: "Type the Organization's exact name to confirm",
+
+  membersSectionTitle: "Members",
+  colEmail: "Email",
+  colRole: "Role",
+  noMembers: "No members.",
+  actionDisableMember: "Disable",
+  actionReactivateMember: "Reactivate",
+  actionTransferOwnership: "Transfer ownership",
+  memberDisableConfirmText:
+    "This member will be disabled: they immediately lose all access (an attempt will be made to revoke their active sessions, without guarantee).",
+  memberReactivateConfirmText: "This member becomes active again and regains their usual access.",
+  transferOwnershipConfirmText:
+    "Ownership of this Organization will be transferred to this member. The current owner becomes a manager.",
+
+  notesSectionTitle: "Internal admin notes",
+  actionAddNote: "Add a note",
+  noNotes: "No internal notes.",
+  formNoteLabel: "Internal note (required, never visible to the Organization)",
+
+  lifecycleHistoryTitle: "Audit log — Organization & members",
+  noLifecycleHistory: "No action recorded for this Organization.",
+  colActor: "Actor",
+  colTarget: "Target",
+  lifecycleActionLabels: {
+    "member.invited": "Member invited",
+    "member.invitation_resent": "Invitation resent",
+    "member.invitation_revoked": "Invitation revoked",
+    "member.invitation_accepted": "Invitation accepted",
+    "member.role_changed": "Role changed",
+    "member.revoked": "Member revoked (self-service)",
+    "owner.transferred": "Ownership transferred (self-service)",
+    "payment.reversed": "Payment reversed",
+    "document.invalidated": "Document invalidated",
+    "tenant_portal.invited": "Tenant portal — invited",
+    "tenant_portal.invitation_resent": "Tenant portal — invitation resent",
+    "tenant_portal.invitation_accepted": "Tenant portal — invitation accepted",
+    "tenant_portal.revoked": "Tenant portal — revoked",
+    "tenant_portal.reactivated": "Tenant portal — reactivated",
+    "contract.generated": "Contract generated",
+    "contract.validated": "Contract validated",
+    "contract.owner_signed": "Contract signed (owner)",
+    "contract.sent": "Contract sent",
+    "contract.tenant_viewed": "Contract viewed (tenant)",
+    "contract.tenant_signed": "Contract signed (tenant)",
+    "contract.finalized": "Contract finalized",
+    "contract.cancelled": "Contract cancelled",
+    "organization.suspended": "Organization suspended",
+    "organization.reactivated": "Organization reactivated",
+    "organization.archived": "Organization archived",
+    "organization.restored": "Organization restored",
+    "member.disabled_by_admin": "Member disabled by an Admin",
+    "member.reactivated_by_admin": "Member reactivated by an Admin",
+    "owner.transferred_by_admin": "Ownership transferred by an Admin",
+    "admin.note_added": "Internal note added",
+  },
 };
 
 export const ADMIN_COPY = { fr, en } as const;

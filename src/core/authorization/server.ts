@@ -87,10 +87,41 @@ export async function isOrganizationBillingBlocked(organizationId: string): Prom
   return data === true;
 }
 
+// REVENUE-01H — une Organization suspendue ou archivée par un Admin
+// (public.organizations.status) perd tout accès aux capacités métier,
+// lecture comme écriture. Volontairement DIFFÉRENT du blocage facturation
+// ALIGN-03 ci-dessus : celui-ci laisse délibérément `billing.*` accessible
+// pour permettre à l'Organization de régulariser elle-même sa situation ; une
+// suspension Admin est un gel décidé par la plateforme (abus, litige…), donc
+// n'accorde aucune exception — y compris pour la facturation. La colonne
+// `status` est déjà lisible par `authenticated` (lot_5b) : aucun nouveau
+// grant n'est nécessaire ici.
+export async function isOrganizationActive(organizationId: string): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("status")
+    .eq("id", organizationId)
+    .maybeSingle();
+  // En cas d'erreur, ne pas bloquer : private.has_capability (base, REVENUE-01H)
+  // reste la barrière ultime, comme pour isOrganizationBillingBlocked ci-dessus.
+  if (error || !data) return true;
+  return data.status === "active";
+}
+
 export async function requireActiveCapability(requested: Capability) {
   const authorization = await getActiveAuthorization();
   if (!authorization) return { authorization: null, status: 401 as const };
   if (!authorization.capabilities.includes(requested)) {
+    return { authorization: null, status: 403 as const };
+  }
+
+  // REVENUE-01H — barrière applicative, avant même le blocage facturation :
+  // une Organization suspendue/archivée n'a plus aucune capacité, quelle que
+  // soit sa situation de facturation. La barrière ultime, incontournable,
+  // reste private.has_capability en base (même un appel REST direct au RPC
+  // est refusé).
+  if (!(await isOrganizationActive(authorization.organizationId))) {
     return { authorization: null, status: 403 as const };
   }
 

@@ -20,6 +20,7 @@ import type {
   FinanceSummary,
   InterventionCounters,
   OrganizationDetail,
+  OrganizationLifecycle,
   Paginated,
   PlatformCounters,
 } from "./server";
@@ -31,6 +32,17 @@ import {
   revokeCommercialInterventionAction,
   type CommercialActionResult,
 } from "./commercial-ops-actions";
+import {
+  addOrganizationNoteAction,
+  archiveOrganizationAction,
+  disableMemberAction,
+  reactivateMemberAction,
+  reactivateOrganizationAction,
+  restoreOrganizationAction,
+  suspendOrganizationAction,
+  transferOwnershipAction,
+  type LifecycleActionResult,
+} from "./organization-lifecycle-actions";
 
 // =============================================================================
 // KJORA — ADMIN-01 — Vues de la console
@@ -718,9 +730,11 @@ function ReasonField({
 export function OrganizationDetailView({
   detail,
   error,
+  lifecycle,
 }: {
   detail: OrganizationDetail | null;
   error: "denied" | "failed" | "not_found" | null;
+  lifecycle: OrganizationLifecycle | null;
 }) {
   const { t, lang } = useCopy();
   const router = useRouter();
@@ -751,6 +765,24 @@ export function OrganizationDetailView({
   const [extendReason, setExtendReason] = useState("");
   const [newEndsOn, setNewEndsOn] = useState("");
 
+  // REVENUE-01H — Cycle de vie Admin (Organization / membre). État distinct de
+  // celui d'ADMIN-BILLING-OPS-01 ci-dessus : dialogues, motifs et confirmations
+  // propres à chaque action, jamais partagés entre les deux familles d'actions.
+  const [orgActionOpen, setOrgActionOpen] = useState<"suspend" | "reactivate" | "archive" | "restore" | null>(null);
+  const [orgActionConfirmed, setOrgActionConfirmed] = useState(false);
+  const [orgActionReason, setOrgActionReason] = useState("");
+  const [archiveConfirmName, setArchiveConfirmName] = useState("");
+
+  const [memberAction, setMemberAction] = useState<
+    { kind: "disable" | "reactivate" | "transfer"; membershipId: string; email: string } | null
+  >(null);
+  const [memberActionConfirmed, setMemberActionConfirmed] = useState(false);
+  const [memberActionReason, setMemberActionReason] = useState("");
+
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteConfirmed, setNoteConfirmed] = useState(false);
+  const [noteText, setNoteText] = useState("");
+
   if (error === "not_found" || (!detail && !error)) {
     return (
       <div className="admin-page">
@@ -775,7 +807,7 @@ export function OrganizationDetailView({
 
   if (!detail) return null;
 
-  function resultMessage(result: CommercialActionResult): string {
+  function resultMessage(result: CommercialActionResult | LifecycleActionResult): string {
     if (!result.ok) return result.message;
     return t.outcomeLabels[result.outcome] ?? result.outcome;
   }
@@ -788,6 +820,84 @@ export function OrganizationDetailView({
     setGrantConfirmed(false);
     setRevokeConfirmed(false);
     setExtendConfirmed(false);
+
+    setOrgActionOpen(null);
+    setOrgActionConfirmed(false);
+    setOrgActionReason("");
+    setArchiveConfirmName("");
+
+    setMemberAction(null);
+    setMemberActionConfirmed(false);
+    setMemberActionReason("");
+
+    setNoteOpen(false);
+    setNoteConfirmed(false);
+    setNoteText("");
+  }
+
+  function openOrgAction(kind: "suspend" | "reactivate" | "archive" | "restore") {
+    setDialogFeedback(null);
+    setOrgActionOpen(kind);
+  }
+
+  function openMemberAction(kind: "disable" | "reactivate" | "transfer", membershipId: string, email: string) {
+    setDialogFeedback(null);
+    setMemberAction({ kind, membershipId, email });
+  }
+
+  function handleOrgActionSubmit() {
+    if (!detail || !orgActionOpen) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await (orgActionOpen === "suspend"
+        ? suspendOrganizationAction(detail.organizationId, orgActionReason)
+        : orgActionOpen === "reactivate"
+        ? reactivateOrganizationAction(detail.organizationId, orgActionReason)
+        : orgActionOpen === "archive"
+        ? archiveOrganizationAction(detail.organizationId, archiveConfirmName, orgActionReason)
+        : restoreOrganizationAction(detail.organizationId, orgActionReason));
+      if (result.ok) {
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleMemberActionSubmit() {
+    if (!detail || !memberAction) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await (memberAction.kind === "disable"
+        ? disableMemberAction(detail.organizationId, memberAction.membershipId, memberActionReason)
+        : memberAction.kind === "reactivate"
+        ? reactivateMemberAction(detail.organizationId, memberAction.membershipId, memberActionReason)
+        : transferOwnershipAction(detail.organizationId, memberAction.membershipId, memberActionReason));
+      if (result.ok) {
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleAddNoteSubmit() {
+    if (!detail) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await addOrganizationNoteAction(detail.organizationId, noteText);
+      if (result.ok) {
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
   }
 
   function handleGrantSubmit() {
@@ -1037,6 +1147,255 @@ export function OrganizationDetailView({
           </div>
         )}
       </section>
+
+      {/* ===================================================================
+          REVENUE-01H — Cycle de vie Admin (Organization / membres / notes)
+          =================================================================== */}
+
+      <section className="admin-section">
+        <h2>{t.lifecycleSectionTitle}</h2>
+        <p>
+          {t.lifecycleCurrentStatus}: <span className="admin-badge">{detail.status}</span>
+        </p>
+        <div className="admin-actions-menu">
+          {detail.status === "active" ? (
+            <button type="button" className="admin-action-button" onClick={() => openOrgAction("suspend")}>
+              {t.lifecycleActionSuspend}
+            </button>
+          ) : null}
+          {detail.status === "suspended" ? (
+            <button type="button" className="admin-action-button admin-action-button--primary" onClick={() => openOrgAction("reactivate")}>
+              {t.lifecycleActionReactivate}
+            </button>
+          ) : null}
+          {detail.status !== "archived" ? (
+            <button type="button" className="admin-action-button admin-action-button--danger" onClick={() => openOrgAction("archive")}>
+              {t.lifecycleActionArchive}
+            </button>
+          ) : (
+            <button type="button" className="admin-action-button admin-action-button--primary" onClick={() => openOrgAction("restore")}>
+              {t.lifecycleActionRestore}
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.membersSectionTitle}</h2>
+        {!lifecycle || lifecycle.members.length === 0 ? (
+          <p className="admin-table__muted">{t.noMembers}</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colEmail}</th>
+                  <th scope="col">{t.colRole}</th>
+                  <th scope="col">{t.colStatus}</th>
+                  <th scope="col">{t.colActions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lifecycle.members.map((member) => (
+                  <tr key={member.membershipId}>
+                    <td>{member.email}</td>
+                    <td>{member.role}</td>
+                    <td>{member.status}</td>
+                    <td>
+                      <div className="admin-actions-menu">
+                        {member.status === "active" && member.role !== "organization_owner" ? (
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small admin-action-button--danger"
+                            onClick={() => openMemberAction("disable", member.membershipId, member.email)}
+                          >
+                            {t.actionDisableMember}
+                          </button>
+                        ) : null}
+                        {member.status === "revoked" ? (
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small"
+                            onClick={() => openMemberAction("reactivate", member.membershipId, member.email)}
+                          >
+                            {t.actionReactivateMember}
+                          </button>
+                        ) : null}
+                        {member.status === "active" && member.role !== "organization_owner" ? (
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small"
+                            onClick={() => openMemberAction("transfer", member.membershipId, member.email)}
+                          >
+                            {t.actionTransferOwnership}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.notesSectionTitle}</h2>
+        <div className="admin-actions-menu">
+          <button
+            type="button"
+            className="admin-action-button"
+            onClick={() => {
+              setDialogFeedback(null);
+              setNoteOpen(true);
+            }}
+          >
+            {t.actionAddNote}
+          </button>
+        </div>
+        {!lifecycle || lifecycle.notes.length === 0 ? (
+          <p className="admin-table__muted">{t.noNotes}</p>
+        ) : (
+          <ul className="admin-notes-list">
+            {lifecycle.notes.map((note) => (
+              <li key={note.noteId}>
+                <p>{note.note}</p>
+                <p className="admin-table__muted">
+                  {note.authorEmail} — {formatDateTime(note.createdAt, lang)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.lifecycleHistoryTitle}</h2>
+        {!lifecycle || lifecycle.history.length === 0 ? (
+          <p className="admin-table__muted">{t.noLifecycleHistory}</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colObserved}</th>
+                  <th scope="col">{t.orgDetailInterventionType}</th>
+                  <th scope="col">{t.colActor}</th>
+                  <th scope="col">{t.colTarget}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lifecycle.history.map((entry) => (
+                  <tr key={entry.auditId}>
+                    <td className="admin-table__muted">{formatDateTime(entry.createdAt, lang)}</td>
+                    <td>{t.lifecycleActionLabels[entry.action] ?? entry.action}</td>
+                    <td>{entry.actorEmail ?? "—"}</td>
+                    <td>{entry.targetEmail ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <ConfirmDialog
+        id="org-action-dialog"
+        title={
+          orgActionOpen === "suspend"
+            ? t.lifecycleActionSuspend
+            : orgActionOpen === "reactivate"
+            ? t.lifecycleActionReactivate
+            : orgActionOpen === "archive"
+            ? t.lifecycleActionArchive
+            : t.lifecycleActionRestore
+        }
+        open={orgActionOpen !== null}
+        onClose={closeAllDialogs}
+        onSubmit={handleOrgActionSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={orgActionConfirmed}
+        onConfirmCheckedChange={setOrgActionConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>
+          {orgActionOpen === "suspend"
+            ? t.lifecycleSuspendConfirmText
+            : orgActionOpen === "reactivate"
+            ? t.lifecycleReactivateConfirmText
+            : orgActionOpen === "archive"
+            ? t.lifecycleArchiveConfirmText
+            : t.lifecycleRestoreConfirmText}
+        </p>
+        {orgActionOpen === "archive" ? (
+          <label className="admin-dialog__field">
+            <span>
+              {t.lifecycleArchiveNameLabel} : <strong>{detail.name}</strong>
+            </span>
+            <input
+              type="text"
+              value={archiveConfirmName}
+              onChange={(e) => setArchiveConfirmName(e.target.value)}
+              required
+            />
+          </label>
+        ) : null}
+        <ReasonField id="org-action-reason" label={t.formReason} value={orgActionReason} onChange={setOrgActionReason} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="member-action-dialog"
+        title={
+          memberAction?.kind === "disable"
+            ? t.actionDisableMember
+            : memberAction?.kind === "reactivate"
+            ? t.actionReactivateMember
+            : t.actionTransferOwnership
+        }
+        open={memberAction !== null}
+        onClose={closeAllDialogs}
+        onSubmit={handleMemberActionSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={memberActionConfirmed}
+        onConfirmCheckedChange={setMemberActionConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>
+          {memberAction?.kind === "disable"
+            ? t.memberDisableConfirmText
+            : memberAction?.kind === "reactivate"
+            ? t.memberReactivateConfirmText
+            : t.transferOwnershipConfirmText}
+        </p>
+        <p>
+          {t.colEmail}: <strong>{memberAction?.email}</strong>
+        </p>
+        <ReasonField id="member-action-reason" label={t.formReason} value={memberActionReason} onChange={setMemberActionReason} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="note-dialog"
+        title={t.actionAddNote}
+        open={noteOpen}
+        onClose={closeAllDialogs}
+        onSubmit={handleAddNoteSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={noteConfirmed}
+        onConfirmCheckedChange={setNoteConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <ReasonField id="note-text" label={t.formNoteLabel} value={noteText} onChange={setNoteText} />
+      </ConfirmDialog>
 
       <ConfirmDialog
         id="grant-dialog"
