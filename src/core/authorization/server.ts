@@ -3,11 +3,11 @@ import "server-only";
 import { cookies } from "next/headers";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/core/organization/select-active-organization";
 import {
-  isCapability,
   isInternalRole,
   type Capability,
   type InternalRole,
 } from "@/core/authorization/capabilities";
+import { getCapabilitiesForRole } from "@/core/authorization/capability-catalog";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ActiveAuthorization = {
@@ -37,14 +37,13 @@ export async function getActiveAuthorization(): Promise<ActiveAuthorization | nu
   const membership = memberships?.[0];
   if (membershipError || !membership || !isInternalRole(membership.role)) return null;
 
-  const { data: capabilityRows, error: capabilityError } = await supabase
-    .from("role_capabilities")
-    .select("capability")
-    .eq("role", membership.role);
-  if (capabilityError) return null;
-  const capabilities = (capabilityRows ?? [])
-    .map((row) => row.capability)
-    .filter(isCapability);
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE C : `role_capabilities` est un
+  // catalogue statique (voir capability-catalog.ts) ; le lire depuis le cache
+  // de processus retire un aller-retour Supabase de CHAQUE navigation vers
+  // une page de `/app/*` (cette fonction est appelée par chaque page.tsx),
+  // sans changer le résultat retourné ni son autorité (la RLS reste la
+  // barrière ultime, inchangée).
+  const capabilities = await getCapabilitiesForRole(membership.role);
 
   return {
     organizationId: membership.organization_id,

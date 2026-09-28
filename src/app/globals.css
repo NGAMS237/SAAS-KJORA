@@ -1638,6 +1638,32 @@ a.portfolio-metric:hover {
 .contract-template-section { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); }
 .contract-template-section textarea { resize: vertical; }
 
+/* AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B */
+.contract-template-preview {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+.contract-template-preview section { display: grid; gap: var(--space-1); }
+.contract-template-preview h4 { margin: 0; font-size: .95rem; }
+.contract-template-preview p { margin: 0; color: var(--text-secondary); }
+.contract-stamp-preview { margin-top: var(--space-3); }
+.contract-stamp-preview__box {
+  display: inline-grid;
+  gap: var(--space-1);
+  min-width: 220px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--brand-gold, var(--border-strong));
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.contract-stamp-preview__box span { color: var(--text-muted); font-size: .85rem; }
+.contract-payment-terms-notice { border-color: var(--warning, var(--border-strong)); }
+
 @media (max-width: 640px) {
   .lease-contract-entry { align-items: stretch; flex-direction: column; }
   .contract-preview { margin-inline: calc(var(--space-2) * -1); border-radius: var(--radius-md); }

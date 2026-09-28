@@ -52,12 +52,13 @@ type LeaseRow = {
   entry_proration_override_reason: string | null;
   exit_proration_override_xaf: number | string | null;
   exit_proration_override_reason: string | null;
+  payment_terms: string | null;
 };
 
 type PropertyRow = { id: string; name: string };
 type UnitRow = { id: string; property_id: string; label: string; type: UnitType; reference_rent_xaf: number | string | null };
 
-const LEASE_COLUMNS = "id, tenant_id, property_id, unit_id, status, start_date, end_date, ended_on, end_reason, base_rent_xaf, recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, initial_prepayment_amount_xaf, prepaid_full_periods, prepayment_remainder_xaf, billing_frequency, due_day, generate_due_days_before, overdue_reminder_days_after, entry_proration_mode, exit_proration_mode, entry_proration_override_xaf, entry_proration_override_reason, exit_proration_override_xaf, exit_proration_override_reason";
+const LEASE_COLUMNS = "id, tenant_id, property_id, unit_id, status, start_date, end_date, ended_on, end_reason, base_rent_xaf, recurring_charges_xaf, periodic_total_xaf, security_deposit_xaf, initial_prepayment_amount_xaf, prepaid_full_periods, prepayment_remainder_xaf, billing_frequency, due_day, generate_due_days_before, overdue_reminder_days_after, entry_proration_mode, exit_proration_mode, entry_proration_override_xaf, entry_proration_override_reason, exit_proration_override_xaf, exit_proration_override_reason, payment_terms";
 
 function optionalNumber(value: number | string | null) {
   return value === null ? null : Number(value);
@@ -96,6 +97,7 @@ function toLease(
     entryProrationOverrideReason: row.entry_proration_override_reason,
     exitProrationOverrideXaf: optionalNumber(row.exit_proration_override_xaf),
     exitProrationOverrideReason: row.exit_proration_override_reason,
+    paymentTerms: row.payment_terms,
     tenantName: tenants.get(row.tenant_id) ?? "—",
     propertyName: properties.get(row.property_id) ?? "—",
     unitLabel: units.get(row.unit_id) ?? "—",
@@ -242,5 +244,6 @@ export function leaseInputToRow(input: LeaseInput) {
     entry_proration_override_reason: input.entryProrationOverrideReason,
     exit_proration_override_xaf: input.exitProrationOverrideXaf,
     exit_proration_override_reason: input.exitProrationOverrideReason,
+    payment_terms: input.paymentTerms,
   };
 }

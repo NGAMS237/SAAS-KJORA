@@ -16,6 +16,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
+import { SUPPORTED_COUNTRIES, RENTAL_CURRENCIES, defaultsForCountry } from "@/core/currency/metadata";
 import { trackEvent } from "@/core/analytics/events";
 import {
   destinationAfterOnboarding,
@@ -90,6 +91,15 @@ export function OrganizationOnboardingForm({
   const [propertyType, setPropertyType] = useState<"house" | "building">("house");
 
   const [name, setName] = useState("");
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A : pays du marché locatif de cette
+  // Organization, avec CM comme valeur historique par défaut (rétrocompatible
+  // avec le comportement précédent). Choisir un pays propose aussitôt la
+  // devise, le fuseau horaire et la langue cohérents avec ce pays — ce sont
+  // des PROPOSITIONS modifiables, jamais un couplage imposé côté base : la
+  // devise reste librement changeable ensuite depuis Paramètres tant
+  // qu'aucune opération financière n'existe.
+  const [country, setCountry] = useState<string>("CM");
+  const [currency, setCurrency] = useState<string>("XAF");
   const [language, setLanguage] = useState<"fr" | "en">(locale);
   const [timezone, setTimezone] = useState("Africa/Douala");
   const [rentMethod, setRentMethod] = useState<RentCollectionMethod | "">(
@@ -152,6 +162,20 @@ export function OrganizationOnboardingForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A : applique les valeurs par
+  // défaut cohérentes du pays choisi (devise, fuseau, langue). L'utilisateur
+  // reste libre de modifier ensuite chacun de ces champs individuellement —
+  // ce ne sont que des propositions de départ, jamais un verrou.
+  function applyCountryDefaults(nextCountry: string) {
+    setCountry(nextCountry);
+    const defaults = defaultsForCountry(nextCountry);
+    if (defaults) {
+      setCurrency(defaults.currency);
+      setTimezone(defaults.timezone);
+      setLanguage(defaults.language);
+    }
+  }
+
   const guard = useCallback(async (fn: () => Promise<void>) => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -192,7 +216,7 @@ export function OrganizationOnboardingForm({
       const response = await fetch("/api/organizations", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), language, timezone }),
+        body: JSON.stringify({ name: name.trim(), language, timezone, country, currency }),
       });
 
       if (response.status === 403) {
@@ -347,6 +371,27 @@ export function OrganizationOnboardingForm({
         </label>
         <div className="form-grid">
           <label className="field">
+            <span>{t("Pays du marché locatif", "Rental market country")}</span>
+            <select name="country" required value={country}
+              onChange={(e) => applyCountryDefaults(e.target.value)}>
+              {SUPPORTED_COUNTRIES.map((entry) => (
+                <option key={entry.countryCode} value={entry.countryCode}>
+                  {t(entry.label.fr, entry.label.en)} · {entry.currency}
+                </option>
+              ))}
+            </select>
+            <small>{t("Propose devise, fuseau et langue cohérents — modifiables ci-dessous.", "Proposes a coherent currency, time zone and language — editable below.")}</small>
+          </label>
+          <label className="field">
+            <span>{t("Devise des loyers", "Rental currency")}</span>
+            <select name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              {RENTAL_CURRENCIES.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+            <small>{t("Librement changeable tant qu’aucune donnée financière n’existe.", "Freely changeable as long as no financial data exists.")}</small>
+          </label>
+        </div>
+        <div className="form-grid">
+          <label className="field">
             <span>{t("Langue", "Language")}</span>
             <select name="language" value={language}
               onChange={(e) => setLanguage(e.target.value as "fr" | "en")}>
@@ -392,8 +437,7 @@ export function OrganizationOnboardingForm({
           </label>
         </div>
         <div className="fixed-configuration">
-          <span><small>{t("Marché immobilier", "Rental market")}</small><strong>{t("Cameroun", "Cameroon")}</strong></span>
-          <span><small>{t("Devise des loyers", "Rental currency")}</small><strong>XAF</strong></span>
+          <span><small>{t("Marché immobilier", "Rental market")}</small><strong>{t(defaultsForCountry(country)?.label.fr ?? country, defaultsForCountry(country)?.label.en ?? country)}</strong></span>
           <span><small>{t("Devise d’abonnement", "Subscription currency")}</small><strong>{selectedBillingCountry ? subscriptionCurrencyForBillingCountry(selectedBillingCountry) : "—"}</strong></span>
         </div>
         {error && error !== "quota" ? (
@@ -452,7 +496,7 @@ export function OrganizationOnboardingForm({
         </label>
         {propertyType === "house" ? (
           <label className="field">
-            <span>{t("Loyer mensuel de référence (XAF, facultatif)", "Reference monthly rent (XAF, optional)")}</span>
+            <span>{t(`Loyer mensuel de référence (${currency}, facultatif)`, `Reference monthly rent (${currency}, optional)`)}</span>
             <input inputMode="numeric" value={referenceRent}
               onChange={(e) => setReferenceRent(e.target.value.replace(/\D/g, ""))} placeholder="150000" />
           </label>
@@ -481,7 +525,7 @@ export function OrganizationOnboardingForm({
             onChange={(e) => setUnitLabel(e.target.value)} placeholder={t("Ex. Appartement A1", "E.g. Apartment A1")} />
         </label>
         <label className="field">
-          <span>{t("Loyer mensuel de référence (XAF, facultatif)", "Reference monthly rent (XAF, optional)")}</span>
+          <span>{t(`Loyer mensuel de référence (${currency}, facultatif)`, `Reference monthly rent (${currency}, optional)`)}</span>
           <input inputMode="numeric" value={referenceRent}
             onChange={(e) => setReferenceRent(e.target.value.replace(/\D/g, ""))} placeholder="120000" />
         </label>

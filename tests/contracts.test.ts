@@ -26,4 +26,20 @@ test("les tables 6F sont RLS/default-deny et les RPC sont privées à authentica
 test("les contrats et signatures finalisés sont immuables et le bucket est privé",()=>{assert.match(migration,/immutable_contract/);assert.match(migration,/immutable_contract_signature/);assert.match(migration,/values \('contract-documents','contract-documents',false/);assert.match(migration,/target_storage_path <> c\.organization_id\|\|/);});
 test("le portail reste Tenant/Lease scoped et les URLs signées durent 120 secondes",()=>{assert.match(migration,/private\.has_active_tenant_portal_access\(target_access_id\)/);assert.match(migration,/la\.tenant_id=c\.tenant_id and la\.lease_id=c\.lease_id/);const route=readFileSync(new URL("../src/app/api/tenant-portal/contracts/[contractId]/download/route.ts",import.meta.url),"utf8");const server=readFileSync(new URL("../src/modules/contracts/server.ts",import.meta.url),"utf8");assert.match(server,/createSignedUrl\(storagePath, 120/);assert.match(route,/getPortalContract\(accessId,contractId\)/);});
 test("6F n'active ni fournisseur payant, ni email financier, ni accès public",()=>{assert.doesNotMatch(migration,/docusign|yousign|adobe sign|flutterwave|campay|stripe/i);assert.doesNotMatch(migration,/public\s*=\s*true/i);assert.doesNotMatch(migration,/message_deliveries|financial_email/i);});
+// AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B
+const settingsView=readFileSync(new URL("../src/modules/contracts/settings-view.tsx",import.meta.url),"utf8");
+const contractViews=readFileSync(new URL("../src/modules/contracts/views.tsx",import.meta.url),"utf8");
+test("les modèles proposent un aperçu local avec des données fictives, jamais réelles",()=>{
+  assert.match(settingsView,/FICTITIOUS_PREVIEW_SNAPSHOT/);
+  assert.match(settingsView,/données fictives/i);
+  assert.doesNotMatch(settingsView,/FICTITIOUS_PREVIEW_SNAPSHOT[\s\S]*fetch\(/);
+});
+test("le cachet et la signature électronique sont explicitement distingués, avec un aperçu visuel du cachet",()=>{
+  assert.match(settingsView,/signature électronique est distincte/i);
+  assert.match(settingsView,/contract-stamp-preview/);
+});
+test("le parcours contrat signale l'absence de modalités de paiement au lieu de la fabriquer",()=>{
+  assert.match(contractViews,/leasePaymentTermsRecorded/);
+  assert.match(contractViews,/non renseignées/i);
+});
 test("le PDF final inclut contenu, preuves et cachet dans un document A4 valide",async()=>{const contract:LeaseContract={id:"00000000-0000-4000-8000-000000000001",organizationId:"00000000-0000-4000-8000-000000000002",leaseId:"00000000-0000-4000-8000-000000000003",tenantId:"00000000-0000-4000-8000-000000000004",templateId:"00000000-0000-4000-8000-000000000005",templateVersion:1,language:"fr",reference:"CTR-2026-DEMO000001",status:"tenant_signed",templateSnapshot:{name:"Bail standard"},dataSnapshot:{organization:{name:"KJORA Démo",currency:"XAF"},tenant:{name:"Awa Démo"},lease:{base_rent:80000}},contentSnapshot:[sections[0]],contentSha256:"a".repeat(64),stampSnapshot:{enabled:true,company:"KJORA Démo",position:"signature_block"},finalStoragePath:null,finalSha256:null,createdAt:"2026-09-02T10:00:00.000Z",sentAt:"2026-09-02T10:10:00.000Z",completedAt:null,signatures:[{party:"owner",signerUserId:"00000000-0000-4000-8000-000000000006",method:"stylized_name",consentCode:"owner_contract_signature_v1",consentText:"Consentement exact",contentSha256:"a".repeat(64),signedAt:"2026-09-02T10:15:00.000Z",signatureData:{displayName:"Bailleur Démo"}},{party:"tenant",signerUserId:"00000000-0000-4000-8000-000000000007",method:"drawn",consentCode:"tenant_contract_signature_v1",consentText:"Consentement exact",contentSha256:"a".repeat(64),signedAt:"2026-09-02T10:20:00.000Z",signatureData:{strokes:[{x:1,y:1},{x:20,y:10},{x:40,y:2}]}}]};const bytes=await generateContractPdf(contract);const pdf=await PDFDocument.load(bytes);assert.ok(bytes.byteLength>1000);assert.ok(pdf.getPageCount()>=1);});

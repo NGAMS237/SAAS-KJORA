@@ -20,15 +20,22 @@ export default async function SettingsPage() {
   // respectivement Essentiel+. Vérifié ici aussi (pas seulement le RBAC) afin
   // que la carte affiche le bon état sans jamais mener à une destination que
   // l'offre de l'Organization ne permet pas d'ouvrir (FEATURE GATING UX §14).
-  const entitlements = authorization ? await getOrganizationEntitlements(authorization.organizationId) : null;
+  //
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A/C : le verrou de devise passe par
+  // UN seul appel à get_organization_currency_lock (liste exhaustive des 6
+  // relations financières, private.organization_has_financial_operations),
+  // au lieu de 4 comptages séparés (leases/dues/payments/ledger_entries,
+  // oubliant payment_allocations et lease_financial_terms) exécutés à chaque
+  // affichage de cette page.
+  const supabase = await createSupabaseServerClient();
+  const [entitlements, currencyLock] = await Promise.all([
+    authorization ? getOrganizationEntitlements(authorization.organizationId) : Promise.resolve(null),
+    supabase.rpc("get_organization_currency_lock", { target_organization_id: activeOrganization.id }).maybeSingle(),
+  ]);
   const currentPlan = entitlements?.plan ?? "decouverte";
   const hasContractsFeature = Boolean(entitlements?.features.has("contracts"));
   const hasExportsFeature = Boolean(entitlements?.features.has("exports_standard"));
-  const supabase = await createSupabaseServerClient();
-  const financeChecks = await Promise.all(["leases", "dues", "payments", "ledger_entries"].map((table) =>
-    supabase.from(table).select("id", { count: "exact", head: true }).eq("organization_id", activeOrganization.id),
-  ));
-  const currencyLocked = financeChecks.some(({ count }) => (count ?? 0) > 0);
+  const currencyLocked = (currencyLock.data as { is_locked: boolean } | null)?.is_locked ?? true;
   return (
     <div className="page-stack settings-v2">
       <PageHeader

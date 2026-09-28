@@ -41,7 +41,15 @@ select set_config('request.jwt.claim.sub', '1e000000-0000-4000-8000-000000000001
 select lives_ok($$ select * from public.update_organization_profile_settings('2e000000-0000-4000-8000-00000000000a', 'Org A Updated', 'en', 'America/Toronto', 'XAF') $$, 'Owner A modifie ses settings');
 select is((select timezone from public.organization_profiles where organization_id = '2e000000-0000-4000-8000-00000000000a'), 'America/Toronto', 'timezone IANA persisté');
 select is((select currency_code from public.organization_profiles where organization_id = '2e000000-0000-4000-8000-00000000000a'), 'XAF', 'devise XAF tenant-scoped persistée');
-select throws_ok($$ select * from public.update_organization_profile_settings('2e000000-0000-4000-8000-00000000000a', 'Org A', 'fr', 'Africa/Douala', 'EUR') $$, '23514', 'organization_currency_locked', 'devise verrouillée après activité financière');
+-- AFRICA-CONTRACTS-PERFORMANCE-01 : la validation du format de devise passe
+-- désormais AVANT la vérification du verrou (ordre plus sûr : une devise qui
+-- n'existe dans aucun catalogue est refusée telle quelle, sans même exposer
+-- si l'Organization est verrouillée ou non) — 'EUR' n'a jamais été une devise
+-- supportée ; ce test vérifie donc désormais invalid_organization_currency
+-- plutôt que organization_currency_locked. Le verrou lui-même (devise
+-- SUPPORTÉE mais différente, après activité financière) est couvert par
+-- rls_africa_contracts_performance_01_axis_a.test.sql.
+select throws_ok($$ select * from public.update_organization_profile_settings('2e000000-0000-4000-8000-00000000000a', 'Org A', 'fr', 'Africa/Douala', 'EUR') $$, '22023', 'invalid_organization_currency', 'devise EUR hors catalogue toujours refusée après activité financière');
 select throws_ok($$ select * from public.update_organization_profile_settings('2e000000-0000-4000-8000-00000000000b', 'Intrusion', 'fr', 'Africa/Douala', 'XAF') $$, '42501', 'forbidden', 'Owner A ne modifie pas Org B');
 select throws_ok($$ select * from public.update_organization_profile_settings('2e000000-0000-4000-8000-00000000000a', 'Org A', 'fr', 'UTC+1 libre', 'XAF') $$, '22023', 'invalid_organization_settings', 'timezone invalide refusé');
 select set_config('request.jwt.claim.sub', '1e000000-0000-4000-8000-000000000002', true);

@@ -55,6 +55,11 @@ export type LeaseInput = {
   entryProrationOverrideReason: string | null;
   exitProrationOverrideXaf: number | null;
   exitProrationOverrideReason: string | null;
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B : texte libre optionnel qui
+  // alimente la clause « Modalités de paiement » d'un contrat généré. Non
+  // renseigné (null), cette clause est omise du contrat plutôt que
+  // fabriquée — jamais de valeur par défaut inventée ici.
+  paymentTerms: string | null;
 };
 
 export type LeaseSummary = LeaseInput & {
@@ -203,6 +208,15 @@ export function parseLeaseInput(input: Record<string, unknown>): ValidationResul
     || (exitProrationOverrideXaf === null) !== (exitProrationOverrideReason === null)) {
     return { ok: false, error: "proration_override_reason_required" };
   }
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B : optionnel, mais si fourni doit
+  // respecter la même fourchette que la contrainte SQL (3 à 1000
+  // caractères) — sinon on refuse tôt plutôt que de laisser la base rejeter
+  // silencieusement une valeur hors bornes.
+  const paymentTermsProvided = input.paymentTerms !== null && input.paymentTerms !== undefined && input.paymentTerms !== "";
+  const paymentTerms = optionalText(input.paymentTerms, 1000);
+  if (paymentTermsProvided && (paymentTerms === null || paymentTerms.length < 3)) {
+    return { ok: false, error: "invalid_payment_terms" };
+  }
   return {
     ok: true,
     value: {
@@ -214,6 +228,7 @@ export function parseLeaseInput(input: Record<string, unknown>): ValidationResul
       exitProrationMode: input.exitProrationMode as ProrationMode,
       entryProrationOverrideXaf, entryProrationOverrideReason,
       exitProrationOverrideXaf, exitProrationOverrideReason,
+      paymentTerms,
     },
   };
 }

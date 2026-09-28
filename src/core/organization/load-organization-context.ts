@@ -6,7 +6,8 @@ import {
   type OrganizationOption,
 } from "@/core/organization/select-active-organization";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isCapability, isInternalRole, type Capability, type InternalRole } from "@/core/authorization/capabilities";
+import { isInternalRole, type InternalRole } from "@/core/authorization/capabilities";
+import { getCapabilitiesForRoles } from "@/core/authorization/capability-catalog";
 
 type MembershipRow = { organization_id: string; role: InternalRole };
 type OrganizationRow = { id: string };
@@ -37,10 +38,14 @@ export async function loadOrganizationContext() {
   const membershipByOrganization = new Map(memberships.map((row) => [row.organization_id, row.role]));
   const ids = [...membershipByOrganization.keys()];
   const roles = [...new Set(memberships.map((membership) => membership.role))];
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE C : `role_capabilities` est un
+  // catalogue statique lu depuis le cache de processus (capability-catalog.ts)
+  // plutôt que redemandé à Supabase à chaque montage de ce layout — un
+  // aller-retour réseau de moins, sans changer le résultat.
   const [
     { data: organizationData, error: organizationError },
     { data: profileData, error: profileError },
-    { data: capabilityData, error: capabilityError },
+    capabilitiesByRole,
   ] =
     await Promise.all([
       supabase.from("organizations").select("id").eq("status", "active").in("id", ids),
@@ -48,17 +53,10 @@ export async function loadOrganizationContext() {
         .from("organization_profiles")
         .select("organization_id, name, country_code, currency_code, language, timezone")
         .in("organization_id", ids),
-      supabase.from("role_capabilities").select("role, capability").in("role", roles),
+      getCapabilitiesForRoles(roles),
     ]);
   if (organizationError) throw organizationError;
   if (profileError) throw profileError;
-  if (capabilityError) throw capabilityError;
-
-  const capabilitiesByRole = new Map<InternalRole, Capability[]>();
-  for (const row of capabilityData ?? []) {
-    if (!isInternalRole(row.role) || !isCapability(row.capability)) continue;
-    capabilitiesByRole.set(row.role, [...(capabilitiesByRole.get(row.role) ?? []), row.capability]);
-  }
 
   const activeIds = new Set(((organizationData ?? []) as OrganizationRow[]).map((row) => row.id));
   const organizations: OrganizationOption[] = ((profileData ?? []) as ProfileRow[])

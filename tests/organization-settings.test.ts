@@ -11,9 +11,13 @@ test("les fuseaux UI sont des identifiants IANA contrôlés", () => {
 });
 
 test("la devise Organization est structurée", () => {
-  assert.equal(isOrganizationCurrency("XAF"), true);
-  for (const currency of ["XOF", "EUR", "USD", "CAD"]) assert.equal(isOrganizationCurrency(currency), false);
-  assert.equal(isOrganizationCurrency("BTC"), false);
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A : le catalogue de devises de
+  // location est passé de XAF seul à 6 devises (XAF, XOF, NGN, CDF, KES,
+  // ZAR) — voir src/core/currency/metadata.ts. XOF était auparavant refusé
+  // par erreur dans ce test ; il est désormais une devise valide. Les
+  // devises hors catalogue (EUR/USD/CAD/BTC) restent refusées.
+  for (const currency of ["XAF", "XOF", "NGN", "CDF", "KES", "ZAR"]) assert.equal(isOrganizationCurrency(currency), true);
+  for (const currency of ["EUR", "USD", "CAD", "BTC"]) assert.equal(isOrganizationCurrency(currency), false);
 });
 
 test("la RPC settings contrôle identité, capability, tenant et verrou financier", () => {

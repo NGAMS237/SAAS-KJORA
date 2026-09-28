@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupportedOrganizationTimezone } from "@/core/organization/settings";
 import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
 import { isPlanSlug } from "@/core/entitlements/model";
+import { isSupportedCountry, isRentalCurrency } from "@/core/currency/metadata";
 
 function cookieOptions() {
   return { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
@@ -26,6 +27,8 @@ export async function POST(request: Request) {
     name?: unknown;
     language?: unknown;
     timezone?: unknown;
+    country?: unknown; // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A : optionnel, défaut CM côté RPC
+    currency?: unknown; // idem — défaut XAF côté RPC
     plan_intent?: unknown; // ALIGN-02: passed for analytics/logging — NEVER used for plan assignment
   };
 
@@ -35,6 +38,18 @@ export async function POST(request: Request) {
     !isSupportedOrganizationTimezone(body.timezone)
   ) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  }
+
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A : pays/devise sont optionnels ici
+  // (rétrocompatible avec tout appelant existant qui n'en envoie pas — la RPC
+  // applique alors ses défauts CM/XAF) mais, s'ils sont fournis, ils doivent
+  // appartenir aux catalogues supportés ; sinon on refuse tôt plutôt que de
+  // laisser la RPC lever une erreur générique moins actionnable pour l'UI.
+  if (body.country !== undefined && (typeof body.country !== "string" || !isSupportedCountry(body.country))) {
+    return NextResponse.json({ error: "invalid_organization_country" }, { status: 400 });
+  }
+  if (body.currency !== undefined && (typeof body.currency !== "string" || !isRentalCurrency(body.currency))) {
+    return NextResponse.json({ error: "invalid_organization_currency" }, { status: 400 });
   }
 
   // plan_intent is non-trustworthy — validate to a known slug for logging only.
@@ -53,6 +68,8 @@ export async function POST(request: Request) {
     organization_name: body.name,
     organization_language: body.language,
     organization_timezone: body.timezone,
+    ...(typeof body.country === "string" ? { organization_country: body.country } : {}),
+    ...(typeof body.currency === "string" ? { organization_currency: body.currency } : {}),
   });
 
   if (error) {
