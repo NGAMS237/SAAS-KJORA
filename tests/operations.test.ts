@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
-  activityHref, dashboardPeriod, notificationHref, parseAuditFilters, shiftDashboardPeriod,
+  activityHref, dashboardPeriod, parseAuditFilters, shiftDashboardPeriod,
 } from "../src/modules/operations/model.ts";
 
 const migration = readFileSync(
@@ -31,7 +31,8 @@ test("activité et notifications ouvrent uniquement leur contexte autorisé", ()
   assert.equal(activityHref({ type: "PROPERTY_CREATED", aggregateId: id, payload: {} }), `/app/biens/${id}`);
   assert.equal(activityHref({ type: "DUE_GENERATED", aggregateId: id, payload: { lease_id: id } }), `/app/locations/${id}`);
   assert.equal(activityHref({ type: "DOCUMENT_GENERATED", aggregateId: id, payload: {} }), `/api/financial-documents/${id}/download`);
-  assert.equal(notificationHref({ documentId: id, tenantId: null, leaseId: null }), `/api/financial-documents/${id}/download`);
+  // NCE-01 : destination de notification résolue par le module fermé
+  // (tests/notifications-communications-e2e-01.test.ts), plus ici.
 });
 
 test("le dashboard délègue les vérités financières à une projection SQL capability-scoped", () => {

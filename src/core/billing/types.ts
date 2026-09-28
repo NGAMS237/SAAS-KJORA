@@ -74,9 +74,15 @@ export type BillingInvoice = {
   amountMinor: number;
   periodStart: string;
   periodEnd: string;
+  /** REVENUE-01B : échéance de paiement (null pour une facture antérieure : repli sur periodEnd). */
+  dueOn: string | null;
   status: InvoiceStatus;
   issuedOn: string;
   paidAt: string | null;
+  /** REVENUE-01B : libellé opaque d'un règlement manuel. Jamais une référence provider. */
+  manualReference: string | null;
+  /** REVENUE-01B : renseigné uniquement après confirmation manuelle par un platform_admin. */
+  manualPaymentConfirmedAt: string | null;
 };
 
 // ---------------------------------------------------------------------------

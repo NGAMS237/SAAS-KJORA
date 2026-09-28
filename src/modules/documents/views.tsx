@@ -7,7 +7,9 @@ import { Bell, BellRing, CheckCheck, Download, ExternalLink, FileCheck2, FileClo
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Card, EmptyState } from "@/core/ui/ui";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
-import { notificationHref } from "@/modules/operations/model";
+import { markAllNotificationsReadAction, setNotificationReadAction } from "@/modules/notifications/actions";
+import { badgeLabel, notificationActionMessage, notificationDisplay, notificationNoticeMessage, parseNotificationNotice } from "@/modules/notifications/model";
+import { clearLocalReadState, setLocalReadState, useNotificationsWithLocalReadState } from "@/modules/notifications/read-state";
 
 // DOCUMENT DELIVERY — modals explicites (§9, §10) au lieu d'un bouton
 // silencieusement désactivé. Chaque modal reste sur la page, comme
@@ -103,6 +105,34 @@ async function mutate(body: Record<string, unknown>) {
   return { ok: response.ok, body: await response.json() as Record<string, unknown> };
 }
 
+// NCE-01 v2 — états d'envoi explicites. Une relance n'a lieu qu'au prochain
+// passage quotidien ou sur déclenchement Admin ; une issue incertaine n'est
+// jamais renvoyée automatiquement (revue par l'équipe KJORA).
+function deliveryStatusLabel(delivery: NonNullable<FinancialDocumentSummary["lastDelivery"]>, t: ReturnType<typeof useCopy>): string {
+  switch (delivery.status) {
+    case "sent":
+      return t(`Envoyé à ${delivery.recipientEmail} le ${shortDate(delivery.sentAt)}`, `Sent to ${delivery.recipientEmail} on ${shortDate(delivery.sentAt)}`);
+    case "delivered":
+      return t(`Remis à ${delivery.recipientEmail}`, `Delivered to ${delivery.recipientEmail}`);
+    case "failed":
+      return delivery.attemptCount >= 3
+        ? t("Envoi en échec définitif", "Delivery permanently failed")
+        : t(`Envoi en échec · essai ${delivery.attemptCount}/3 · nouvelle tentative au prochain passage quotidien ou déclenchement Admin`, `Delivery failed · attempt ${delivery.attemptCount}/3 · retried at the next daily run or Admin trigger`);
+    case "delivery_unknown":
+      return t("Issue d’envoi incertaine — en vérification, aucun renvoi automatique", "Uncertain delivery outcome — under review, no automatic resend");
+    case "provider_failed":
+      return t("Échec signalé par le fournisseur (non remis)", "Failure reported by the provider (not delivered)");
+    case "bounced":
+    case "complained":
+    case "suppressed":
+      return t("Adresse refusée par le destinataire ou le fournisseur", "Address refused by the recipient or provider");
+    case "cancelled":
+      return t("Envoi annulé", "Delivery cancelled");
+    default:
+      return t("Envoi en file", "Delivery queued");
+  }
+}
+
 function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
   document: FinancialDocumentSummary; canShare: boolean; emailDeliveryEnabled: boolean;
 }) {
@@ -147,11 +177,7 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
       <span>{document.reference} · {shortDate(document.issuedOn)}</span>
       {document.periodStart ? <small>{shortDate(document.periodStart)} → {shortDate(document.periodEnd)}</small> : null}
       {document.status === "invalidated" ? <small>{t("Invalidé — original conservé", "Invalidated — original retained")}</small> : null}
-      {document.lastDelivery ? <small>{document.lastDelivery.status === "sent"
-        ? t(`Envoyé à ${document.lastDelivery.recipientEmail} le ${shortDate(document.lastDelivery.sentAt)}`, `Sent to ${document.lastDelivery.recipientEmail} on ${shortDate(document.lastDelivery.sentAt)}`)
-        : document.lastDelivery.status === "failed"
-          ? t(`Envoi en échec · essai ${document.lastDelivery.attemptCount}/3`, `Delivery failed · attempt ${document.lastDelivery.attemptCount}/3`)
-          : t(`Envoi ${document.lastDelivery.status}`, `Delivery ${document.lastDelivery.status}`)}</small> : null}
+      {document.lastDelivery ? <small>{deliveryStatusLabel(document.lastDelivery, t)}</small> : null}
       {message ? <small role="status">{message}</small> : null}
     </div>
     <div className="document-row__actions">
@@ -195,60 +221,127 @@ export function StatementPdfAction({ tenantId, initialDocuments }: { tenantId: s
   </Card>;
 }
 
-function notificationCopy(notification: NotificationSummary, t: ReturnType<typeof useCopy>) {
-  const reference = String(notification.payload.payment_reference ?? notification.payload.due_reference ?? "");
-  const titles = {
-    due_notice_ready: t("Avis d’échéance prêt", "Due notice ready"),
-    payment_receipt_ready: t("Reçu de paiement prêt", "Payment receipt ready"),
-    rent_receipt_ready: t("Quittance de loyer prête", "Rent receipt ready"),
-    payment_overdue: t("Échéance en retard", "Payment overdue"),
-    contract_ready: t("Contrat à consulter", "Contract ready"),
-    contract_completed: t("Contrat final disponible", "Final contract available"),
-    last_prepaid_period: t("Dernière période prépayée atteinte", "Last prepaid period reached"),
-    low_credit: t("Crédit insuffisant pour la prochaine échéance", "Credit does not cover the next due"),
-    delivery_failed: t("Échec d’envoi", "Delivery failed"),
-  };
-  const detail = notification.type === "low_credit"
-    ? t(
-      `Crédit affecté : ${Number(notification.payload.credit_applied_xaf ?? 0).toLocaleString("fr-FR")} XAF · Reste attendu : ${Number(notification.payload.expected_remainder_xaf ?? 0).toLocaleString("fr-FR")} XAF`,
-      `Credit applied: ${Number(notification.payload.credit_applied_xaf ?? 0).toLocaleString("en-GB")} XAF · Expected remainder: ${Number(notification.payload.expected_remainder_xaf ?? 0).toLocaleString("en-GB")} XAF`,
-    )
-    : notification.type === "last_prepaid_period"
-      ? t(
-        `Dernière période couverte : ${shortDate(String(notification.payload.last_covered_period_end ?? ""))} · Prochaine échéance non couverte : ${shortDate(String(notification.payload.next_uncovered_due_date ?? ""))}`,
-        `Last covered period: ${shortDate(String(notification.payload.last_covered_period_end ?? ""))} · Next uncovered due: ${shortDate(String(notification.payload.next_uncovered_due_date ?? ""))}`,
-      )
-      : reference || t("Événement financier", "Financial event");
-  return { title: titles[notification.type], detail };
+function useNotificationDisplay() {
+  const { language } = usePreferences();
+  return (notification: NotificationSummary) => notificationDisplay(notification, language === "FR" ? "FR" : "EN");
 }
 
-export function NotificationsView({ notifications, embedded = false }: { notifications: NotificationSummary[]; embedded?: boolean }) {
-  const t = useCopy(); const router = useRouter(); const [busyId, setBusyId] = useState<string | null>(null);
-  async function setReadState(id: string, isRead: boolean) {
-    setBusyId(id); await mutate({ action: isRead ? "mark_notification_read" : "mark_notification_unread", notificationId: id }); setBusyId(null); router.refresh();
+/** NCE-01 : tout lien de notification passe par la route d'ouverture (lecture + destination fermée). */
+function openHref(notification: NotificationSummary) {
+  return `/api/notifications/${notification.id}/open`;
+}
+
+function opensDocument(notification: NotificationSummary) {
+  return Boolean(notification.documentId)
+    && (notification.type === "due_notice_ready" || notification.type === "payment_receipt_ready" || notification.type === "rent_receipt_ready");
+}
+
+function useNotificationReadActions() {
+  const { language } = usePreferences();
+  const router = useRouter();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function setRead(id: string, isRead: boolean) {
+    setBusyId(id); setError(null);
+    setLocalReadState([id], isRead);
+    const result = await setNotificationReadAction(id, isRead);
+    setBusyId(null);
+    if (!result.ok) {
+      clearLocalReadState([id]);
+      setError(notificationActionMessage(result.error, language === "FR" ? "FR" : "EN"));
+      return;
+    }
+    router.refresh();
   }
-  async function markAllRead() {
-    setBusyId("all"); await mutate({ action: "mark_all_notifications_read" }); setBusyId(null); router.refresh();
+  async function markAll(ids: string[]) {
+    setBusyId("all"); setError(null);
+    setLocalReadState(ids, true);
+    const result = await markAllNotificationsReadAction();
+    setBusyId(null);
+    if (!result.ok) {
+      clearLocalReadState(ids);
+      setError(notificationActionMessage(result.error, language === "FR" ? "FR" : "EN"));
+      return;
+    }
+    router.refresh();
   }
-  const unreadCount = notifications.filter((notification) => !notification.readAt).length;
-  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">{t("Alertes", "Alerts")}</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’Organization active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unreadCount ? <button className="button button--secondary" disabled={busyId === "all"} onClick={markAllRead} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
-    <Card className="notifications-card">{notifications.length ? <div className="notification-list">{notifications.map((notification) => { const copy = notificationCopy(notification, t); const href = notificationHref(notification); return <div className={`notification-row${notification.readAt ? " is-read" : ""}`} key={notification.id}><span className="notification-row__icon">{notification.type === "delivery_failed" ? <Mail size={18} /> : <BellRing size={18} />}</span><div><strong>{copy.title}</strong><span>{copy.detail} · {shortDate(notification.createdAt)}</span></div><div className="notification-row__actions"><Link className="button button--secondary" href={href} prefetch={false} target={notification.documentId ? "_blank" : undefined}>{t("Ouvrir", "Open")}<ExternalLink size={14} /></Link><button className="button button--secondary" disabled={busyId === notification.id} onClick={() => setReadState(notification.id, !notification.readAt)} type="button">{notification.readAt ? t("Marquer non lue", "Mark unread") : t("Marquer comme lue", "Mark read")}</button></div></div>; })}</div>
+  function markOpened(id: string) {
+    // Badge immédiat, puis écriture par Server Action (POST, contrôle
+    // d'origine Next) : le marquage ne dépend pas de l'en-tête
+    // Sec-Fetch-Site, que la route d'ouverture exige pour écrire.
+    setLocalReadState([id], true);
+    void setNotificationReadAction(id, true).then((result) => {
+      if (!result.ok) clearLocalReadState([id]);
+    });
+  }
+  return { busyId, error, setRead, markAll, markOpened };
+}
+
+export function NotificationNoticeBanner({ notice }: { notice: string | null }) {
+  const { language } = usePreferences();
+  const parsed = parseNotificationNotice(notice);
+  const [dismissed, setDismissed] = useState(false);
+  if (!parsed || dismissed) return null;
+  return <div className="notification-notice" role="status">
+    <TriangleAlert aria-hidden="true" size={17} />
+    <p>{notificationNoticeMessage(parsed, language === "FR" ? "FR" : "EN")}</p>
+    <button aria-label={language === "FR" ? "Masquer ce message" : "Dismiss this message"} className="icon-button" onClick={() => setDismissed(true)} type="button"><X size={16} /></button>
+  </div>;
+}
+
+export function NotificationsView({ notifications: serverNotifications, embedded = false, notice = null }: {
+  notifications: NotificationSummary[]; embedded?: boolean; notice?: string | null;
+}) {
+  const t = useCopy();
+  const display = useNotificationDisplay();
+  const notifications = useNotificationsWithLocalReadState(serverNotifications);
+  const { busyId, error, setRead, markAll, markOpened } = useNotificationReadActions();
+  const unread = notifications.filter((notification) => !notification.readAt);
+  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">{t("Alertes", "Alerts")}</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’Organization active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unread.length ? <button className="button button--secondary" disabled={busyId === "all"} onClick={() => markAll(unread.map((notification) => notification.id))} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
+    <NotificationNoticeBanner notice={notice} />
+    {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
+    <p className="sr-only" aria-live="polite">{t(`${unread.length} notification(s) non lue(s)`, `${unread.length} unread notification(s)`)}</p>
+    <Card className="notifications-card">{notifications.length ? <ul className="notification-list">{notifications.map((notification) => {
+      const copy = display(notification);
+      const isRead = Boolean(notification.readAt);
+      return <li className={`notification-row${isRead ? " is-read" : " is-unread"}`} key={notification.id}>
+        <span className="notification-row__icon" aria-hidden="true">{notification.type === "delivery_failed" ? <Mail size={18} /> : <BellRing size={18} />}</span>
+        <div>
+          <strong>{!isRead ? <span className="notification-row__unread-dot" aria-hidden="true" /> : null}{copy.title}<span className="sr-only">{isRead ? t(" (lue)", " (read)") : t(" (non lue)", " (unread)")}</span></strong>
+          {copy.context ? <span className="notification-row__context">{copy.context}</span> : null}
+          <span>{copy.detail}{copy.date ? ` · ${copy.date}` : ""}</span>
+        </div>
+        <div className="notification-row__actions">
+          <a aria-label={`${t("Ouvrir", "Open")} — ${copy.ariaLabel(isRead)}`} className="button button--secondary" href={openHref(notification)} onClick={() => markOpened(notification.id)} rel={opensDocument(notification) ? "noopener" : undefined} target={opensDocument(notification) ? "_blank" : undefined}>{t("Ouvrir", "Open")}<ExternalLink aria-hidden="true" size={14} /></a>
+          <button aria-pressed={isRead} className="button button--secondary" disabled={busyId === notification.id} onClick={() => setRead(notification.id, !isRead)} type="button">{isRead ? t("Marquer non lue", "Mark unread") : t("Marquer comme lue", "Mark read")}</button>
+        </div>
+      </li>;
+    })}</ul>
       : <EmptyState icon={BellRing} title={t("Aucune notification", "No notifications")} description={t("Les futurs événements financiers autorisés apparaîtront ici.", "Future authorized financial events will appear here.")} />}</Card>
   </div>;
 }
 
-export function NotificationBell({ notifications, placement }: { notifications: NotificationSummary[]; placement: "desktop" | "mobile" }) {
+export function NotificationBell({ notifications: serverNotifications, placement }: { notifications: NotificationSummary[]; placement: "desktop" | "mobile" }) {
   const t = useCopy();
+  const display = useNotificationDisplay();
+  const notifications = useNotificationsWithLocalReadState(serverNotifications);
+  const { busyId, error, markAll, markOpened } = useNotificationReadActions();
   const [open, setOpen] = useState(false);
   const unread = notifications.filter((notification) => !notification.readAt);
+  const badge = badgeLabel(unread.length);
   const dialogId = `notification-popover-${placement}`;
   return <div className={`notification-bell notification-bell--${placement}`}>
     <button aria-controls={dialogId} aria-expanded={open} className="icon-button notification-bell__trigger" onClick={() => setOpen((value) => !value)} type="button" aria-label={t(`${unread.length} notification(s) non lue(s)`, `${unread.length} unread notification(s)`)}>
-      <Bell aria-hidden="true" size={19} />{unread.length ? <span>{Math.min(unread.length, 99)}</span> : null}
+      <Bell aria-hidden="true" size={19} />{badge ? <span aria-hidden="true">{badge}</span> : null}
     </button>
     {open ? <div className="notification-popover" id={dialogId} role="dialog" aria-label={t("Notifications récentes", "Recent notifications")}>
-      <div className="notification-popover__header"><div><strong>{t("Notifications", "Notifications")}</strong><small>{unread.length ? t(`${unread.length} non lue(s)`, `${unread.length} unread`) : t("Tout est lu", "All read")}</small></div><button className="icon-button" onClick={() => setOpen(false)} type="button" aria-label={t("Fermer", "Close")}><X size={17} /></button></div>
-      <div className="notification-popover__list">{notifications.slice(0, 5).map((notification) => { const copy = notificationCopy(notification, t); return <Link className={notification.readAt ? "is-read" : ""} href={notificationHref(notification)} key={notification.id} onClick={() => setOpen(false)} prefetch={false} target={notification.documentId ? "_blank" : undefined}><span className="notification-popover__dot" /><span><strong>{copy.title}</strong><small>{copy.detail}</small></span></Link>; })}{notifications.length === 0 ? <p>{t("Aucune notification.", "No notifications.")}</p> : null}</div>
+      <div className="notification-popover__header"><div><strong>{t("Notifications", "Notifications")}</strong><small aria-live="polite">{unread.length ? t(`${unread.length} non lue(s)`, `${unread.length} unread`) : t("Tout est lu", "All read")}</small></div>{unread.length ? <button className="button button--secondary notification-popover__mark-all" disabled={busyId === "all"} onClick={() => markAll(unread.map((notification) => notification.id))} type="button"><CheckCheck aria-hidden="true" size={15} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<button className="icon-button" onClick={() => setOpen(false)} type="button" aria-label={t("Fermer", "Close")}><X size={17} /></button></div>
+      {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
+      <ul className="notification-popover__list">{notifications.slice(0, 5).map((notification) => {
+        const copy = display(notification);
+        const isRead = Boolean(notification.readAt);
+        return <li key={notification.id}><a aria-label={copy.ariaLabel(isRead)} className={isRead ? "is-read" : "is-unread"} href={openHref(notification)} onClick={() => { markOpened(notification.id); setOpen(false); }} rel={opensDocument(notification) ? "noopener" : undefined} target={opensDocument(notification) ? "_blank" : undefined}><span className="notification-popover__dot" aria-hidden="true" /><span><strong>{copy.title}</strong>{copy.context ? <small>{copy.context}</small> : null}<small>{copy.detail}{copy.date ? ` · ${copy.date}` : ""}</small></span></a></li>;
+      })}{notifications.length === 0 ? <li><p>{t("Aucune notification.", "No notifications.")}</p></li> : null}</ul>
       <Link className="notification-popover__footer" href="/app/activite#notifications" onClick={() => setOpen(false)}>{t("Ouvrir le centre de notifications", "Open notification centre")}</Link>
     </div> : null}
   </div>;

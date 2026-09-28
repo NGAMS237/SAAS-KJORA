@@ -8,7 +8,13 @@ export const dynamic = "force-dynamic";
 
 export default async function TenantPortalLayout({ children }: { children: ReactNode }) {
   const context = await loadPortalContext();
-  if (!context?.activeAccess) redirect("/portal/connexion?reason=portal-access-required");
+  if (!context?.activeAccess) {
+    // REVENUE-LAUNCH-01 v3 — Organization suspendue/archivée : message dédié,
+    // jamais confondu avec un accès révoqué.
+    redirect(context && context.unavailableOrganizations.length > 0
+      ? "/portal/connexion?reason=organization-unavailable"
+      : "/portal/connexion?reason=portal-access-required");
+  }
   const notifications = await getPortalNotifications(context.activeAccess.accessId);
   return <PinLockProvider scope="portal" userId={context.userId}>
     <PortalShell

@@ -42,8 +42,12 @@ const PAGE = readFileSync(
 const FINANCE_SECTION_START = VIEWS.indexOf("function BarChart");
 assert.notEqual(FINANCE_SECTION_START, -1, "BarChart introuvable");
 // Englobe BarChart, ConnectorRow et FinancesView : les trois ont été ajoutés
-// ensemble pour ce lot, dans cet ordre, jusqu'à la fin du fichier.
-const FINANCE_VIEW = VIEWS.slice(FINANCE_SECTION_START);
+// ensemble pour ce lot, dans cet ordre. Borné à l'ajout suivant dans le
+// fichier (ContactsView, REVENUE-01I) plutôt qu'à la fin du fichier : ce
+// n'était plus la dernière section depuis que 01I a été ajouté après elle.
+const FINANCE_SECTION_END = VIEWS.indexOf("export function ContactsView");
+assert.notEqual(FINANCE_SECTION_END, -1, "ContactsView introuvable");
+const FINANCE_VIEW = VIEWS.slice(FINANCE_SECTION_START, FINANCE_SECTION_END);
 
 // ---------------------------------------------------------------------------
 // 1. Route et navigation

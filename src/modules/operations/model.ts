@@ -115,13 +115,7 @@ export function activityHref(event: Pick<ActivityEvent, "type" | "aggregateId" |
   return null;
 }
 
-export function notificationHref(notification: {
-  documentId: string | null;
-  tenantId: string | null;
-  leaseId: string | null;
-}) {
-  if (notification.documentId) return `/api/financial-documents/${notification.documentId}/download`;
-  if (notification.tenantId) return `/app/locataires/${notification.tenantId}`;
-  if (notification.leaseId) return `/app/locations/${notification.leaseId}`;
-  return "/app/activite";
-}
+// NCE-01 : l'ancien notificationHref (destination déduite côté client, sans
+// vérification d'existence ni de capacité) est supprimé. Les notifications
+// s'ouvrent par /api/notifications/[id]/open et le résolveur fermé de
+// src/modules/notifications/model.ts.

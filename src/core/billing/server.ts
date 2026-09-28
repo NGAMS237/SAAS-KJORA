@@ -98,6 +98,27 @@ export async function getBillingOverview(organizationId: string): Promise<Billin
   };
 }
 
+function parseBillingInvoiceRow(row: Record<string, unknown>): BillingInvoice | null {
+  const p = plan(row.plan);
+  if (!p || typeof row.id !== "string") return null;
+  return {
+    id: row.id,
+    number: str(row.number) ?? "",
+    plan: p,
+    billingCycle: isBillingCycle(row.billing_cycle) ? row.billing_cycle : "monthly",
+    currency: isBillingCurrency(row.currency) ? row.currency : "XAF",
+    amountMinor: Number(row.amount_minor ?? 0),
+    periodStart: str(row.period_start) ?? "",
+    periodEnd: str(row.period_end) ?? "",
+    dueOn: str(row.due_on),
+    status: isInvoiceStatus(row.status) ? row.status : "draft",
+    issuedOn: str(row.issued_on) ?? "",
+    paidAt: str(row.paid_at),
+    manualReference: str(row.manual_reference),
+    manualPaymentConfirmedAt: str(row.manual_payment_confirmed_at),
+  };
+}
+
 export async function listBillingInvoices(organizationId: string): Promise<BillingInvoice[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("list_billing_invoices", {
@@ -106,22 +127,35 @@ export async function listBillingInvoices(organizationId: string): Promise<Billi
   if (error || !Array.isArray(data)) return [];
 
   return (data as Array<Record<string, unknown>>).flatMap((row) => {
-    const p = plan(row.plan);
-    if (!p || typeof row.id !== "string") return [];
-    return [{
-      id: row.id,
-      number: str(row.number) ?? "",
-      plan: p,
-      billingCycle: isBillingCycle(row.billing_cycle) ? row.billing_cycle : "monthly",
-      currency: isBillingCurrency(row.currency) ? row.currency : "XAF",
-      amountMinor: Number(row.amount_minor ?? 0),
-      periodStart: str(row.period_start) ?? "",
-      periodEnd: str(row.period_end) ?? "",
-      status: isInvoiceStatus(row.status) ? row.status : "draft",
-      issuedOn: str(row.issued_on) ?? "",
-      paidAt: str(row.paid_at),
-    }];
+    const invoice = parseBillingInvoiceRow(row);
+    return invoice ? [invoice] : [];
   });
+}
+
+/**
+ * REVENUE-01D. Une facture unique, avec le nom d'organisation nécessaire au
+ * PDF (REVENUE-01B, `invoice-pdf.ts`). Réutilise `list_billing_invoices`
+ * (déjà gardée par `billing.view`) plutôt que d'écrire une nouvelle RPC : la
+ * liste est plafonnée à 200 lignes, aucun montant ni identifiant ne transite
+ * par le client.
+ */
+export async function getBillingInvoiceForDownload(
+  organizationId: string,
+  invoiceId: string,
+): Promise<(BillingInvoice & { organizationName: string }) | null> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data, error }, profile] = await Promise.all([
+    supabase.rpc("list_billing_invoices", { target_organization_id: organizationId }),
+    supabase.from("organization_profiles").select("name").eq("organization_id", organizationId).maybeSingle(),
+  ]);
+  if (error || !Array.isArray(data)) return null;
+
+  const row = (data as Array<Record<string, unknown>>).find((r) => r.id === invoiceId);
+  if (!row) return null;
+  const invoice = parseBillingInvoiceRow(row);
+  if (!invoice) return null;
+
+  return { ...invoice, organizationName: str(profile.data?.name) ?? "" };
 }
 
 // ---------------------------------------------------------------------------

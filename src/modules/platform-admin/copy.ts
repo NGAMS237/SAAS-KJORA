@@ -37,6 +37,9 @@ export type AdminCopy = {
   organizationsTotal: string;
   organizationsActive: string;
   organizationsSuspended: string;
+  // Complément REVENUE-LAUNCH-01 §1/§2
+  organizationsArchived: string;
+  organizationsRequiringProviderAction: (count: number) => string;
   subscriptionsFreeRegistered: string;
   subscriptionsPaidRegistered: string;
   organizationsWithoutSubscription: string;
@@ -79,6 +82,8 @@ export type AdminCopy = {
   filterStatusAll: string;
   filterStatusActive: string;
   filterStatusSuspended: string;
+  // Complément REVENUE-LAUNCH-01 §1
+  filterStatusArchived: string;
   resultsCount: (count: number) => string;
   clearFilters: string;
   applyFilters: string;
@@ -122,6 +127,8 @@ export type AdminCopy = {
   orgDetailPeriodEnd: string;
   orgDetailProvider: string;
   orgDetailMismatchWarning: string;
+  // Complément REVENUE-LAUNCH-01 §3
+  orgDetailProviderActionRequired: string;
   orgDetailNotFound: string;
   orgDetailActiveInterventionTitle: string;
   orgDetailNoActiveIntervention: string;
@@ -235,6 +242,91 @@ export type AdminCopy = {
   connectorStateNotConnected: string;
 
   financeApplyFilter: string;
+
+  // REVENUE-01E — Extension Admin Finances (facturation manuelle Afrique,
+  // rappels automatiques, échecs de paiement). Section distincte de B/C/D.
+  financeSectionManualInvoicing: string;
+  financeManualInvoicesDueXaf: string;
+  financeManualInvoicesOverdueXaf: string;
+  financeArchivedOpenInvoicesXaf: string;
+  financeExcludedArchivedSubscriptions: string;
+  financeManualPaymentsConfirmed: string;
+  financeManualPaymentsCollectedXaf: string;
+  financeManualPaymentsCollectedCad: string;
+  financeRemindersSent: string;
+  financeRemindersDueNow: string;
+  financePaymentFailures: string;
+
+  // REVENUE-01H — Cycle de vie Admin (Organization / membres / notes internes).
+  lifecycleSectionTitle: string;
+  lifecycleCurrentStatus: string;
+  lifecycleActionSuspend: string;
+  lifecycleActionReactivate: string;
+  lifecycleActionArchive: string;
+  lifecycleActionRestore: string;
+  lifecycleSuspendConfirmText: string;
+  lifecycleReactivateConfirmText: string;
+  lifecycleArchiveConfirmText: string;
+  lifecycleRestoreConfirmText: string;
+  lifecycleArchiveNameLabel: string;
+
+  membersSectionTitle: string;
+  colEmail: string;
+  colRole: string;
+  noMembers: string;
+  actionDisableMember: string;
+  actionReactivateMember: string;
+  actionTransferOwnership: string;
+  memberDisableConfirmText: string;
+  memberReactivateConfirmText: string;
+  transferOwnershipConfirmText: string;
+
+  notesSectionTitle: string;
+  actionAddNote: string;
+  noNotes: string;
+  formNoteLabel: string;
+
+  lifecycleHistoryTitle: string;
+  noLifecycleHistory: string;
+  colActor: string;
+  colTarget: string;
+  lifecycleActionLabels: Record<string, string>;
+
+  // NOTIFICATIONS-COMMUNICATIONS-E2E-01 — Supervision des opérations.
+  navOperations: string;
+
+  // REVENUE-01I — Contacts commerciaux.
+  navContacts: string;
+  contactsTitle: string;
+  contactsLead: string;
+  searchByNameOrEmail: string;
+  colPhone: string;
+  colCountry: string;
+  colLanguage: string;
+  colConsent: string;
+  consentYes: string;
+  consentNo: string;
+  consentUnsubscribed: string;
+  noContactRecorded: string;
+  // Complément REVENUE-LAUNCH-01 §4
+  colMarketingEligible: string;
+  marketingEligibleYes: string;
+  marketingEligibleNo: string;
+  // REVENUE-LAUNCH-01 v3 — consentement versionné et prouvé
+  consentVersionLabel: (version: string) => string;
+  consentEvidenceLabel: string;
+  consentEvidenceOptionalLabel: string;
+  consentEvidenceRequired: string;
+  actionEditContact: string;
+  actionGrantConsent: string;
+  actionUnsubscribe: string;
+  exportCsv: string;
+  formPhoneOptional: string;
+  formCountry: string;
+  formLanguage: string;
+  editContactConfirmText: string;
+  grantConsentConfirmText: string;
+  unsubscribeConfirmText: string;
 };
 
 const fr: AdminCopy = {
@@ -267,6 +359,9 @@ const fr: AdminCopy = {
   organizationsTotal: "Organizations au total",
   organizationsActive: "Actives",
   organizationsSuspended: "Suspendues",
+  organizationsArchived: "Archivées",
+  organizationsRequiringProviderAction: (count) =>
+    `${count} Organization(s) suspendue(s)/archivée(s) avec un abonnement fournisseur encore actif : action manuelle requise (jamais annulé automatiquement).`,
   subscriptionsFreeRegistered: "Abonnements gratuits enregistrés",
   subscriptionsPaidRegistered: "Abonnements payants enregistrés",
   organizationsWithoutSubscription: "Sans abonnement enregistré",
@@ -308,6 +403,7 @@ const fr: AdminCopy = {
   filterStatusAll: "Tous les statuts",
   filterStatusActive: "Actif",
   filterStatusSuspended: "Suspendu",
+  filterStatusArchived: "Archivé",
   resultsCount: (count) => `${count} résultat${count === 1 ? "" : "s"}`,
   clearFilters: "Réinitialiser",
   applyFilters: "Filtrer",
@@ -352,6 +448,8 @@ const fr: AdminCopy = {
   orgDetailProvider: "Fournisseur",
   orgDetailMismatchWarning:
     "Le forfait effectif et l'abonnement enregistré sont en désaccord, sans intervention manuelle active pour l'expliquer.",
+  orgDetailProviderActionRequired:
+    "Cette Organization est suspendue ou archivée, mais son abonnement reste lié à un fournisseur réel non annulé. Aucune annulation automatique n'est effectuée : une action manuelle est requise.",
   orgDetailNotFound: "Cette Organization est introuvable.",
   orgDetailActiveInterventionTitle: "Intervention commerciale active",
   orgDetailNoActiveIntervention: "Aucune intervention commerciale active.",
@@ -436,6 +534,40 @@ const fr: AdminCopy = {
     invalid_idempotency_key: "Jeton de soumission invalide, réessayez.",
     reason_required: "Un motif est obligatoire.",
     not_found: "Intervention introuvable.",
+
+    // REVENUE-01H — Cycle de vie Admin.
+    suspended: "Organization suspendue.",
+    already_suspended: "Cette Organization était déjà suspendue.",
+    organization_archived: "Cette Organization est archivée : restaurez-la d'abord.",
+    already_active: "Cette Organization est déjà active.",
+    reactivated: "Organization réactivée.",
+    already_archived: "Cette Organization était déjà archivée.",
+    name_confirmation_mismatch: "Le nom saisi ne correspond pas exactement au nom de l'Organization.",
+    archived: "Organization archivée.",
+    not_archived: "Cette Organization n'est pas archivée.",
+    restored: "Organization restaurée.",
+    membership_not_found: "Membre introuvable.",
+    already_disabled: "Ce membre était déjà désactivé.",
+    owner_transfer_required: "Un propriétaire ne peut pas être désactivé directement : transférez d'abord la propriété.",
+    disabled: "Membre désactivé.",
+    no_active_owner: "Aucun propriétaire actif trouvé pour cette Organization.",
+    already_owner: "Ce membre est déjà propriétaire.",
+    verified_target_required: "Le membre ciblé doit d'abord confirmer son courriel.",
+    transferred: "Propriété transférée.",
+    note_added: "Note interne ajoutée.",
+
+    // REVENUE-01I — Contacts commerciaux.
+    invalid_phone: "Numéro de téléphone invalide.",
+    country_required: "Le pays est obligatoire.",
+    invalid_language: "Langue invalide.",
+    saved: "Fiche contact enregistrée.",
+    contact_not_found: "Enregistrez d'abord une fiche contact pour cette Organization.",
+    invalid_consent: "Valeur de consentement invalide.",
+    invalid_source: "Source de consentement invalide.",
+    consent_updated: "Consentement marketing mis à jour.",
+    invalid_consent_version: "Version du texte de consentement inconnue.",
+    consent_evidence_required: "Un accord exige une preuve décrite.",
+    invalid_consent_evidence: "Preuve trop longue (500 caractères maximum).",
   },
 
   navFinances: "Finances",
@@ -501,6 +633,121 @@ const fr: AdminCopy = {
   connectorStateNotConnected: "NON CONNECTÉ",
 
   financeApplyFilter: "Appliquer",
+
+  financeSectionManualInvoicing: "Facturation manuelle Afrique & rappels",
+  financeManualInvoicesDueXaf: "Factures dues (XAF)",
+  financeManualInvoicesOverdueXaf: "Factures en retard (XAF)",
+  financeArchivedOpenInvoicesXaf: "Factures ouvertes d'Organizations archivées (XAF, hors encours)",
+  financeExcludedArchivedSubscriptions: "Abonnements d'Organizations archivées exclus du revenu attendu",
+  financeManualPaymentsConfirmed: "Paiements manuels confirmés (période)",
+  financeManualPaymentsCollectedXaf: "Encaissé facturation manuelle (XAF)",
+  financeManualPaymentsCollectedCad: "Encaissé facturation manuelle (CAD)",
+  financeRemindersSent: "Rappels envoyés (période)",
+  financeRemindersDueNow: "Rappels à envoyer (aujourd'hui)",
+  financePaymentFailures: "Échecs de paiement (période)",
+
+  lifecycleSectionTitle: "Cycle de vie de l'Organization",
+  lifecycleCurrentStatus: "Statut actuel",
+  lifecycleActionSuspend: "Suspendre",
+  lifecycleActionReactivate: "Réactiver",
+  lifecycleActionArchive: "Archiver",
+  lifecycleActionRestore: "Restaurer",
+  lifecycleSuspendConfirmText:
+    "Cette Organization sera suspendue : ses membres perdront tout accès aux fonctionnalités métier jusqu'à réactivation. Aucune donnée n'est supprimée.",
+  lifecycleReactivateConfirmText:
+    "Cette Organization redevient active : ses membres retrouvent immédiatement leurs accès habituels.",
+  lifecycleArchiveConfirmText:
+    "Cette Organization sera archivée : ses membres perdront tout accès jusqu'à restauration. Aucune donnée n'est supprimée — l'archivage reste réversible.",
+  lifecycleRestoreConfirmText: "Cette Organization redevient active et ses membres retrouvent leurs accès.",
+  lifecycleArchiveNameLabel: "Tapez le nom exact de l'Organization pour confirmer",
+
+  membersSectionTitle: "Membres",
+  colEmail: "Courriel",
+  colRole: "Rôle",
+  noMembers: "Aucun membre.",
+  actionDisableMember: "Désactiver",
+  actionReactivateMember: "Réactiver",
+  actionTransferOwnership: "Transférer la propriété",
+  memberDisableConfirmText:
+    "Ce membre sera désactivé dans cette Organization uniquement : il perd immédiatement tout accès à celle-ci. Son compte et ses accès aux autres Organizations ne sont pas modifiés.",
+  memberReactivateConfirmText: "Ce membre redevient actif et retrouve ses accès habituels.",
+  transferOwnershipConfirmText:
+    "La propriété de cette Organization sera transférée à ce membre. Le propriétaire actuel devient gestionnaire.",
+
+  notesSectionTitle: "Notes internes Admin",
+  actionAddNote: "Ajouter une note",
+  noNotes: "Aucune note interne.",
+  formNoteLabel: "Note interne (obligatoire, jamais visible de l'Organization)",
+
+  lifecycleHistoryTitle: "Journal d'audit — Organization & membres",
+  noLifecycleHistory: "Aucune action enregistrée pour cette Organization.",
+  colActor: "Auteur",
+  colTarget: "Cible",
+  lifecycleActionLabels: {
+    "member.invited": "Membre invité",
+    "member.invitation_resent": "Invitation renvoyée",
+    "member.invitation_revoked": "Invitation révoquée",
+    "member.invitation_accepted": "Invitation acceptée",
+    "member.role_changed": "Rôle modifié",
+    "member.revoked": "Membre révoqué (self-service)",
+    "owner.transferred": "Propriété transférée (self-service)",
+    "payment.reversed": "Paiement annulé",
+    "document.invalidated": "Document invalidé",
+    "tenant_portal.invited": "Portail locataire — invité",
+    "tenant_portal.invitation_resent": "Portail locataire — invitation renvoyée",
+    "tenant_portal.invitation_accepted": "Portail locataire — invitation acceptée",
+    "tenant_portal.revoked": "Portail locataire — révoqué",
+    "tenant_portal.reactivated": "Portail locataire — réactivé",
+    "contract.generated": "Contrat généré",
+    "contract.validated": "Contrat validé",
+    "contract.owner_signed": "Contrat signé (propriétaire)",
+    "contract.sent": "Contrat envoyé",
+    "contract.tenant_viewed": "Contrat consulté (locataire)",
+    "contract.tenant_signed": "Contrat signé (locataire)",
+    "contract.finalized": "Contrat finalisé",
+    "contract.cancelled": "Contrat annulé",
+    "organization.suspended": "Organization suspendue",
+    "organization.reactivated": "Organization réactivée",
+    "organization.archived": "Organization archivée",
+    "organization.restored": "Organization restaurée",
+    "member.disabled_by_admin": "Membre désactivé par un Admin",
+    "member.reactivated_by_admin": "Membre réactivé par un Admin",
+    "owner.transferred_by_admin": "Propriété transférée par un Admin",
+    "admin.note_added": "Note interne ajoutée",
+  },
+
+  navOperations: "Opérations",
+  navContacts: "Contacts",
+  contactsTitle: "Contacts commerciaux",
+  contactsLead:
+    "Coordonnées et consentement marketing par Organization. Aucune inscription automatique à une newsletter — saisie manuelle uniquement, jamais d'envoi de campagne depuis cette console.",
+  searchByNameOrEmail: "Rechercher par Organization ou courriel",
+  colPhone: "Téléphone",
+  colCountry: "Pays",
+  colLanguage: "Langue",
+  colConsent: "Consentement marketing",
+  consentYes: "Consentant",
+  consentNo: "Non consentant",
+  consentUnsubscribed: "Désabonné",
+  noContactRecorded: "Aucune fiche contact enregistrée.",
+  colMarketingEligible: "Éligible marketing",
+  marketingEligibleYes: "Éligible",
+  marketingEligibleNo: "Non éligible",
+  consentVersionLabel: (version) => `Version du texte de consentement : ${version}`,
+  consentEvidenceLabel: "Preuve du consentement (obligatoire) — canal, date, référence du formulaire signé…",
+  consentEvidenceOptionalLabel: "Précision sur le retrait (facultatif)",
+  consentEvidenceRequired: "Décrivez la preuve du consentement (au moins 3 caractères).",
+  actionEditContact: "Modifier la fiche",
+  actionGrantConsent: "Marquer consentant",
+  actionUnsubscribe: "Désabonner",
+  exportCsv: "Exporter en CSV",
+  formPhoneOptional: "Téléphone (facultatif)",
+  formCountry: "Pays",
+  formLanguage: "Langue de communication",
+  editContactConfirmText: "Ces coordonnées seront enregistrées pour cette Organization.",
+  grantConsentConfirmText:
+    "Cette Organization sera marquée comme ayant consenti à recevoir des communications marketing, à la date d'aujourd'hui.",
+  unsubscribeConfirmText: "Cette Organization sera marquée comme désabonnée des communications marketing.",
 };
 
 const en: AdminCopy = {
@@ -533,6 +780,9 @@ const en: AdminCopy = {
   organizationsTotal: "Organizations total",
   organizationsActive: "Active",
   organizationsSuspended: "Suspended",
+  organizationsArchived: "Archived",
+  organizationsRequiringProviderAction: (count) =>
+    `${count} suspended/archived Organization(s) still have an active provider subscription: manual action required (never cancelled automatically).`,
   subscriptionsFreeRegistered: "Registered free subscriptions",
   subscriptionsPaidRegistered: "Registered paid subscriptions",
   organizationsWithoutSubscription: "Without a registered subscription",
@@ -574,6 +824,7 @@ const en: AdminCopy = {
   filterStatusAll: "All statuses",
   filterStatusActive: "Active",
   filterStatusSuspended: "Suspended",
+  filterStatusArchived: "Archived",
   resultsCount: (count) => `${count} result${count === 1 ? "" : "s"}`,
   clearFilters: "Clear filters",
   applyFilters: "Filter",
@@ -618,6 +869,8 @@ const en: AdminCopy = {
   orgDetailProvider: "Provider",
   orgDetailMismatchWarning:
     "The effective plan and the registered subscription disagree, with no active manual intervention to explain it.",
+  orgDetailProviderActionRequired:
+    "This Organization is suspended or archived, but its subscription is still linked to an active, non-cancelled provider. No automatic cancellation is performed: manual action is required.",
   orgDetailNotFound: "This Organization could not be found.",
   orgDetailActiveInterventionTitle: "Active commercial intervention",
   orgDetailNoActiveIntervention: "No active commercial intervention.",
@@ -702,6 +955,40 @@ const en: AdminCopy = {
     invalid_idempotency_key: "Invalid submission token, please retry.",
     reason_required: "A reason is required.",
     not_found: "Intervention not found.",
+
+    // REVENUE-01H — Admin lifecycle.
+    suspended: "Organization suspended.",
+    already_suspended: "This Organization was already suspended.",
+    organization_archived: "This Organization is archived: restore it first.",
+    already_active: "This Organization is already active.",
+    reactivated: "Organization reactivated.",
+    already_archived: "This Organization was already archived.",
+    name_confirmation_mismatch: "The name entered does not exactly match the Organization's name.",
+    archived: "Organization archived.",
+    not_archived: "This Organization is not archived.",
+    restored: "Organization restored.",
+    membership_not_found: "Member not found.",
+    already_disabled: "This member was already disabled.",
+    owner_transfer_required: "An owner cannot be disabled directly: transfer ownership first.",
+    disabled: "Member disabled.",
+    no_active_owner: "No active owner found for this Organization.",
+    already_owner: "This member is already the owner.",
+    verified_target_required: "The targeted member must confirm their email first.",
+    transferred: "Ownership transferred.",
+    note_added: "Internal note added.",
+
+    // REVENUE-01I — Commercial contacts.
+    invalid_phone: "Invalid phone number.",
+    country_required: "Country is required.",
+    invalid_language: "Invalid language.",
+    saved: "Contact record saved.",
+    contact_not_found: "Save a contact record for this Organization first.",
+    invalid_consent: "Invalid consent value.",
+    invalid_source: "Invalid consent source.",
+    consent_updated: "Marketing consent updated.",
+    invalid_consent_version: "Unknown consent wording version.",
+    consent_evidence_required: "An opt-in requires a described proof.",
+    invalid_consent_evidence: "Proof too long (500 characters maximum).",
   },
 
   navFinances: "Finances",
@@ -767,6 +1054,121 @@ const en: AdminCopy = {
   connectorStateNotConnected: "NOT CONNECTED",
 
   financeApplyFilter: "Apply",
+
+  financeSectionManualInvoicing: "Manual Africa invoicing & reminders",
+  financeManualInvoicesDueXaf: "Invoices due (XAF)",
+  financeManualInvoicesOverdueXaf: "Overdue invoices (XAF)",
+  financeArchivedOpenInvoicesXaf: "Open invoices of archived Organizations (XAF, excluded)",
+  financeExcludedArchivedSubscriptions: "Archived Organizations' subscriptions excluded from expected revenue",
+  financeManualPaymentsConfirmed: "Manual payments confirmed (period)",
+  financeManualPaymentsCollectedXaf: "Collected via manual invoicing (XAF)",
+  financeManualPaymentsCollectedCad: "Collected via manual invoicing (CAD)",
+  financeRemindersSent: "Reminders sent (period)",
+  financeRemindersDueNow: "Reminders due (today)",
+  financePaymentFailures: "Payment failures (period)",
+
+  lifecycleSectionTitle: "Organization lifecycle",
+  lifecycleCurrentStatus: "Current status",
+  lifecycleActionSuspend: "Suspend",
+  lifecycleActionReactivate: "Reactivate",
+  lifecycleActionArchive: "Archive",
+  lifecycleActionRestore: "Restore",
+  lifecycleSuspendConfirmText:
+    "This Organization will be suspended: its members will lose all access to business features until reactivated. No data is deleted.",
+  lifecycleReactivateConfirmText:
+    "This Organization becomes active again: its members immediately regain their usual access.",
+  lifecycleArchiveConfirmText:
+    "This Organization will be archived: its members will lose all access until restored. No data is deleted — archiving remains reversible.",
+  lifecycleRestoreConfirmText: "This Organization becomes active again and its members regain their access.",
+  lifecycleArchiveNameLabel: "Type the Organization's exact name to confirm",
+
+  membersSectionTitle: "Members",
+  colEmail: "Email",
+  colRole: "Role",
+  noMembers: "No members.",
+  actionDisableMember: "Disable",
+  actionReactivateMember: "Reactivate",
+  actionTransferOwnership: "Transfer ownership",
+  memberDisableConfirmText:
+    "This member will be disabled in this Organization only: they immediately lose all access to it. Their account and access to other Organizations are unchanged.",
+  memberReactivateConfirmText: "This member becomes active again and regains their usual access.",
+  transferOwnershipConfirmText:
+    "Ownership of this Organization will be transferred to this member. The current owner becomes a manager.",
+
+  notesSectionTitle: "Internal admin notes",
+  actionAddNote: "Add a note",
+  noNotes: "No internal notes.",
+  formNoteLabel: "Internal note (required, never visible to the Organization)",
+
+  lifecycleHistoryTitle: "Audit log — Organization & members",
+  noLifecycleHistory: "No action recorded for this Organization.",
+  colActor: "Actor",
+  colTarget: "Target",
+  lifecycleActionLabels: {
+    "member.invited": "Member invited",
+    "member.invitation_resent": "Invitation resent",
+    "member.invitation_revoked": "Invitation revoked",
+    "member.invitation_accepted": "Invitation accepted",
+    "member.role_changed": "Role changed",
+    "member.revoked": "Member revoked (self-service)",
+    "owner.transferred": "Ownership transferred (self-service)",
+    "payment.reversed": "Payment reversed",
+    "document.invalidated": "Document invalidated",
+    "tenant_portal.invited": "Tenant portal — invited",
+    "tenant_portal.invitation_resent": "Tenant portal — invitation resent",
+    "tenant_portal.invitation_accepted": "Tenant portal — invitation accepted",
+    "tenant_portal.revoked": "Tenant portal — revoked",
+    "tenant_portal.reactivated": "Tenant portal — reactivated",
+    "contract.generated": "Contract generated",
+    "contract.validated": "Contract validated",
+    "contract.owner_signed": "Contract signed (owner)",
+    "contract.sent": "Contract sent",
+    "contract.tenant_viewed": "Contract viewed (tenant)",
+    "contract.tenant_signed": "Contract signed (tenant)",
+    "contract.finalized": "Contract finalized",
+    "contract.cancelled": "Contract cancelled",
+    "organization.suspended": "Organization suspended",
+    "organization.reactivated": "Organization reactivated",
+    "organization.archived": "Organization archived",
+    "organization.restored": "Organization restored",
+    "member.disabled_by_admin": "Member disabled by an Admin",
+    "member.reactivated_by_admin": "Member reactivated by an Admin",
+    "owner.transferred_by_admin": "Ownership transferred by an Admin",
+    "admin.note_added": "Internal note added",
+  },
+
+  navOperations: "Operations",
+  navContacts: "Contacts",
+  contactsTitle: "Commercial contacts",
+  contactsLead:
+    "Contact details and marketing consent by Organization. No automatic newsletter sign-up — manual entry only, and this console never sends any campaign.",
+  searchByNameOrEmail: "Search by Organization or email",
+  colPhone: "Phone",
+  colCountry: "Country",
+  colLanguage: "Language",
+  colConsent: "Marketing consent",
+  consentYes: "Opted in",
+  consentNo: "Not opted in",
+  consentUnsubscribed: "Unsubscribed",
+  noContactRecorded: "No contact record saved.",
+  colMarketingEligible: "Marketing eligible",
+  marketingEligibleYes: "Eligible",
+  marketingEligibleNo: "Not eligible",
+  consentVersionLabel: (version) => `Consent wording version: ${version}`,
+  consentEvidenceLabel: "Proof of consent (required) — channel, date, signed form reference…",
+  consentEvidenceOptionalLabel: "Note about the withdrawal (optional)",
+  consentEvidenceRequired: "Describe the proof of consent (at least 3 characters).",
+  actionEditContact: "Edit record",
+  actionGrantConsent: "Mark as opted in",
+  actionUnsubscribe: "Unsubscribe",
+  exportCsv: "Export as CSV",
+  formPhoneOptional: "Phone (optional)",
+  formCountry: "Country",
+  formLanguage: "Communication language",
+  editContactConfirmText: "This contact information will be saved for this Organization.",
+  grantConsentConfirmText:
+    "This Organization will be marked as having consented to receive marketing communications, as of today.",
+  unsubscribeConfirmText: "This Organization will be marked as unsubscribed from marketing communications.",
 };
 
 export const ADMIN_COPY = { fr, en } as const;

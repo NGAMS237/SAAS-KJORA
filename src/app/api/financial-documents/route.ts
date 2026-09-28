@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { parseDocumentId, parseStatementRequest } from "@/modules/documents/model";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { mapNotificationRpcError } from "@/modules/notifications/model";
 
 export const runtime = "nodejs";
 
@@ -59,7 +60,12 @@ export async function POST(request: NextRequest) {
     const result = await supabase.rpc("prepare_account_statement", {
       target_tenant_id: parsed.value.tenantId, period_from: parsed.value.from, period_to: parsed.value.to,
     });
-    if (result.error) return applyAuthState(NextResponse.json({ error: result.error.message }, { status: 400 }));
+    if (result.error) {
+      // NCE-01 : jamais le texte SQL brut, uniquement un code stable.
+      const code = result.error.message.includes("invalid_statement_period") ? "invalid_statement_period"
+        : result.error.code === "42501" ? "forbidden" : "statement_preparation_failed";
+      return applyAuthState(NextResponse.json({ error: code }, { status: code === "forbidden" ? 403 : 400 }));
+    }
     return applyAuthState(NextResponse.json({ documentId: result.data }));
   }
 
@@ -86,7 +92,7 @@ export async function POST(request: NextRequest) {
       target_notification_id: notificationId,
       target_is_read: input.action === "mark_notification_read",
     });
-    if (result.error) return applyAuthState(NextResponse.json({ error: result.error.message }, { status: 403 }));
+    if (result.error) return applyAuthState(NextResponse.json({ error: mapNotificationRpcError(result.error) }, { status: 403 }));
     return applyAuthState(NextResponse.json({ notificationId: result.data }));
   }
 
@@ -95,7 +101,7 @@ export async function POST(request: NextRequest) {
     const result = await supabase.rpc("mark_all_notifications_read", {
       target_organization_id: authorization.organizationId,
     });
-    if (result.error) return applyAuthState(NextResponse.json({ error: result.error.message }, { status: 403 }));
+    if (result.error) return applyAuthState(NextResponse.json({ error: mapNotificationRpcError(result.error) }, { status: 403 }));
     return applyAuthState(NextResponse.json({ updated: Number(result.data ?? 0) }));
   }
 

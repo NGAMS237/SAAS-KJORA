@@ -29,6 +29,13 @@ export type PlatformCounters = {
   organizationsActive: number;
   organizationsSuspended: number;
   /**
+   * Complément REVENUE-LAUNCH-01 §2 — sans cette clé, une Organization
+   * archivée restait comptée dans organizationsTotal mais dans aucune
+   * ventilation par statut : organizationsTotal doit toujours égaler
+   * organizationsActive + organizationsSuspended + organizationsArchived.
+   */
+  organizationsArchived: number;
+  /**
    * ADMIN-01.1 — abonnements RÉELLEMENT enregistrés (organization_subscriptions)
    * uniquement. Une Organization sans ligne de facturation n'est comptée ni
    * gratuite ni payante : voir `organizationsWithoutSubscription`.
@@ -38,6 +45,13 @@ export type PlatformCounters = {
   organizationsWithoutSubscription: number;
   /** Forfait effectif (organization_plans) en désaccord avec la facturation enregistrée. */
   planBillingMismatches: number;
+  /**
+   * Complément REVENUE-LAUNCH-01 §3 — Organizations suspendues/archivées dont
+   * l'abonnement reste lié à un provider réel non annulé : jamais annulé
+   * automatiquement (aucun appel fournisseur réel), ce compteur signale
+   * l'incohérence pour une action manuelle.
+   */
+  organizationsRequiringProviderAction: number;
   subscriptionsByStatus: Record<string, number>;
   subscriptionsByPlan: Record<string, number>;
   generatedAt: string | null;
@@ -147,6 +161,13 @@ export type OrganizationDetail = {
     provider: string | null;
   };
   planBillingMismatch: boolean;
+  /**
+   * Complément REVENUE-LAUNCH-01 §3 — vrai uniquement si cette Organization
+   * est suspendue/archivée ET que son abonnement reste lié à un provider réel
+   * non annulé. Jamais résolu automatiquement (aucun appel fournisseur réel) :
+   * signale seulement qu'une action manuelle est requise.
+   */
+  providerActionRequired: boolean;
   activeIntervention: ActiveIntervention | null;
   recentAdminEvents: AdminCommercialEvent[];
 };
@@ -225,6 +246,7 @@ export async function getOrganizationDetail(
         provider: sub.provider ? String(sub.provider) : null,
       },
       planBillingMismatch: payload.planBillingMismatch === true,
+      providerActionRequired: payload.providerActionRequired === true,
       activeIntervention: mapActiveIntervention(payload.activeIntervention),
       recentAdminEvents: mapRecentEvents(payload.recentAdminEvents),
     },
@@ -289,10 +311,12 @@ export async function getPlatformCounters(): Promise<ReadResult<PlatformCounters
       organizationsTotal: toNumber(payload.organizations_total),
       organizationsActive: toNumber(payload.organizations_active),
       organizationsSuspended: toNumber(payload.organizations_suspended),
+      organizationsArchived: toNumber(payload.organizations_archived),
       subscriptionsFree: toNumber(payload.subscriptions_free),
       subscriptionsPaid: toNumber(payload.subscriptions_paid),
       organizationsWithoutSubscription: toNumber(payload.organizations_without_subscription),
       planBillingMismatches: toNumber(payload.plan_billing_mismatches),
+      organizationsRequiringProviderAction: toNumber(payload.organizations_requiring_provider_action),
       subscriptionsByStatus: toCountRecord(payload.subscriptions_by_status),
       subscriptionsByPlan: toCountRecord(payload.subscriptions_by_plan),
       generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
@@ -534,6 +558,8 @@ export type FinanceSummary = {
   mobileMoneyConnected: boolean;
   /** Unités mineures, par devise — état courant, indépendant de la période. */
   expectedRevenueByCurrency: Record<string, number>;
+  /** v3 — abonnements d'Organizations archivées exclus du revenu attendu (jamais perdus en silence). */
+  excludedArchivedSubscriptions: number;
   generatedAt: string | null;
 };
 
@@ -597,6 +623,7 @@ export async function getFinanceSummary(
       stripeConnected: collected.stripe_connected === true,
       mobileMoneyConnected: collected.mobile_money_connected === true,
       expectedRevenueByCurrency: toCountRecord(expected.by_currency),
+      excludedArchivedSubscriptions: toNumber(expected.excluded_archived_subscriptions),
       generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
     },
   };
@@ -632,5 +659,253 @@ export async function listFinanceRecentEvents(
   return {
     ok: true,
     data: parsePagedPayload(data, mapFinanceEventRow, limit, offset),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// REVENUE-01E — Extension Admin Finances (facturation manuelle Afrique,
+// rappels automatiques, échecs de paiement). Second appel RPC, distinct de
+// `getFinanceSummary` : voir supabase/migrations/
+// 20260927170000_revenue_01e_admin_finance_extension.sql — la RPC
+// FINANCE-ADMIN-01 n'est ni modifiée ni dupliquée.
+// ---------------------------------------------------------------------------
+
+export type FinanceBillingExtension = {
+  periodKey: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  manualInvoicing: {
+    /** Unités mineures... non : un COMPTE de factures, par devise. Jamais une somme entre devises. */
+    dueByCurrency: Record<string, number>;
+    overdueByCurrency: Record<string, number>;
+    /**
+     * v3 — factures ouvertes d'Organizations ARCHIVÉES : exclues des encours
+     * normaux (due/overdue), comptées ici pour ne jamais disparaître en silence.
+     */
+    archivedOpenByCurrency: Record<string, number>;
+    paymentsConfirmedCount: number;
+    /** Unités mineures encaissées via facturation manuelle (REVENUE-01B), par devise. */
+    paymentsConfirmedByCurrency: Record<string, number>;
+  };
+  reminders: {
+    sentInPeriod: number;
+    dueNow: number;
+  };
+  paymentFailuresInPeriod: number;
+  generatedAt: string | null;
+};
+
+export async function getFinanceBillingExtension(
+  periodFilter: FinancePeriodFilter = "last_30_days",
+): Promise<ReadResult<FinanceBillingExtension>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_finance_billing_extension", {
+    period_filter: periodFilter,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  const payload = data as Record<string, unknown>;
+  const period = (payload.period ?? {}) as Record<string, unknown>;
+  const manualInvoicing = (payload.manual_invoicing ?? {}) as Record<string, unknown>;
+  const reminders = (payload.reminders ?? {}) as Record<string, unknown>;
+
+  return {
+    ok: true,
+    data: {
+      periodKey: String(period.key ?? periodFilter),
+      periodStart: period.start ? String(period.start) : null,
+      periodEnd: period.end ? String(period.end) : null,
+      manualInvoicing: {
+        dueByCurrency: toCountRecord(manualInvoicing.due_by_currency),
+        overdueByCurrency: toCountRecord(manualInvoicing.overdue_by_currency),
+        archivedOpenByCurrency: toCountRecord(manualInvoicing.archived_open_by_currency),
+        paymentsConfirmedCount: toNumber(manualInvoicing.payments_confirmed_count),
+        paymentsConfirmedByCurrency: toCountRecord(manualInvoicing.payments_confirmed_by_currency),
+      },
+      reminders: {
+        sentInPeriod: toNumber(reminders.sent_in_period),
+        dueNow: toNumber(reminders.due_now),
+      },
+      paymentFailuresInPeriod: toNumber(payload.payment_failures_in_period),
+      generatedAt: typeof payload.generated_at === "string" ? payload.generated_at : null,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// REVENUE-01H — Cycle de vie Admin (Organization / membre)
+// ---------------------------------------------------------------------------
+// Trois RPC Admin dédiées (voir supabase/migrations/
+// 20260927180000_revenue_01h_admin_lifecycle.sql) — jamais les RPC
+// self-service (list_organization_members/list_administrative_audit,
+// lot_5c) : celles-ci exigent has_capability(...,'member.view'/'audit.view'),
+// donc une appartenance à l'Organization, structurellement inutilisable
+// depuis cette console.
+// ---------------------------------------------------------------------------
+
+export type AdminMemberRow = {
+  membershipId: string;
+  userId: string;
+  email: string;
+  role: string;
+  status: "active" | "revoked";
+  createdAt: string;
+  revokedAt: string | null;
+};
+
+export type AdminAuditRow = {
+  auditId: string;
+  action: string;
+  actorEmail: string | null;
+  targetEmail: string | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AdminOrganizationNote = {
+  noteId: string;
+  authorEmail: string;
+  note: string;
+  createdAt: string;
+};
+
+export type OrganizationLifecycle = {
+  members: AdminMemberRow[];
+  history: AdminAuditRow[];
+  notes: AdminOrganizationNote[];
+};
+
+function mapAdminMemberRow(r: Record<string, unknown>): AdminMemberRow {
+  return {
+    membershipId: String(r.membership_id ?? ""),
+    userId: String(r.user_id ?? ""),
+    email: String(r.email ?? ""),
+    role: String(r.role ?? ""),
+    status: r.status === "revoked" ? "revoked" : "active",
+    createdAt: String(r.created_at ?? ""),
+    revokedAt: r.revoked_at ? String(r.revoked_at) : null,
+  };
+}
+
+function mapAdminAuditRow(r: Record<string, unknown>): AdminAuditRow {
+  return {
+    auditId: String(r.audit_id ?? ""),
+    action: String(r.action ?? ""),
+    actorEmail: r.actor_email ? String(r.actor_email) : null,
+    targetEmail: r.target_email ? String(r.target_email) : null,
+    details: (r.details ?? {}) as Record<string, unknown>,
+    createdAt: String(r.created_at ?? ""),
+  };
+}
+
+function mapAdminOrganizationNote(r: Record<string, unknown>): AdminOrganizationNote {
+  return {
+    noteId: String(r.note_id ?? ""),
+    authorEmail: String(r.author_email ?? ""),
+    note: String(r.note ?? ""),
+    createdAt: String(r.created_at ?? ""),
+  };
+}
+
+/**
+ * Lecture combinée pour la section « Cycle de vie » de la fiche Organization.
+ * Non bloquante comme l'extension Finances (REVENUE-01E) : un échec ici
+ * n'empêche jamais le reste de la fiche Organization (aperçu, interventions
+ * commerciales) de s'afficher — voir son câblage en Promise.all dans la page.
+ */
+export async function getOrganizationLifecycle(
+  organizationId: string,
+): Promise<ReadResult<OrganizationLifecycle>> {
+  const supabase = await createSupabaseServerClient();
+  const [membersResult, historyResult, notesResult] = await Promise.all([
+    supabase.rpc("admin_list_organization_members", { target_organization_id: organizationId }),
+    supabase.rpc("admin_list_administrative_audit", { target_organization_id: organizationId, result_limit: 50 }),
+    supabase.rpc("admin_list_organization_notes", { target_organization_id: organizationId }),
+  ]);
+  if (membersResult.error) return { ok: false, reason: classify(membersResult.error) };
+  if (historyResult.error) return { ok: false, reason: classify(historyResult.error) };
+  if (notesResult.error) return { ok: false, reason: classify(notesResult.error) };
+
+  return {
+    ok: true,
+    data: {
+      members: ((membersResult.data ?? []) as Record<string, unknown>[]).map(mapAdminMemberRow),
+      history: ((historyResult.data ?? []) as Record<string, unknown>[]).map(mapAdminAuditRow),
+      notes: ((notesResult.data ?? []) as Record<string, unknown>[]).map(mapAdminOrganizationNote),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// REVENUE-01I — Contacts commerciaux
+// ---------------------------------------------------------------------------
+// Une seule RPC paginée pour la console (admin_list_commercial_contacts) et
+// une RPC de lecture non paginée dédiée à l'export (admin_list_commercial_
+// contacts_for_export, appelée uniquement depuis la route de téléchargement,
+// jamais depuis cette fonction) — voir supabase/migrations/
+// 20260927190000_revenue_01i_commercial_contacts.sql.
+// ---------------------------------------------------------------------------
+
+export type AdminCommercialContactRow = {
+  organizationId: string;
+  organizationName: string;
+  /** Complément REVENUE-LAUNCH-01 §4 — jamais absent de la liste ni de l'export. */
+  organizationStatus: string;
+  ownerEmail: string | null;
+  phone: string | null;
+  country: string | null;
+  language: string | null;
+  marketingConsent: boolean;
+  marketingConsentAt: string | null;
+  consentSource: string | null;
+  /** v3 — version du texte de consentement de la dernière décision. */
+  consentVersion: string | null;
+  unsubscribedAt: string | null;
+  /**
+   * Complément REVENUE-LAUNCH-01 §4 — organization.status = 'active' ET
+   * consentement positif ET preuve (source) présente ET jamais désabonnée.
+   * Calculé côté base (admin_list_commercial_contacts), jamais recalculé ici.
+   */
+  marketingEligible: boolean;
+};
+
+export type CommercialContactFilters = {
+  search?: string;
+};
+
+function mapAdminCommercialContactRow(r: Record<string, unknown>): AdminCommercialContactRow {
+  return {
+    organizationId: String(r.organization_id ?? ""),
+    organizationName: String(r.organization_name ?? ""),
+    organizationStatus: String(r.organization_status ?? ""),
+    ownerEmail: r.owner_email ? String(r.owner_email) : null,
+    phone: r.phone ? String(r.phone) : null,
+    country: r.country ? String(r.country) : null,
+    language: r.language ? String(r.language) : null,
+    marketingConsent: r.marketing_consent === true,
+    marketingConsentAt: r.marketing_consent_at ? String(r.marketing_consent_at) : null,
+    consentSource: r.consent_source ? String(r.consent_source) : null,
+    consentVersion: r.consent_version ? String(r.consent_version) : null,
+    unsubscribedAt: r.unsubscribed_at ? String(r.unsubscribed_at) : null,
+    marketingEligible: r.marketing_eligible === true,
+  };
+}
+
+export async function listCommercialContacts(
+  limit = DEFAULT_PAGE_SIZE,
+  offset = 0,
+  filters: CommercialContactFilters = {},
+): Promise<ReadResult<Paginated<AdminCommercialContactRow>>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_list_commercial_contacts", {
+    page_limit: limit,
+    page_offset: offset,
+    search_term: filters.search?.trim() || null,
+  });
+  if (error || !data) return { ok: false, reason: classify(error) };
+
+  return {
+    ok: true,
+    data: parsePagedPayload(data, mapAdminCommercialContactRow, limit, offset),
   };
 }

@@ -59,9 +59,10 @@ test("01 — les 6 providers étudiés sont tous décrits dans la matrice", () =
   assert.equal(PROVIDER_NAMES.length, 6);
 });
 
-test("02 — le contrat nomme exactement 10 opérations", () => {
-  assert.equal(PROVIDER_OPERATIONS.length, 10);
-  assert.equal(new Set(PROVIDER_OPERATIONS).size, 10);
+test("02 — le contrat nomme exactement 11 opérations (10 ALIGN-04A + openCustomerPortal REVENUE-01F)", () => {
+  assert.equal(PROVIDER_OPERATIONS.length, 11);
+  assert.equal(new Set(PROVIDER_OPERATIONS).size, 11);
+  assert.ok(PROVIDER_OPERATIONS.includes("openCustomerPortal"));
 });
 
 test("03 — aucun provider n'est contraint de tout supporter", () => {

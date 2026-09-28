@@ -31,6 +31,26 @@ test("lease rejects due day 29", () => assert.equal(parseLeaseInput({ ...leaseBa
 test("lease accepts only the documented J-X choices", () => { assert.equal(parseLeaseInput({ ...leaseBase, generateDueDaysBefore: 7 }).ok, true); assert.equal(parseLeaseInput({ ...leaseBase, generateDueDaysBefore: 6 }).ok, false); });
 test("lease rejects end before start", () => assert.equal(parseLeaseInput({ ...leaseBase, endDate: "2026-08-14" }).ok, false));
 test("manual proration correction requires a reason", () => assert.equal(parseLeaseInput({ ...leaseBase, entryProrationOverrideXaf: 120000 }).ok, false));
+
+// AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B : la colonne payment_terms
+// alimente la clause « Modalités de paiement » d'un contrat généré. Elle
+// est optionnelle (une Location sans mention reste valide, la clause sera
+// simplement absente du contrat — jamais fabriquée), mais si fournie doit
+// respecter la même fourchette que la contrainte SQL (3 à 1000 caractères).
+test("lease payment terms are optional and default to null", () => {
+  const parsed = parseLeaseInput(leaseBase);
+  assert.equal(parsed.ok && parsed.value.paymentTerms, null);
+});
+test("lease accepts recorded payment terms within range", () => {
+  const parsed = parseLeaseInput({ ...leaseBase, paymentTerms: "Virement bancaire avant le 5 de chaque mois." });
+  assert.equal(parsed.ok && parsed.value.paymentTerms, "Virement bancaire avant le 5 de chaque mois.");
+});
+test("lease rejects payment terms shorter than 3 characters", () => assert.equal(parseLeaseInput({ ...leaseBase, paymentTerms: "ab" }).ok, false));
+test("lease rejects payment terms longer than 1000 characters", () => assert.equal(parseLeaseInput({ ...leaseBase, paymentTerms: "a".repeat(1001) }).ok, false));
+test("lease treats an empty payment terms string as not provided", () => {
+  const parsed = parseLeaseInput({ ...leaseBase, paymentTerms: "" });
+  assert.equal(parsed.ok && parsed.value.paymentTerms, null);
+});
 test("calendar entry proration uses inclusive remaining days", () => assert.equal(calendarEntryProration(310000, "2026-08-16", "calendar_days"), 160000));
 test("calendar entry detail exposes dates, occupied days and total rent plus charges", () => assert.deepEqual(calendarEntryProrationDetail(42000, "2026-08-16", "calendar_days"), { startDate: "2026-08-16", endDate: "2026-08-31", occupiedDays: 16, daysInPeriod: 31, amountXaf: 21677 }));
 test("calendar exit proration uses occupied calendar days", () => assert.equal(calendarExitProration(310000, "2026-08-10", "calendar_days"), 100000));

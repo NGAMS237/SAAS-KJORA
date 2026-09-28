@@ -19,6 +19,7 @@ import {
   priceFor,
   needsBillingWarning,
   isBillingBlocked,
+  isReceiptAvailable,
   type BillingCycle,
   type InvoiceStatus,
   type SubscriptionStatus,
@@ -433,6 +434,18 @@ export function BillingView({
                 <Badge tone={facture.status === "paid" ? "success" : "neutral"}>
                   {locale === "en" ? INVOICE_STATUS_LABELS_EN[facture.status] : INVOICE_STATUS_LABELS[facture.status]}
                 </Badge>
+                {facture.currency === "XAF" ? (
+                  <a
+                    className="button button--secondary button--small"
+                    href={`/api/billing/invoices/${facture.id}/download?lang=${locale}`}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {isReceiptAvailable(facture.status)
+                      ? t("Télécharger le reçu", "Download receipt")
+                      : t("Télécharger la facture", "Download invoice")}
+                  </a>
+                ) : null}
               </div>
             ))}
           </div>

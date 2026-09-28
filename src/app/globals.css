@@ -1638,6 +1638,32 @@ a.portfolio-metric:hover {
 .contract-template-section { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); }
 .contract-template-section textarea { resize: vertical; }
 
+/* AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B */
+.contract-template-preview {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+.contract-template-preview section { display: grid; gap: var(--space-1); }
+.contract-template-preview h4 { margin: 0; font-size: .95rem; }
+.contract-template-preview p { margin: 0; color: var(--text-secondary); }
+.contract-stamp-preview { margin-top: var(--space-3); }
+.contract-stamp-preview__box {
+  display: inline-grid;
+  gap: var(--space-1);
+  min-width: 220px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--brand-gold, var(--border-strong));
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.contract-stamp-preview__box span { color: var(--text-muted); font-size: .85rem; }
+.contract-payment-terms-notice { border-color: var(--warning, var(--border-strong)); }
+
 @media (max-width: 640px) {
   .lease-contract-entry { align-items: stretch; flex-direction: column; }
   .contract-preview { margin-inline: calc(var(--space-2) * -1); border-radius: var(--radius-md); }
@@ -4262,7 +4288,7 @@ a.portfolio-metric:hover {
   overflow-y: auto;
 }
 
-.notification-popover__list > a {
+.notification-popover__list > li > a {
   align-items: start;
   border-bottom: 1px solid var(--border);
   color: var(--text);
@@ -4272,15 +4298,15 @@ a.portfolio-metric:hover {
   padding: 13px 15px;
 }
 
-.notification-popover__list > a:hover {
+.notification-popover__list > li > a:hover {
   background: var(--surface-muted);
 }
 
-.notification-popover__list > a.is-read {
+.notification-popover__list > li > a.is-read {
   opacity: .64;
 }
 
-.notification-popover__list > a > span:last-child {
+.notification-popover__list > li > a > span:last-child {
   display: grid;
   gap: 3px;
   min-width: 0;
@@ -5130,6 +5156,10 @@ a.portfolio-metric:hover {
   border: 1px solid var(--border);
 }
 .admin-badge--archived { background: var(--warning-soft); color: var(--warning); }
+/* Complément REVENUE-LAUNCH-01 §1 — badge de statut Organization (actif/suspendu),
+   même palette que le reste de la console (succès/danger). */
+.admin-badge--active { background: var(--success-soft); color: var(--success); }
+.admin-badge--suspended { background: var(--danger-soft); color: var(--danger); }
 
 /* ADMIN-BILLING-OPS-01 — actions administratives (Accorder / Prolonger / Révoquer) */
 .admin-actions-menu { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -5144,6 +5174,18 @@ a.portfolio-metric:hover {
 .admin-action-button--primary:hover { opacity: 0.9; }
 .admin-action-button--danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
 .admin-action-button--danger:hover { opacity: 0.85; }
+
+/* REVENUE-01H — actions compactes en ligne de tableau (membres) */
+.admin-action-button--small { padding: 5px 12px; font-size: 0.75rem; }
+
+/* REVENUE-01H — notes internes Admin (jamais visibles de l'Organization) */
+.admin-notes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.admin-notes-list li {
+  border: 1px solid var(--border); border-radius: var(--radius-surface);
+  padding: 10px 14px; background: var(--surface-muted);
+}
+.admin-notes-list p { margin: 0 0 4px; }
+.admin-notes-list p:last-child { margin-bottom: 0; font-size: 0.78rem; }
 
 /* ADMIN-BILLING-OPS-01 — confirmation avant validation (résumé + case à cocher explicite) */
 .admin-dialog {
@@ -5185,4 +5227,178 @@ a.portfolio-metric:hover {
   .admin-filters { flex-direction: column; align-items: stretch; }
   .admin-filters__field { min-width: 0; }
   .admin-filters__clear { align-self: flex-start; }
+}
+
+/* REVENUE-LAUNCH-01 v3 — contexte limité d'une Organization suspendue/archivée */
+.suspended-page {
+  max-width: 880px; margin: 0 auto; padding: 32px 16px 56px;
+  display: flex; flex-direction: column; gap: 18px; color: var(--text);
+}
+.suspended-page__controls { display: flex; justify-content: flex-end; }
+.suspended-page__header h1 { margin: 6px 0 8px; font-size: clamp(1.4rem, 3vw, 1.9rem); }
+.suspended-page__header p { margin: 0 0 10px; color: var(--text-muted); }
+.suspended-page__card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 18px 20px;
+}
+.suspended-page__card h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.suspended-page__card ul { margin: 0 0 10px; padding-left: 18px; }
+.suspended-page__muted { color: var(--text-muted); font-size: 0.9rem; }
+.suspended-page__switcher { display: flex; flex-wrap: wrap; gap: 8px; }
+.suspended-page__switch {
+  padding: 6px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border);
+  text-decoration: none; color: var(--text); font-size: 0.85rem;
+}
+.suspended-page__switch[aria-current="page"] { border-color: var(--text); font-weight: 700; }
+.suspended-page__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.suspended-page__links { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; }
+.restricted-org-banner {
+  margin: 0 0 16px; padding: 10px 14px; border-radius: 12px;
+  background: var(--warning-soft); color: var(--warning); font-size: 0.88rem;
+}
+.restricted-org-banner p { margin: 0; }
+.restricted-org-banner p + p { margin-top: 4px; }
+
+/* NOTIFICATIONS-COMMUNICATIONS-E2E-01 — état lu/non lu accessible, repli non bloquant */
+ul.notification-list,
+ul.notification-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notification-popover__list > li > p {
+  color: var(--text-muted);
+  margin: 0;
+  padding: 15px;
+}
+
+.notification-popover__list > li > a.is-read .notification-popover__dot {
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.notification-popover__header {
+  gap: 10px;
+}
+
+.notification-popover__mark-all {
+  font-size: .76rem;
+  margin-left: auto;
+  padding: 6px 10px;
+}
+
+.notification-row.is-unread {
+  border-color: color-mix(in srgb, var(--brand-gold) 45%, var(--border));
+}
+
+.notification-row__unread-dot {
+  background: var(--brand-gold);
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  margin-right: 8px;
+  vertical-align: middle;
+  width: 8px;
+}
+
+.notification-row__context {
+  color: var(--text);
+  font-size: .86rem;
+}
+
+.notification-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.notification-notice {
+  align-items: start;
+  background: var(--brand-gold-soft);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 40%, var(--border));
+  border-radius: var(--radius-md);
+  color: var(--text);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-block: 12px;
+  padding: 12px 14px;
+}
+
+.notification-notice p {
+  margin: 0;
+}
+
+.payments-filter-banner {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+@media (max-width: 720px) {
+  .notification-row__actions {
+    justify-content: stretch;
+  }
+}
+
+.communication-toggles {
+  border: 0;
+  display: grid;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.communication-toggles:disabled {
+  opacity: .6;
+}
+
+.communication-toggle {
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 12px 14px;
+}
+
+.communication-toggle input {
+  height: 18px;
+  margin-top: 2px;
+  width: 18px;
+}
+
+.communication-toggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.communication-toggle small {
+  color: var(--text-muted);
+}
+
+.form-feedback--success { background: var(--success-soft, var(--info-soft)); color: var(--success, var(--info)); }
+
+.admin-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block: 10px;
+}
+
+.admin-ops-result {
+  font-size: .75rem;
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }

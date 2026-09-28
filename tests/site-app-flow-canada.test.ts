@@ -40,8 +40,28 @@ test("Canada maps to CAD on the server-controlled subscription market", () => {
   assert.match(migration, /billing_country = 'CA' and currency = 'CAD'/i);
 });
 
-test("Cameroon rental operations remain XAF even for a Canadian subscription", () => {
-  assert.match(organizationForm, /Rental market[\s\S]*Cameroon[\s\S]*Rental currency[\s\S]*XAF/i);
+test("Cameroon rental operations remain independent of the KJORA subscription's billing country", () => {
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE A widened the rental market from a
+  // Cameroon/XAF-only hardcode to a country/currency picker backed by
+  // src/core/currency/metadata.ts (RENTAL_CURRENCIES, SUPPORTED_COUNTRIES),
+  // so this form's raw source no longer spells a static "Rental currency
+  // ... XAF" — the currency list is now data-driven. What must still hold,
+  // and is the actual point of this test: Cameroon/XAF remain the default
+  // (backward-compatible), and the rental currency is never derived from
+  // the separate KJORA subscription billing country (a Canadian
+  // subscription must never leak CAD into the rental currency).
+  assert.match(organizationForm, /useState<string>\("CM"\)/, "le pays locatif par défaut doit rester le Cameroun");
+  assert.match(organizationForm, /useState<string>\("XAF"\)/, "la devise locative par défaut doit rester XAF");
+  assert.doesNotMatch(
+    organizationForm,
+    /setCurrency\([^)]*selectedBillingCountry/,
+    "la devise locative ne doit jamais dériver du pays de facturation de l’abonnement",
+  );
+  assert.doesNotMatch(
+    organizationForm,
+    /setCurrency\([^)]*subscriptionCurrencyForBillingCountry/,
+    "la devise locative ne doit jamais recopier la devise d’abonnement (CAD pour le Canada)",
+  );
   assert.match(migration, /leaves organization_profiles\.currency_code[\s\S]*untouched/i);
   assert.doesNotMatch(migration, /update\s+public\.organization_profiles/i);
 });

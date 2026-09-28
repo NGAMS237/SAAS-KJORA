@@ -11,7 +11,10 @@ const dataImport = readFileSync(new URL("../src/modules/data-import/server.ts", 
 const dataExport = readFileSync(new URL("../src/modules/data-export/server.ts", import.meta.url), "utf8");
 const contextResolver = readFileSync(new URL("../src/core/routing/context-resolver.ts", import.meta.url), "utf8");
 const billingWebhook = readFileSync(new URL("../src/app/api/billing/webhooks/[provider]/route.ts", import.meta.url), "utf8");
-const financialCron = readFileSync(new URL("../src/app/api/financial-communications/cron/route.ts", import.meta.url), "utf8");
+// NCE-01 : la route cron délègue à l'orchestrateur ; la clé service_role vit
+// dans le module serveur des communications (jamais dans un fichier client).
+const financialCron = readFileSync(new URL("../src/modules/communications/server.ts", import.meta.url), "utf8")
+  + readFileSync(new URL("../src/modules/communications/config.ts", import.meta.url), "utf8");
 
 test("la migration retire le SELECT global et restaure uniquement la projection minimale", () => {
   assert.match(migration, /revoke select on table public\.tenants from public, anon, authenticated/i);

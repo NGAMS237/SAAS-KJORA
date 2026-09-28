@@ -3,11 +3,11 @@ import "server-only";
 import { cookies } from "next/headers";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/core/organization/select-active-organization";
 import {
-  isCapability,
   isInternalRole,
   type Capability,
   type InternalRole,
 } from "@/core/authorization/capabilities";
+import { getCapabilitiesForRole } from "@/core/authorization/capability-catalog";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ActiveAuthorization = {
@@ -37,14 +37,13 @@ export async function getActiveAuthorization(): Promise<ActiveAuthorization | nu
   const membership = memberships?.[0];
   if (membershipError || !membership || !isInternalRole(membership.role)) return null;
 
-  const { data: capabilityRows, error: capabilityError } = await supabase
-    .from("role_capabilities")
-    .select("capability")
-    .eq("role", membership.role);
-  if (capabilityError) return null;
-  const capabilities = (capabilityRows ?? [])
-    .map((row) => row.capability)
-    .filter(isCapability);
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE C : `role_capabilities` est un
+  // catalogue statique (voir capability-catalog.ts) ; le lire depuis le cache
+  // de processus retire un aller-retour Supabase de CHAQUE navigation vers
+  // une page de `/app/*` (cette fonction est appelée par chaque page.tsx),
+  // sans changer le résultat retourné ni son autorité (la RLS reste la
+  // barrière ultime, inchangée).
+  const capabilities = await getCapabilitiesForRole(membership.role);
 
   return {
     organizationId: membership.organization_id,
@@ -87,10 +86,47 @@ export async function isOrganizationBillingBlocked(organizationId: string): Prom
   return data === true;
 }
 
+// REVENUE-01H — une Organization suspendue ou archivée par un Admin
+// (public.organizations.status) perd tout accès aux capacités métier,
+// lecture comme écriture. Volontairement DIFFÉRENT du blocage facturation
+// ALIGN-03 ci-dessus : celui-ci laisse délibérément `billing.*` accessible
+// pour permettre à l'Organization de régulariser elle-même sa situation ; une
+// suspension Admin est un gel décidé par la plateforme (abus, litige…), donc
+// ne rouvre aucune capacité métier. Les seules exceptions décidées (lecture
+// de facturation, export lecture seule du seul Owner) passent par des
+// chemins dédiés et étroits (private.has_restricted_capability), jamais par
+// cette garde. La colonne `status` est déjà lisible par `authenticated`
+// (lot_5b) : aucun nouveau grant n'est nécessaire ici.
+//
+// FAIL-CLOSED (REVENUE-LAUNCH-01 v3) : une erreur de lecture, une ligne
+// absente ou un statut inattendu refusent l'accès. Une garde d'autorisation
+// ne doit jamais s'ouvrir parce qu'elle n'a pas pu vérifier — la base
+// (has_capability) reste une seconde barrière, pas une excuse pour ouvrir
+// la première.
+export async function isOrganizationActive(organizationId: string): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("status")
+    .eq("id", organizationId)
+    .maybeSingle();
+  if (error || !data) return false;
+  return data.status === "active";
+}
+
 export async function requireActiveCapability(requested: Capability) {
   const authorization = await getActiveAuthorization();
   if (!authorization) return { authorization: null, status: 401 as const };
   if (!authorization.capabilities.includes(requested)) {
+    return { authorization: null, status: 403 as const };
+  }
+
+  // REVENUE-01H — barrière applicative, avant même le blocage facturation :
+  // une Organization suspendue/archivée n'a plus aucune capacité, quelle que
+  // soit sa situation de facturation. La barrière ultime, incontournable,
+  // reste private.has_capability en base (même un appel REST direct au RPC
+  // est refusé).
+  if (!(await isOrganizationActive(authorization.organizationId))) {
     return { authorization: null, status: 403 as const };
   }
 

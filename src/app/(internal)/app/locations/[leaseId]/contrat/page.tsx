@@ -7,6 +7,7 @@ import { getContractTemplates, getLeaseContract, getLeaseContracts } from "@/mod
 import { InternalContractView } from "@/modules/contracts/views";
 import { UUID_PATTERN } from "@/modules/properties/model";
 import { Card, EmptyState, PageHeader } from "@/core/ui/ui";
+import { getLeaseDetail } from "@/modules/tenancy/server";
 
 export default async function ContractPage({ params, searchParams }: { params:Promise<{leaseId:string}>;searchParams:Promise<{contract?:string}> }) {
   const [{leaseId},query,authorization]=await Promise.all([params,searchParams,getActiveAuthorization()]);
@@ -29,8 +30,13 @@ export default async function ContractPage({ params, searchParams }: { params:Pr
       </div>
     );
   }
-  const [templates,contracts]=await Promise.all([getContractTemplates(authorization.organizationId),getLeaseContracts(authorization.organizationId,leaseId)]);
+  const [templates,contracts,leaseDetail]=await Promise.all([getContractTemplates(authorization.organizationId),getLeaseContracts(authorization.organizationId,leaseId),getLeaseDetail(authorization.organizationId,leaseId)]);
   const contractId=parseContractId(query.contract); const selected=contractId?await getLeaseContract(authorization.organizationId,contractId):null;
   if(selected&&selected.leaseId!==leaseId) notFound();
-  return <InternalContractView leaseId={leaseId} templates={templates} contracts={contracts} selected={selected}/>;
+  // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B : la clause « Modalités de
+  // paiement » n'apparaît dans le contrat que si la Location en porte —
+  // on le signale ici plutôt que de laisser la clause disparaître en
+  // silence (mandat : jamais de disparition non expliquée).
+  const leasePaymentTermsRecorded = Boolean(leaseDetail?.paymentTerms?.trim());
+  return <InternalContractView leaseId={leaseId} templates={templates} contracts={contracts} selected={selected} leasePaymentTermsRecorded={leasePaymentTermsRecorded}/>;
 }

@@ -343,6 +343,42 @@ export function renewalReminderDates(renewalOn: string): string[] {
   return RENEWAL_REMINDER_OFFSETS.map((offset) => addDays(renewalOn, -offset));
 }
 
+/** Relances pendant la tolérance : J+1, J+3, J+6 après le début de la grâce (REVENUE-01C). */
+export const GRACE_REMINDER_OFFSETS = [1, 3, 6] as const;
+
+export function graceReminderDates(graceStartedOn: string): string[] {
+  return GRACE_REMINDER_OFFSETS.map((offset) => addDays(graceStartedOn, offset));
+}
+
+/**
+ * Expiration du moyen de paiement : J-30, J-7 (REVENUE-01C, ALIGN-00 §6.2).
+ * Ne produit un rappel que si le provider expose cette information — aucun
+ * n'est branché aujourd'hui, donc cette liste ne trouve encore aucun candidat.
+ */
+export const PAYMENT_METHOD_EXPIRY_OFFSETS = [30, 7] as const;
+
+/**
+ * Seuil « facture Afrique arrivant à échéance » : J-3 avant l'échéance de
+ * paiement (`billing_invoices.due_on`, repli sur la fin de période pour une
+ * facture antérieure à REVENUE-01B).
+ */
+export const INVOICE_DUE_SOON_OFFSET_DAYS = 3;
+
+/**
+ * Délai de paiement par défaut d'une facture manuelle (REVENUE-01B) : 7 jours
+ * après le début de période (ou après la date d'émission si la période a déjà
+ * commencé), borné à la fin de période. Miroir exact de
+ * `admin_issue_manual_invoice` (SQL).
+ */
+export const MANUAL_INVOICE_PAYMENT_TERM_DAYS = 7;
+
+/** Échéance par défaut d'une facture manuelle — même règle que le SQL. */
+export function defaultManualInvoiceDueOn(periodStart: string, periodEnd: string, today: string): string {
+  const start = periodStart > today ? periodStart : today;
+  const candidate = addDays(start, MANUAL_INVOICE_PAYMENT_TERM_DAYS);
+  return candidate < periodEnd ? candidate : periodEnd;
+}
+
 // ---------------------------------------------------------------------------
 // Factures
 // ---------------------------------------------------------------------------
@@ -389,3 +425,30 @@ export const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
   monthly: "Mensuel",
   annual: "Annuel",
 };
+
+// ---------------------------------------------------------------------------
+// Facturation manuelle Afrique (REVENUE-01B)
+// ---------------------------------------------------------------------------
+// Portée verrouillée : la confirmation manuelle de paiement ne concerne que la
+// devise XAF (Cameroun/Afrique). Le Canada/diaspora reste sur l'architecture
+// Stripe préparée (REVENUE-01F) — décision produit verrouillée, non rouverte
+// par ce module.
+
+export const MANUAL_INVOICING_CURRENCY: BillingCurrency = "XAF";
+
+export function supportsManualInvoicing(currency: BillingCurrency): boolean {
+  return currency === MANUAL_INVOICING_CURRENCY;
+}
+
+/**
+ * Un reçu (preuve de paiement) n'a de sens qu'une fois la facture réglée.
+ * Avant paiement, seule une facture (demande de règlement) peut être montrée.
+ */
+export function isReceiptAvailable(status: InvoiceStatus): boolean {
+  return status === "paid";
+}
+
+/** Une facture en statut 'open' est-elle en retard sur son échéance ? Calculé, jamais stocké. */
+export function isInvoiceOverdue(status: InvoiceStatus, periodEnd: string, onDate: string): boolean {
+  return status === "open" && Date.parse(`${periodEnd}T00:00:00Z`) < Date.parse(`${onDate}T00:00:00Z`);
+}

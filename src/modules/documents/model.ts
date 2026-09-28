@@ -30,7 +30,8 @@ export type FinancialDocumentSummary = {
   /** Email actuel du locataire (peut différer de lastDelivery.recipientEmail, historique) — utilisé pour détecter côté client l'absence d'email avant même d'appeler le serveur (§9). */
   tenantEmail: string | null;
   lastDelivery: {
-    status: "pending" | "processing" | "sent" | "failed" | "cancelled";
+    status: "pending" | "processing" | "sent" | "delivered" | "failed" | "delivery_unknown" | "provider_failed"
+      | "bounced" | "complained" | "suppressed" | "cancelled";
     recipientEmail: string;
     attemptCount: number;
     sentAt: string | null;
@@ -55,6 +56,10 @@ export type NotificationSummary = {
   documentId: string | null;
   tenantId: string | null;
   leaseId: string | null;
+  /** NCE-01 : contexte d'affichage (jamais une adresse électronique). */
+  tenantName: string | null;
+  propertyName: string | null;
+  unitLabel: string | null;
   readAt: string | null;
   createdAt: string;
 };

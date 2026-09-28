@@ -12,17 +12,21 @@ import {
   type MonitoringState,
 } from "./monitoring";
 import type {
+  AdminCommercialContactRow,
   AdminOrganizationRow,
   AdminSubscriptionRow,
+  FinanceBillingExtension,
   FinanceEventRow,
   FinancePeriodFilter,
   FinanceSummary,
   InterventionCounters,
   OrganizationDetail,
+  OrganizationLifecycle,
   Paginated,
   PlatformCounters,
 } from "./server";
 import { FINANCE_PERIOD_FILTERS } from "./finance-periods";
+import { MARKETING_CONSENT_VERSION, isValidConsentEvidence } from "./marketing-consent";
 import { formatMinorAmount as formatMoneyMinorAmount, minorToMajor } from "./money";
 import {
   extendCommercialInterventionAction,
@@ -30,6 +34,22 @@ import {
   revokeCommercialInterventionAction,
   type CommercialActionResult,
 } from "./commercial-ops-actions";
+import {
+  addOrganizationNoteAction,
+  archiveOrganizationAction,
+  disableMemberAction,
+  reactivateMemberAction,
+  reactivateOrganizationAction,
+  restoreOrganizationAction,
+  suspendOrganizationAction,
+  transferOwnershipAction,
+  type LifecycleActionResult,
+} from "./organization-lifecycle-actions";
+import {
+  setMarketingConsentAction,
+  upsertOrganizationContactAction,
+  type ContactActionResult,
+} from "./contacts-actions";
 
 // =============================================================================
 // KJORA — ADMIN-01 — Vues de la console
@@ -133,10 +153,17 @@ export function OverviewView({
             <Counter label={t.organizationsTotal} value={counters.organizationsTotal} />
             <Counter label={t.organizationsActive} value={counters.organizationsActive} />
             <Counter label={t.organizationsSuspended} value={counters.organizationsSuspended} />
+            <Counter label={t.organizationsArchived} value={counters.organizationsArchived} />
             <Counter label={t.subscriptionsFreeRegistered} value={counters.subscriptionsFree} />
             <Counter label={t.subscriptionsPaidRegistered} value={counters.subscriptionsPaid} />
             <Counter label={t.organizationsWithoutSubscription} value={counters.organizationsWithoutSubscription} />
           </div>
+
+          {counters.organizationsRequiringProviderAction > 0 ? (
+            <p className="admin-error" role="alert">
+              {t.organizationsRequiringProviderAction(counters.organizationsRequiringProviderAction)}
+            </p>
+          ) : null}
 
           <div className="admin-breakdowns">
             <Breakdown title={t.byPlan} data={counters.subscriptionsByPlan} empty={t.emptyRows} />
@@ -314,6 +341,26 @@ function FilterBar({ children, action }: { children: ReactNode; action: string }
 // Organizations
 // ---------------------------------------------------------------------------
 
+/**
+ * Complément REVENUE-LAUNCH-01 §1 — badge FR/EN par statut d'Organization,
+ * partagé entre la liste et la fiche détaillée. Un statut inconnu retombe sur
+ * le badge neutre plutôt que de ne rien afficher.
+ */
+function OrganizationStatusBadge({ status }: { status: string }) {
+  const { t } = useCopy();
+  const label =
+    status === "active" ? t.filterStatusActive
+    : status === "suspended" ? t.filterStatusSuspended
+    : status === "archived" ? t.filterStatusArchived
+    : status;
+  const modifier = status === "active" || status === "suspended" || status === "archived" ? status : null;
+  return (
+    <span className={modifier ? `admin-badge admin-badge--${modifier}` : "admin-badge"}>
+      {label}
+    </span>
+  );
+}
+
 export function OrganizationsView({
   page,
   error,
@@ -349,6 +396,10 @@ export function OrganizationsView({
             <option value="">{t.filterStatusAll}</option>
             <option value="active">{t.filterStatusActive}</option>
             <option value="suspended">{t.filterStatusSuspended}</option>
+            {/* Complément REVENUE-LAUNCH-01 §1 — une Organization archivée doit
+                rester retrouvable depuis la console Admin, jamais seulement
+                via une recherche par nom sans filtre dédié. */}
+            <option value="archived">{t.filterStatusArchived}</option>
           </select>
         </label>
         <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
@@ -399,7 +450,7 @@ export function OrganizationsView({
                           {row.name || "—"}
                         </Link>
                       </th>
-                      <td>{row.status}</td>
+                      <td><OrganizationStatusBadge status={row.status} /></td>
                       <td className="admin-table__num">{row.memberCount}</td>
                       <td>{row.plan}</td>
                       <td>{row.billingStatus}</td>
@@ -717,9 +768,11 @@ function ReasonField({
 export function OrganizationDetailView({
   detail,
   error,
+  lifecycle,
 }: {
   detail: OrganizationDetail | null;
   error: "denied" | "failed" | "not_found" | null;
+  lifecycle: OrganizationLifecycle | null;
 }) {
   const { t, lang } = useCopy();
   const router = useRouter();
@@ -750,6 +803,24 @@ export function OrganizationDetailView({
   const [extendReason, setExtendReason] = useState("");
   const [newEndsOn, setNewEndsOn] = useState("");
 
+  // REVENUE-01H — Cycle de vie Admin (Organization / membre). État distinct de
+  // celui d'ADMIN-BILLING-OPS-01 ci-dessus : dialogues, motifs et confirmations
+  // propres à chaque action, jamais partagés entre les deux familles d'actions.
+  const [orgActionOpen, setOrgActionOpen] = useState<"suspend" | "reactivate" | "archive" | "restore" | null>(null);
+  const [orgActionConfirmed, setOrgActionConfirmed] = useState(false);
+  const [orgActionReason, setOrgActionReason] = useState("");
+  const [archiveConfirmName, setArchiveConfirmName] = useState("");
+
+  const [memberAction, setMemberAction] = useState<
+    { kind: "disable" | "reactivate" | "transfer"; membershipId: string; email: string } | null
+  >(null);
+  const [memberActionConfirmed, setMemberActionConfirmed] = useState(false);
+  const [memberActionReason, setMemberActionReason] = useState("");
+
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteConfirmed, setNoteConfirmed] = useState(false);
+  const [noteText, setNoteText] = useState("");
+
   if (error === "not_found" || (!detail && !error)) {
     return (
       <div className="admin-page">
@@ -774,7 +845,7 @@ export function OrganizationDetailView({
 
   if (!detail) return null;
 
-  function resultMessage(result: CommercialActionResult): string {
+  function resultMessage(result: CommercialActionResult | LifecycleActionResult): string {
     if (!result.ok) return result.message;
     return t.outcomeLabels[result.outcome] ?? result.outcome;
   }
@@ -787,6 +858,84 @@ export function OrganizationDetailView({
     setGrantConfirmed(false);
     setRevokeConfirmed(false);
     setExtendConfirmed(false);
+
+    setOrgActionOpen(null);
+    setOrgActionConfirmed(false);
+    setOrgActionReason("");
+    setArchiveConfirmName("");
+
+    setMemberAction(null);
+    setMemberActionConfirmed(false);
+    setMemberActionReason("");
+
+    setNoteOpen(false);
+    setNoteConfirmed(false);
+    setNoteText("");
+  }
+
+  function openOrgAction(kind: "suspend" | "reactivate" | "archive" | "restore") {
+    setDialogFeedback(null);
+    setOrgActionOpen(kind);
+  }
+
+  function openMemberAction(kind: "disable" | "reactivate" | "transfer", membershipId: string, email: string) {
+    setDialogFeedback(null);
+    setMemberAction({ kind, membershipId, email });
+  }
+
+  function handleOrgActionSubmit() {
+    if (!detail || !orgActionOpen) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await (orgActionOpen === "suspend"
+        ? suspendOrganizationAction(detail.organizationId, orgActionReason)
+        : orgActionOpen === "reactivate"
+        ? reactivateOrganizationAction(detail.organizationId, orgActionReason)
+        : orgActionOpen === "archive"
+        ? archiveOrganizationAction(detail.organizationId, archiveConfirmName, orgActionReason)
+        : restoreOrganizationAction(detail.organizationId, orgActionReason));
+      if (result.ok) {
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleMemberActionSubmit() {
+    if (!detail || !memberAction) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await (memberAction.kind === "disable"
+        ? disableMemberAction(detail.organizationId, memberAction.membershipId, memberActionReason)
+        : memberAction.kind === "reactivate"
+        ? reactivateMemberAction(detail.organizationId, memberAction.membershipId, memberActionReason)
+        : transferOwnershipAction(detail.organizationId, memberAction.membershipId, memberActionReason));
+      if (result.ok) {
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleAddNoteSubmit() {
+    if (!detail) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await addOrganizationNoteAction(detail.organizationId, noteText);
+      if (result.ok) {
+        closeAllDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
   }
 
   function handleGrantSubmit() {
@@ -884,6 +1033,12 @@ export function OrganizationDetailView({
       {detail.planBillingMismatch ? (
         <p className="admin-error" role="alert">
           {t.orgDetailMismatchWarning}
+        </p>
+      ) : null}
+
+      {detail.providerActionRequired ? (
+        <p className="admin-error" role="alert">
+          {t.orgDetailProviderActionRequired}
         </p>
       ) : null}
 
@@ -1036,6 +1191,255 @@ export function OrganizationDetailView({
           </div>
         )}
       </section>
+
+      {/* ===================================================================
+          REVENUE-01H — Cycle de vie Admin (Organization / membres / notes)
+          =================================================================== */}
+
+      <section className="admin-section">
+        <h2>{t.lifecycleSectionTitle}</h2>
+        <p>
+          {t.lifecycleCurrentStatus}: <OrganizationStatusBadge status={detail.status} />
+        </p>
+        <div className="admin-actions-menu">
+          {detail.status === "active" ? (
+            <button type="button" className="admin-action-button" onClick={() => openOrgAction("suspend")}>
+              {t.lifecycleActionSuspend}
+            </button>
+          ) : null}
+          {detail.status === "suspended" ? (
+            <button type="button" className="admin-action-button admin-action-button--primary" onClick={() => openOrgAction("reactivate")}>
+              {t.lifecycleActionReactivate}
+            </button>
+          ) : null}
+          {detail.status !== "archived" ? (
+            <button type="button" className="admin-action-button admin-action-button--danger" onClick={() => openOrgAction("archive")}>
+              {t.lifecycleActionArchive}
+            </button>
+          ) : (
+            <button type="button" className="admin-action-button admin-action-button--primary" onClick={() => openOrgAction("restore")}>
+              {t.lifecycleActionRestore}
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.membersSectionTitle}</h2>
+        {!lifecycle || lifecycle.members.length === 0 ? (
+          <p className="admin-table__muted">{t.noMembers}</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colEmail}</th>
+                  <th scope="col">{t.colRole}</th>
+                  <th scope="col">{t.colStatus}</th>
+                  <th scope="col">{t.colActions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lifecycle.members.map((member) => (
+                  <tr key={member.membershipId}>
+                    <td>{member.email}</td>
+                    <td>{member.role}</td>
+                    <td>{member.status}</td>
+                    <td>
+                      <div className="admin-actions-menu">
+                        {member.status === "active" && member.role !== "organization_owner" ? (
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small admin-action-button--danger"
+                            onClick={() => openMemberAction("disable", member.membershipId, member.email)}
+                          >
+                            {t.actionDisableMember}
+                          </button>
+                        ) : null}
+                        {member.status === "revoked" ? (
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small"
+                            onClick={() => openMemberAction("reactivate", member.membershipId, member.email)}
+                          >
+                            {t.actionReactivateMember}
+                          </button>
+                        ) : null}
+                        {member.status === "active" && member.role !== "organization_owner" ? (
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small"
+                            onClick={() => openMemberAction("transfer", member.membershipId, member.email)}
+                          >
+                            {t.actionTransferOwnership}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.notesSectionTitle}</h2>
+        <div className="admin-actions-menu">
+          <button
+            type="button"
+            className="admin-action-button"
+            onClick={() => {
+              setDialogFeedback(null);
+              setNoteOpen(true);
+            }}
+          >
+            {t.actionAddNote}
+          </button>
+        </div>
+        {!lifecycle || lifecycle.notes.length === 0 ? (
+          <p className="admin-table__muted">{t.noNotes}</p>
+        ) : (
+          <ul className="admin-notes-list">
+            {lifecycle.notes.map((note) => (
+              <li key={note.noteId}>
+                <p>{note.note}</p>
+                <p className="admin-table__muted">
+                  {note.authorEmail} — {formatDateTime(note.createdAt, lang)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>{t.lifecycleHistoryTitle}</h2>
+        {!lifecycle || lifecycle.history.length === 0 ? (
+          <p className="admin-table__muted">{t.noLifecycleHistory}</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colObserved}</th>
+                  <th scope="col">{t.orgDetailInterventionType}</th>
+                  <th scope="col">{t.colActor}</th>
+                  <th scope="col">{t.colTarget}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lifecycle.history.map((entry) => (
+                  <tr key={entry.auditId}>
+                    <td className="admin-table__muted">{formatDateTime(entry.createdAt, lang)}</td>
+                    <td>{t.lifecycleActionLabels[entry.action] ?? entry.action}</td>
+                    <td>{entry.actorEmail ?? "—"}</td>
+                    <td>{entry.targetEmail ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <ConfirmDialog
+        id="org-action-dialog"
+        title={
+          orgActionOpen === "suspend"
+            ? t.lifecycleActionSuspend
+            : orgActionOpen === "reactivate"
+            ? t.lifecycleActionReactivate
+            : orgActionOpen === "archive"
+            ? t.lifecycleActionArchive
+            : t.lifecycleActionRestore
+        }
+        open={orgActionOpen !== null}
+        onClose={closeAllDialogs}
+        onSubmit={handleOrgActionSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={orgActionConfirmed}
+        onConfirmCheckedChange={setOrgActionConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>
+          {orgActionOpen === "suspend"
+            ? t.lifecycleSuspendConfirmText
+            : orgActionOpen === "reactivate"
+            ? t.lifecycleReactivateConfirmText
+            : orgActionOpen === "archive"
+            ? t.lifecycleArchiveConfirmText
+            : t.lifecycleRestoreConfirmText}
+        </p>
+        {orgActionOpen === "archive" ? (
+          <label className="admin-dialog__field">
+            <span>
+              {t.lifecycleArchiveNameLabel} : <strong>{detail.name}</strong>
+            </span>
+            <input
+              type="text"
+              value={archiveConfirmName}
+              onChange={(e) => setArchiveConfirmName(e.target.value)}
+              required
+            />
+          </label>
+        ) : null}
+        <ReasonField id="org-action-reason" label={t.formReason} value={orgActionReason} onChange={setOrgActionReason} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="member-action-dialog"
+        title={
+          memberAction?.kind === "disable"
+            ? t.actionDisableMember
+            : memberAction?.kind === "reactivate"
+            ? t.actionReactivateMember
+            : t.actionTransferOwnership
+        }
+        open={memberAction !== null}
+        onClose={closeAllDialogs}
+        onSubmit={handleMemberActionSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={memberActionConfirmed}
+        onConfirmCheckedChange={setMemberActionConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>
+          {memberAction?.kind === "disable"
+            ? t.memberDisableConfirmText
+            : memberAction?.kind === "reactivate"
+            ? t.memberReactivateConfirmText
+            : t.transferOwnershipConfirmText}
+        </p>
+        <p>
+          {t.colEmail}: <strong>{memberAction?.email}</strong>
+        </p>
+        <ReasonField id="member-action-reason" label={t.formReason} value={memberActionReason} onChange={setMemberActionReason} />
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="note-dialog"
+        title={t.actionAddNote}
+        open={noteOpen}
+        onClose={closeAllDialogs}
+        onSubmit={handleAddNoteSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={noteConfirmed}
+        onConfirmCheckedChange={setNoteConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <ReasonField id="note-text" label={t.formNoteLabel} value={noteText} onChange={setNoteText} />
+      </ConfirmDialog>
 
       <ConfirmDialog
         id="grant-dialog"
@@ -1261,11 +1665,14 @@ function ConnectorRow({
 export function FinancesView({
   summary,
   events,
+  extension,
   error,
   period,
 }: {
   summary: FinanceSummary | null;
   events: Paginated<FinanceEventRow> | null;
+  /** REVENUE-01E. Peut être `null` sans bloquer le reste de la page (voir page.tsx). */
+  extension: FinanceBillingExtension | null;
   error: "denied" | "failed" | null;
   period: FinancePeriodFilter;
 }) {
@@ -1322,6 +1729,7 @@ export function FinancesView({
             <h2 id="finance-counters-heading">{t.financeSectionCounters}</h2>
             <div className="admin-counters">
               <Counter label={t.financeCounterOrganizations} value={summary.counters.organizationsTotal} />
+              <Counter label={t.financeExcludedArchivedSubscriptions} value={summary.excludedArchivedSubscriptions} />
               <Counter label={t.financeCounterFreeSubs} value={summary.counters.subscriptionsFree} />
               <Counter label={t.financeCounterPaidSubs} value={summary.counters.subscriptionsPaid} />
               <Counter
@@ -1475,6 +1883,50 @@ export function FinancesView({
         </>
       ) : null}
 
+      {/* REVENUE-01E — Facturation manuelle Afrique, rappels, échecs de
+          paiement. Section distincte de B/C/D ci-dessus : jamais fusionnée
+          dans les mêmes compteurs (domaines différents, voir la migration). */}
+      {extension ? (
+        <section className="admin-section" aria-labelledby="finance-revenue-launch-heading">
+          <h2 id="finance-revenue-launch-heading">{t.financeSectionManualInvoicing}</h2>
+          <div className="admin-counters">
+            <Counter
+              label={t.financeManualInvoicesDueXaf}
+              value={extension.manualInvoicing.dueByCurrency.XAF ?? 0}
+            />
+            <Counter
+              label={t.financeManualInvoicesOverdueXaf}
+              value={extension.manualInvoicing.overdueByCurrency.XAF ?? 0}
+            />
+            <Counter
+              label={t.financeArchivedOpenInvoicesXaf}
+              value={extension.manualInvoicing.archivedOpenByCurrency.XAF ?? 0}
+            />
+            <Counter
+              label={t.financeManualPaymentsConfirmed}
+              value={extension.manualInvoicing.paymentsConfirmedCount}
+            />
+            <Counter label={t.financeRemindersSent} value={extension.reminders.sentInPeriod} />
+            <Counter label={t.financeRemindersDueNow} value={extension.reminders.dueNow} />
+            <Counter label={t.financePaymentFailures} value={extension.paymentFailuresInPeriod} />
+          </div>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <tbody>
+                <tr>
+                  <th scope="row">{t.financeManualPaymentsCollectedXaf}</th>
+                  <td>{formatMinorAmount(extension.manualInvoicing.paymentsConfirmedByCurrency.XAF ?? 0, "XAF", lang)}</td>
+                </tr>
+                <tr>
+                  <th scope="row">{t.financeManualPaymentsCollectedCad}</th>
+                  <td>{formatMinorAmount(extension.manualInvoicing.paymentsConfirmedByCurrency.CAD ?? 0, "CAD", lang)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       {/* F. Tableau des événements financiers récents — assaini, paginé. */}
       <section className="admin-section" aria-labelledby="finance-events-heading">
         <h2 id="finance-events-heading">{t.financeSectionEvents}</h2>
@@ -1496,7 +1948,18 @@ export function FinancesView({
                 events.rows.map((ev) => (
                   <tr key={ev.eventId}>
                     <td>{formatDateTime(ev.occurredAt, lang) ?? "—"}</td>
-                    <th scope="row">{ev.organizationName || "—"}</th>
+                    <th scope="row">
+                      {ev.organizationId ? (
+                        <Link
+                          href={`/administration/organizations/${ev.organizationId}`}
+                          className="admin-table__view-link"
+                        >
+                          {ev.organizationName || "—"}
+                        </Link>
+                      ) : (
+                        ev.organizationName || "—"
+                      )}
+                    </th>
                     <td>{ev.category}</td>
                     <td>{ev.status}</td>
                     <td>{ev.currency ?? "—"}</td>
@@ -1522,6 +1985,317 @@ export function FinancesView({
           <Pagination page={events} basePath="/administration/finances" extraParams={{ period }} />
         ) : null}
       </section>
+    </div>
+  );
+}
+
+// =============================================================================
+// REVENUE-01I — Contacts commerciaux
+// =============================================================================
+// Aucune inscription automatique à une newsletter : le seul chemin d'écriture
+// est une saisie manuelle Admin (les deux dialogues ci-dessous). Cette page
+// ne déclenche jamais aucun envoi — l'export CSV (lien vers la route dédiée)
+// est la seule "sortie" de ces données depuis cette console.
+// =============================================================================
+
+export function ContactsView({
+  page,
+  error,
+  search,
+}: {
+  page: Paginated<AdminCommercialContactRow> | null;
+  error: "denied" | "failed" | null;
+  search: string;
+}) {
+  const { t } = useCopy();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [dialogFeedback, setDialogFeedback] = useState<string | null>(null);
+
+  const [editTarget, setEditTarget] = useState<AdminCommercialContactRow | null>(null);
+  const [editConfirmed, setEditConfirmed] = useState(false);
+  const [editPhone, setEditPhone] = useState("");
+  const [editCountry, setEditCountry] = useState("");
+  const [editLanguage, setEditLanguage] = useState<"fr" | "en">("fr");
+
+  const [consentTarget, setConsentTarget] = useState<{ row: AdminCommercialContactRow; grant: boolean } | null>(null);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
+  // v3 — preuve obligatoire pour un accord (décision immuable côté base).
+  const [consentEvidence, setConsentEvidence] = useState("");
+
+  const hasFilters = search !== "";
+  const extraParams: Record<string, string> = {};
+  if (search) extraParams.q = search;
+
+  function resultMessage(result: ContactActionResult): string {
+    if (!result.ok) return result.message;
+    return t.outcomeLabels[result.outcome] ?? result.outcome;
+  }
+
+  function closeDialogs() {
+    setEditTarget(null);
+    setEditConfirmed(false);
+    setConsentTarget(null);
+    setConsentConfirmed(false);
+    setConsentEvidence("");
+    setDialogFeedback(null);
+  }
+
+  function openEdit(row: AdminCommercialContactRow) {
+    setDialogFeedback(null);
+    setEditPhone(row.phone ?? "");
+    setEditCountry(row.country ?? "");
+    setEditLanguage(row.language === "en" ? "en" : "fr");
+    setEditTarget(row);
+  }
+
+  function openConsent(row: AdminCommercialContactRow, grant: boolean) {
+    setDialogFeedback(null);
+    setConsentTarget({ row, grant });
+  }
+
+  function handleEditSubmit() {
+    if (!editTarget) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      const result = await upsertOrganizationContactAction(
+        editTarget.organizationId,
+        editPhone,
+        editCountry,
+        editLanguage,
+      );
+      if (result.ok) {
+        closeDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function handleConsentSubmit() {
+    if (!consentTarget) return;
+    setDialogFeedback(null);
+    startTransition(async () => {
+      // Seule source possible aujourd'hui : aucun formulaire public de
+      // consentement n'existe encore (voir la migration REVENUE-01I).
+      if (consentTarget.grant && !isValidConsentEvidence(consentEvidence)) {
+        setDialogFeedback(t.consentEvidenceRequired);
+        return;
+      }
+      const result = await setMarketingConsentAction(
+        consentTarget.row.organizationId,
+        consentTarget.grant,
+        "admin_manual_entry",
+        MARKETING_CONSENT_VERSION,
+        consentEvidence,
+      );
+      if (result.ok) {
+        closeDialogs();
+        setFeedback({ kind: "success", message: resultMessage(result) });
+        router.refresh();
+      } else {
+        setDialogFeedback(resultMessage(result));
+      }
+    });
+  }
+
+  function consentLabel(row: AdminCommercialContactRow): string {
+    if (row.unsubscribedAt) return t.consentUnsubscribed;
+    return row.marketingConsent ? t.consentYes : t.consentNo;
+  }
+
+  return (
+    <div className="admin-page">
+      <header className="admin-page__header">
+        <h1>{t.contactsTitle}</h1>
+        <p>{t.contactsLead}</p>
+      </header>
+
+      <div className="admin-actions-menu">
+        <a className="admin-action-button" href="/api/administration/contacts/export">
+          {t.exportCsv}
+        </a>
+      </div>
+
+      <FilterBar action="/administration/contacts">
+        <label className="admin-filters__field">
+          <span className="admin-filters__label">{t.searchByNameOrEmail}</span>
+          <input type="text" name="q" defaultValue={search} className="admin-filters__input" />
+        </label>
+        <button type="submit" className="admin-filters__submit">{t.applyFilters}</button>
+        {hasFilters ? (
+          <Link href="/administration/contacts" className="admin-filters__clear">
+            {t.clearFilters}
+          </Link>
+        ) : null}
+      </FilterBar>
+
+      {feedback ? (
+        <p className={feedback.kind === "success" ? "admin-success" : "admin-error"} role="status">
+          {feedback.message}
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className="admin-error" role="alert">
+          {error === "denied" ? t.errorDenied : t.errorFailed}
+        </p>
+      ) : null}
+
+      {page ? (
+        <>
+          <p className="admin-results-count">{t.resultsCount(page.total)}</p>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.colName}</th>
+                  <th scope="col">{t.colStatus}</th>
+                  <th scope="col">{t.orgDetailOwnerEmail}</th>
+                  <th scope="col">{t.colPhone}</th>
+                  <th scope="col">{t.colCountry}</th>
+                  <th scope="col">{t.colLanguage}</th>
+                  <th scope="col">{t.colConsent}</th>
+                  <th scope="col">{t.colMarketingEligible}</th>
+                  <th scope="col">{t.colActions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="admin-table__muted">
+                      {t.emptyRows}
+                    </td>
+                  </tr>
+                ) : (
+                  page.rows.map((row) => (
+                    <tr key={row.organizationId}>
+                      <th scope="row">
+                        <Link
+                          href={`/administration/organizations/${row.organizationId}`}
+                          className="admin-table__view-link"
+                        >
+                          {row.organizationName || "—"}
+                        </Link>
+                      </th>
+                      <td><OrganizationStatusBadge status={row.organizationStatus} /></td>
+                      <td>{row.ownerEmail ?? "—"}</td>
+                      <td>{row.phone ?? "—"}</td>
+                      <td>{row.country ?? t.noContactRecorded}</td>
+                      <td>{row.language ?? "—"}</td>
+                      <td>
+                        <span className="admin-badge">{consentLabel(row)}</span>
+                      </td>
+                      <td>
+                        {/* Complément REVENUE-LAUNCH-01 §4 — jamais recalculé
+                            côté client : reflète tel quel marketing_eligible
+                            calculé par admin_list_commercial_contacts. */}
+                        <span className={row.marketingEligible ? "admin-badge admin-badge--active" : "admin-badge"}>
+                          {row.marketingEligible ? t.marketingEligibleYes : t.marketingEligibleNo}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-actions-menu">
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--small"
+                            onClick={() => openEdit(row)}
+                          >
+                            {t.actionEditContact}
+                          </button>
+                          {row.country ? (
+                            row.marketingConsent ? (
+                              <button
+                                type="button"
+                                className="admin-action-button admin-action-button--small admin-action-button--danger"
+                                onClick={() => openConsent(row, false)}
+                              >
+                                {t.actionUnsubscribe}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="admin-action-button admin-action-button--small"
+                                onClick={() => openConsent(row, true)}
+                              >
+                                {t.actionGrantConsent}
+                              </button>
+                            )
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} basePath="/administration/contacts" extraParams={extraParams} />
+        </>
+      ) : null}
+
+      <ConfirmDialog
+        id="edit-contact-dialog"
+        title={t.actionEditContact}
+        open={editTarget !== null}
+        onClose={closeDialogs}
+        onSubmit={handleEditSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={editConfirmed}
+        onConfirmCheckedChange={setEditConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>{t.editContactConfirmText}</p>
+        <label className="admin-dialog__field">
+          <span>{t.formPhoneOptional}</span>
+          <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} maxLength={30} />
+        </label>
+        <label className="admin-dialog__field">
+          <span>{t.formCountry}</span>
+          <input type="text" value={editCountry} onChange={(e) => setEditCountry(e.target.value)} maxLength={80} required />
+        </label>
+        <label className="admin-dialog__field">
+          <span>{t.formLanguage}</span>
+          <select value={editLanguage} onChange={(e) => setEditLanguage(e.target.value === "en" ? "en" : "fr")}>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        id="consent-dialog"
+        title={consentTarget?.grant ? t.actionGrantConsent : t.actionUnsubscribe}
+        open={consentTarget !== null}
+        onClose={closeDialogs}
+        onSubmit={handleConsentSubmit}
+        submitLabel={t.formConfirm}
+        cancelLabel={t.formCancel}
+        confirmChecked={consentConfirmed}
+        onConfirmCheckedChange={setConsentConfirmed}
+        confirmLabel={t.formConfirmCheckbox}
+        pending={isPending}
+        feedback={dialogFeedback}
+      >
+        <p>{consentTarget?.grant ? t.grantConsentConfirmText : t.unsubscribeConfirmText}</p>
+        <p className="admin-table__muted">{t.consentVersionLabel(MARKETING_CONSENT_VERSION)}</p>
+        <label className="admin-dialog__field">
+          <span>{consentTarget?.grant ? t.consentEvidenceLabel : t.consentEvidenceOptionalLabel}</span>
+          <textarea
+            value={consentEvidence}
+            onChange={(e) => setConsentEvidence(e.target.value)}
+            maxLength={500}
+            rows={3}
+            required={consentTarget?.grant === true}
+          />
+        </label>
+      </ConfirmDialog>
     </div>
   );
 }

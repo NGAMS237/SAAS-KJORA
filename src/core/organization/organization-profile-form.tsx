@@ -3,7 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrganizationOption } from "@/core/organization/select-active-organization";
-import { ORGANIZATION_CURRENCIES, ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
+import { ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
+import { RENTAL_CURRENCIES, defaultsForCountry } from "@/core/currency/metadata";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 
 export function OrganizationProfileForm({ organization, currencyLocked }: { organization: OrganizationOption; currencyLocked: boolean }) {
@@ -46,9 +47,9 @@ export function OrganizationProfileForm({ organization, currencyLocked }: { orga
       <div className="form-grid">
         <label className="field"><span>{t("Langue", "Language")}</span><select defaultValue={organization.language} name="language"><option value="fr">Français</option><option value="en">English</option></select></label>
         <label className="field"><span>{t("Fuseau horaire", "Time zone")}</span><select defaultValue={organization.timezone} name="timezone" required>{!ORGANIZATION_TIMEZONES.some(([id]) => id === organization.timezone) ? <option value={organization.timezone}>{organization.timezone}</option> : null}{ORGANIZATION_TIMEZONES.map(([id, label]) => <option key={id} value={id}>{label} · {id}</option>)}</select></label>
-        <label className="field"><span>{t("Devise", "Currency")}</span><select defaultValue={organization.currencyCode} disabled={currencyLocked} name="currency">{ORGANIZATION_CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}</select><small>{currencyLocked ? t("XAF verrouillée : des données financières existent déjà. Aucun historique ne sera converti.", "XAF is locked: financial data already exists. History is never converted.") : t("XAF est la seule devise activée pour le MVP Cameroun.", "XAF is the only currency enabled for the Cameroon MVP.")}</small>{currencyLocked ? <input name="currency" type="hidden" value={organization.currencyCode} /> : null}</label>
+        <label className="field"><span>{t("Devise", "Currency")}</span><select defaultValue={organization.currencyCode} disabled={currencyLocked} name="currency">{RENTAL_CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}</select><small>{currencyLocked ? t("Devise verrouillée : des données financières existent déjà pour cette Organization (bail, échéance, paiement, allocation ou écriture de compte). Aucun historique ne sera converti.", "Currency is locked: this Organization already has financial data (a lease, a due, a payment, an allocation, or a ledger entry). History is never converted.") : t("Changeable librement tant qu’aucune donnée financière n’existe. Ne modifie jamais la devise de votre abonnement KJORA.", "Freely changeable as long as no financial data exists. Never changes your KJORA subscription currency.")}</small>{currencyLocked ? <input name="currency" type="hidden" value={organization.currencyCode} /> : null}</label>
       </div>
-      <div className="fixed-configuration"><span><small>{t("Pays", "Country")}</small><strong>{t("Cameroun", "Cameroon")}</strong></span></div>
+      <div className="fixed-configuration"><span><small>{t("Pays", "Country")}</small><strong>{t(defaultsForCountry(organization.countryCode)?.label.fr ?? organization.countryCode, defaultsForCountry(organization.countryCode)?.label.en ?? organization.countryCode)}</strong></span></div>
       {message ? <p className="form-feedback" role="status">{message}</p> : null}
       <button className="button button--primary" disabled={busy} type="submit">{busy ? t("Enregistrement…", "Saving…") : t("Enregistrer", "Save")}</button>
     </form>
