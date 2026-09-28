@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(10);
+select ok((select relrowsecurity from pg_class where oid='public.whatsapp_outbox'::regclass),'RLS outbox');
+select ok(not has_table_privilege('anon','public.whatsapp_outbox','select'),'anon refusé');
+select ok(not has_table_privilege('authenticated','public.whatsapp_outbox','select'),'authenticated sans lecture directe');
+select ok(has_table_privilege('service_role','public.whatsapp_outbox','select'),'service role lit la file');
+select ok(not has_function_privilege('anon','public.save_tenant_whatsapp_preferences(uuid,text,boolean,text,boolean,boolean)','execute'),'anon ne modifie pas');
+select ok(has_function_privilege('authenticated','public.save_tenant_whatsapp_preferences(uuid,text,boolean,text,boolean,boolean)','execute'),'RPC gardée exposée');
+select ok(position('tenant.manage' in pg_get_functiondef('public.save_tenant_whatsapp_preferences(uuid,text,boolean,text,boolean,boolean)'::regprocedure))>0,'capability tenant.manage');
+select ok(position('set search_path = ''''' in pg_get_functiondef('public.save_tenant_whatsapp_preferences(uuid,text,boolean,text,boolean,boolean)'::regprocedure))>0,'search_path fermé');
+select col_is_null('public','whatsapp_outbox','provider_message_ref','référence fournisseur nullable');
+select ok(not has_table_privilege('authenticated','public.whatsapp_templates','select'),'gabarits privés');
+select * from finish();
+rollback;
