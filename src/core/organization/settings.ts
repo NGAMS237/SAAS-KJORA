@@ -14,19 +14,24 @@
 export { RENTAL_CURRENCIES as ORGANIZATION_CURRENCIES, isRentalCurrency as isOrganizationCurrency } from "../currency/metadata.ts";
 export type { RentalCurrency as OrganizationCurrency } from "../currency/metadata.ts";
 
-export const ORGANIZATION_TIMEZONES = [
-  ["Africa/Douala", "Cameroun — Douala / Yaoundé"],
-  ["Africa/Abidjan", "Côte d’Ivoire — Abidjan"],
-  ["Africa/Dakar", "Sénégal — Dakar"],
-  ["Africa/Lagos", "Nigeria — Lagos"],
-  ["Africa/Kinshasa", "RDC — Kinshasa"],
-  ["Africa/Nairobi", "Kenya — Nairobi"],
-  ["Africa/Johannesburg", "Afrique du Sud — Johannesburg"],
-  ["Europe/Paris", "France — Paris"],
-  ["Europe/London", "Royaume-Uni — Londres"],
-  ["America/Toronto", "Canada — Toronto"],
-  ["America/New_York", "États-Unis — New York"],
+import { SUPPORTED_COUNTRIES } from "../currency/metadata.ts";
+
+const AFRICAN_TIMEZONES = SUPPORTED_COUNTRIES.map(
+  ({ countryCode, label, timezone }) => [timezone, { fr: `${label.fr} (${countryCode})`, en: `${label.en} (${countryCode})` }] as const,
+);
+
+const OTHER_TIMEZONES = [
+  ["Europe/Paris", { fr: "France — Paris", en: "France — Paris" }],
+  ["Europe/London", { fr: "Royaume-Uni — Londres", en: "United Kingdom — London" }],
+  ["America/Toronto", { fr: "Canada — Toronto", en: "Canada — Toronto" }],
+  ["America/New_York", { fr: "États-Unis — New York", en: "United States — New York" }],
 ] as const;
+
+// Les fuseaux des pays disponibles viennent du même catalogue que l'onboarding.
+// Une déduplication évite deux options si plusieurs pays partagent un fuseau.
+export const ORGANIZATION_TIMEZONES = [
+  ...new Map([...AFRICAN_TIMEZONES, ...OTHER_TIMEZONES].map(([id, label]) => [id, [id, label] as const])).values(),
+];
 
 export function isSupportedOrganizationTimezone(value: unknown) {
   if (typeof value !== "string" || !value.includes("/")) return false;
