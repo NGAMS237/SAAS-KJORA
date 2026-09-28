@@ -70,8 +70,22 @@ const DOC = "b1000000-0000-4000-8000-000000000001";
 const TENANT = "c1000000-0000-4000-8000-000000000001";
 const LEASE = "d1000000-0000-4000-8000-000000000001";
 
-const MIGRATION = readFileSync("supabase/migrations/20260928090000_notifications_communications_e2e_01.sql", "utf8");
-const read = (path: string) => readFileSync(path, "utf8");
+// Normalisation CRLF -> LF : ce fichier recherche un motif multi-lignes exact
+// ("then\n    -- Nouvelle génération PROPRE") par indexOf. Sur un checkout
+// Windows avec core.autocrlf=true, le fichier source sur disque contient
+// "\r\n" : ce motif (qui ne contient qu'un "\n" nu) n'est alors plus trouvé
+// comme sous-chaîne contiguë, et le test dérivé échoue — alors que la
+// migration SQL elle-même est correcte des deux côtés. No-op sur ce bac à
+// sable (déjà en LF).
+const MIGRATION = readFileSync("supabase/migrations/20260928090000_notifications_communications_e2e_01.sql", "utf8").replace(/\r\n/g, "\n");
+// Même normalisation que MIGRATION ci-dessus, appliquée à l'assistant `read`
+// partagé : le test "v4 : resend repart d'une génération propre" (et 5
+// autres) relit ce même fichier de migration via `read(...)` dans une
+// variable locale `migration` distincte de la constante `MIGRATION`
+// ci-dessus — normaliser seulement `MIGRATION` ne suffisait donc pas, cette
+// seconde copie non normalisée restait sujette au même problème CRLF que
+// celui déjà documenté plus haut.
+const read = (path: string) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 
 function opened(overrides: Partial<NotificationOpenResult>): NotificationOpenResult {
   return {
