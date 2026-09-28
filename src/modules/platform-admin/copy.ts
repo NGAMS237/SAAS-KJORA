@@ -294,6 +294,7 @@ export type AdminCopy = {
 
   // NOTIFICATIONS-COMMUNICATIONS-E2E-01 — Supervision des opérations.
   navOperations: string;
+  navPartners: string;
 
   // REVENUE-01I — Contacts commerciaux.
   navContacts: string;
@@ -717,6 +718,7 @@ const fr: AdminCopy = {
   },
 
   navOperations: "Opérations",
+  navPartners: "Partenaires",
   navContacts: "Contacts",
   contactsTitle: "Contacts commerciaux",
   contactsLead:
@@ -1138,6 +1140,7 @@ const en: AdminCopy = {
   },
 
   navOperations: "Operations",
+  navPartners: "Partners",
   navContacts: "Contacts",
   contactsTitle: "Commercial contacts",
   contactsLead:

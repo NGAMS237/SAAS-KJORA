@@ -1,0 +1,16 @@
+begin;
+select plan(12);
+select has_table('public','partner_applications','partner applications exist');
+select has_table('public','partners','partners exist');
+select has_table('public','partner_codes','partner codes exist');
+select has_table('public','partner_attributions','attributions exist');
+select has_table('public','partner_rewards','rewards exist');
+select has_table('public','partner_reward_events','reward ledger exists');
+select is((select relrowsecurity from pg_class where oid='public.partner_applications'::regclass),true,'applications RLS');
+select is((select relrowsecurity from pg_class where oid='public.partner_rewards'::regclass),true,'rewards RLS');
+select function_privs_are('public','submit_partner_application',array['text','text','text','text','text','text','text'],ARRAY['EXECUTE'],'anon submits only through RPC');
+select isnt(has_table_privilege('authenticated','public.partner_rewards','select'),true,'no direct rewards read');
+select isnt(has_function_privilege('anon','public.admin_list_partner_applications(integer,integer)','execute'),true,'anon cannot list');
+select isnt(has_function_privilege('anon','public.partner_dashboard_self()','execute'),true,'anon cannot read dashboard');
+select * from finish();
+rollback;
