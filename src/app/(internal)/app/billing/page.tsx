@@ -3,7 +3,7 @@ import { getActiveAuthorization } from "@/core/authorization/server";
 import { checkoutAffordance, getBillingOverview, listBillingInvoices } from "@/core/billing/server";
 import { priceFor } from "@/core/billing/model";
 import { BillingView } from "@/core/billing/billing-view";
-import { mergeSiteAppIntent, parseSiteAppIntent, type SiteAppSearchParams } from "@/core/onboarding/plan-intent";
+import { mergeSiteAppIntent, parseSiteAppIntent, subscriptionCurrencyForBillingCountry, type SiteAppSearchParams } from "@/core/onboarding/plan-intent";
 import { siteAppIntentFromOnboardingState } from "@/core/onboarding/onboarding-state";
 import { persistIncomingSiteAppIntent } from "@/core/onboarding/server";
 import { loadOnboardingState } from "@/core/routing/context-resolver";
@@ -39,11 +39,16 @@ export default async function BillingPage({
     ? siteAppIntentFromOnboardingState(state)
     : null;
   const requestedIntent = mergeSiteAppIntent(incomingIntent, storedIntent);
+  const affordancePlan = requestedIntent.plan ?? sub.plan;
+  const affordanceCycle = requestedIntent.billingCycle ?? sub.billingCycle;
+  const affordanceCurrency = requestedIntent.billingCountry
+    ? subscriptionCurrencyForBillingCountry(requestedIntent.billingCountry)
+    : sub.currency;
   const affordance = checkoutAffordance({
-    plan: sub.plan,
-    cycle: sub.billingCycle,
-    currency: sub.currency,
-    amountMinor: priceFor(sub.plan, sub.billingCycle, sub.currency) ?? 0,
+    plan: affordancePlan,
+    cycle: affordanceCycle,
+    currency: affordanceCurrency,
+    amountMinor: priceFor(affordancePlan, affordanceCycle, affordanceCurrency) ?? 0,
   });
 
   return <BillingView affordance={affordance} invoices={invoices} overview={overview} requestedIntent={requestedIntent} />;

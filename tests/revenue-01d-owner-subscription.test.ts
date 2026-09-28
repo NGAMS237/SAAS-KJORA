@@ -81,15 +81,14 @@ test("la nouvelle route de téléchargement ne nomme aucun fournisseur de paieme
   assert.doesNotMatch(sansCommentaires(DOWNLOAD_ROUTE), /\bstripe\b|\bflutterwave\b|\bcampay\b|\belyonpay\b|\bnotchpay\b|\bpayunit\b/i);
 });
 
-test("la vue Owner ne révèle jamais quel fournisseur est réellement retenu (seule une mise en garde Stripe pré-existante et neutre subsiste)", () => {
-  // Seule occurrence tolérée : la phrase de réassurance "aucun paiement ni
-  // Checkout Stripe n'est lancé", pré-existante à ce lot. Toute AUTRE mention
-  // de fournisseur (Flutterwave, CamPay, ElyonPay, NotchPay, PayUnit, ou une
-  // 2e mention de Stripe hors de cette phrase) serait une fuite.
-  const withoutReassurance = sansCommentaires(BILLING_VIEW).replace(
-    /Aucun paiement ni Checkout Stripe n.{1,3}est lanc[ée] dans ce parcours\./gi, "",
-  ).replace(/No payment or Stripe Checkout is started in this flow\./gi, "");
-  assert.doesNotMatch(withoutReassurance, /\bstripe\b|\bflutterwave\b|\bcampay\b|\belyonpay\b|\bnotchpay\b|\bpayunit\b/i);
+test("la vue Owner ne révèle que le fournisseur Stripe Test explicitement activable, jamais le routage interne Afrique", () => {
+  // BILLING-STRIPE-SAAS-01 rend volontairement visible le parcours sandbox
+  // Canada. Les fournisseurs étudiés pour l'Afrique et les secrets de routage
+  // restent strictement absents de la vue Owner.
+  const view = sansCommentaires(BILLING_VIEW);
+  assert.match(view, /Stripe Test/);
+  assert.doesNotMatch(view, /\bflutterwave\b|\bcampay\b|\belyonpay\b|\bnotchpay\b|\bpayunit\b/i);
+  assert.doesNotMatch(view, /secret|webhook|price[_-]?id/i);
 });
 
 // ---------------------------------------------------------------------------

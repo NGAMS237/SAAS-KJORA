@@ -85,6 +85,20 @@ export async function POST(request: NextRequest) {
     return applyAuthState(NextResponse.json({ deliveryId: result.data }, { status: 202 }));
   }
 
+  if (input.action === "approve" || input.action === "defer") {
+    if (!authorization.capabilities.includes("receipt.share")) return applyAuthState(NextResponse.json({ error: "forbidden" }, { status: 403 }));
+    const documentId = parseDocumentId(input.documentId);
+    if (!documentId) return applyAuthState(NextResponse.json({ error: "invalid_document" }, { status: 400 }));
+    const deferredUntil = typeof input.deferredUntil === "string" ? input.deferredUntil : null;
+    const result = await supabase.rpc("review_financial_document", {
+      target_document_id: documentId,
+      p_decision: input.action,
+      p_deferred_until: input.action === "defer" ? deferredUntil : null,
+    });
+    if (result.error) return applyAuthState(NextResponse.json({ error: "review_failed" }, { status: result.error.code === "42501" ? 403 : 400 }));
+    return applyAuthState(NextResponse.json({ result: result.data }));
+  }
+
   if (input.action === "mark_notification_read" || input.action === "mark_notification_unread") {
     const notificationId = parseDocumentId(input.notificationId);
     if (!notificationId) return applyAuthState(NextResponse.json({ error: "invalid_notification" }, { status: 400 }));

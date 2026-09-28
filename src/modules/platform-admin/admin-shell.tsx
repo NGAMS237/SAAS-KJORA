@@ -23,6 +23,7 @@ const NAV = [
   { href: "/administration/finances", key: "navFinances" as const },
   { href: "/administration/contacts", key: "navContacts" as const },
   { href: "/administration/operations", key: "navOperations" as const },
+  { href: "/administration/partenaires", key: "navPartners" as const },
 ];
 
 /** ADMIN-01.1 : jamais déduit du hostname — reçu tel quel de `VERCEL_ENV`. */

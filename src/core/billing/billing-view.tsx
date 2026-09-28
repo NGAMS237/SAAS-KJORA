@@ -178,6 +178,32 @@ export function BillingView({
     setBusy(false);
   }
 
+  async function openStripeTest(kind: "checkout" | "portal") {
+    if (kind === "checkout" && (!requestedPlan || !requestedBillingCountry)) return;
+    setBusy(true);
+    setMessage(null);
+    const response = await fetch(`/api/billing/stripe/${kind}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(kind === "checkout" ? {
+        plan: requestedPlan,
+        cycle: requestedCycle,
+        locale,
+        idempotency_key: crypto.randomUUID(),
+      } : {}),
+    });
+    const body = await response.json().catch(() => null) as { redirect_url?: string } | null;
+    if (!response.ok || !body?.redirect_url) {
+      setMessage(t(
+        "Stripe Test n’est pas configuré pour cette Preview. Aucun paiement n’a été lancé.",
+        "Stripe Test is not configured for this Preview. No payment was started.",
+      ));
+      setBusy(false);
+      return;
+    }
+    window.location.assign(body.redirect_url);
+  }
+
   const prixCourant = priceFor(sub.plan, sub.billingCycle, sub.currency);
 
   return (
@@ -414,6 +440,16 @@ export function BillingView({
               ? (locale === "en" ? CHECKOUT_UNAVAILABLE_MESSAGES_EN[affordance.reason] : CHECKOUT_UNAVAILABLE_MESSAGES[affordance.reason])
               : null}
         </p>
+        {requestedBillingCountry === "CA" && requestedPlan && affordance.online ? (
+          <button className="button button--primary" disabled={busy} onClick={() => void openStripeTest("checkout")} type="button">
+            {busy ? t("Ouverture…", "Opening…") : t("Continuer vers Stripe Test", "Continue to Stripe Test")}
+          </button>
+        ) : null}
+        {sub.provider === "stripe" ? (
+          <button className="button button--secondary" disabled={busy} onClick={() => void openStripeTest("portal")} type="button">
+            {t("Gérer dans le portail Stripe Test", "Manage in Stripe Test portal")}
+          </button>
+        ) : null}
       </Card>
 
       {/* -------------------------------------------------------- Factures */}

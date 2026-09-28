@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   FinancialDocumentRecord,
+  FinancialDocumentReviewStatus,
   FinancialDocumentStatus,
   FinancialDocumentSummary,
   FinancialDocumentType,
@@ -19,16 +20,18 @@ type DocumentRow = {
   period_start: string | null; period_end: string | null; snapshot: Record<string, unknown>;
   template_version: string; storage_path: string | null; created_by: string | null;
   created_at: string; invalidated_at: string | null; invalidation_reason: string | null;
+  review_status: FinancialDocumentReviewStatus; deferred_until: string | null;
 };
 type TenantDocumentContactRow = { tenant_id: string; email: string | null };
 
-const DOCUMENT_COLUMNS = "id, organization_id, tenant_id, lease_id, due_id, payment_id, document_type, reference, status, language, issued_on, period_start, period_end, snapshot, template_version, storage_path, created_by, created_at, invalidated_at, invalidation_reason";
+const DOCUMENT_COLUMNS = "id, organization_id, tenant_id, lease_id, due_id, payment_id, document_type, reference, status, review_status, deferred_until, language, issued_on, period_start, period_end, snapshot, template_version, storage_path, created_by, created_at, invalidated_at, invalidation_reason";
 
 function documentRecord(row: DocumentRow): FinancialDocumentRecord {
   return {
     id: row.id, organizationId: row.organization_id, tenantId: row.tenant_id,
     leaseId: row.lease_id, dueId: row.due_id, paymentId: row.payment_id,
-    type: row.document_type, reference: row.reference, status: row.status, language: row.language,
+    type: row.document_type, reference: row.reference, status: row.status,
+    reviewStatus: row.review_status, deferredUntil: row.deferred_until, language: row.language,
     issuedOn: row.issued_on, periodStart: row.period_start, periodEnd: row.period_end,
     snapshot: row.snapshot, templateVersion: row.template_version, storagePath: row.storage_path,
     createdBy: row.created_by, createdAt: row.created_at, invalidatedAt: row.invalidated_at,
@@ -42,7 +45,8 @@ function summary(row: DocumentRow, tenantEmail: string | null = null): Financial
   return {
     id: row.id, tenantId: row.tenant_id, leaseId: row.lease_id, dueId: row.due_id,
     paymentId: row.payment_id, type: row.document_type, reference: row.reference,
-    status: row.status, language: row.language, issuedOn: row.issued_on,
+    status: row.status, reviewStatus: row.review_status, deferredUntil: row.deferred_until,
+    language: row.language, issuedOn: row.issued_on,
     periodStart: row.period_start, periodEnd: row.period_end, storagePath: row.storage_path,
     createdAt: row.created_at, invalidatedAt: row.invalidated_at, invalidationReason: row.invalidation_reason,
     tenantEmail,
@@ -123,6 +127,10 @@ export async function materializeFinancialDocument(document: FinancialDocumentRe
   });
   if (finalized.error) throw finalized.error;
   return storagePath;
+}
+
+export async function renderFinancialDocumentPreview(document: FinancialDocumentRecord) {
+  return generateFinancialDocumentPdf(document);
 }
 
 export async function createFinancialDocumentSignedUrl(storagePath: string) {

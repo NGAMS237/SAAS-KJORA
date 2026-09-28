@@ -1,18 +1,29 @@
 import { NextResponse } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { parseDocumentId } from "@/modules/documents/model";
-import { createFinancialDocumentSignedUrl, getFinancialDocument, materializeFinancialDocument } from "@/modules/documents/server";
+import { createFinancialDocumentSignedUrl, getFinancialDocument, materializeFinancialDocument, renderFinancialDocumentPreview } from "@/modules/documents/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ documentId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ documentId: string }> }) {
   const [{ documentId }, authorization] = await Promise.all([params, getActiveAuthorization()]);
   if (!authorization || !parseDocumentId(documentId)) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const document = await getFinancialDocument(authorization.organizationId, documentId);
   if (!document) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const required = document.type === "payment_receipt" || document.type === "rent_receipt" ? "receipt.view" : "due.view";
   if (!authorization.capabilities.includes(required)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (new URL(request.url).searchParams.get("preview") === "1") {
+    const bytes = await renderFinancialDocumentPreview(document);
+    return new NextResponse(Buffer.from(bytes), { headers: {
+      "content-type": "application/pdf",
+      "content-disposition": `inline; filename="preview-${document.reference}.pdf"`,
+      "cache-control": "private, no-store",
+    } });
+  }
+  if (document.reviewStatus !== "approved") {
+    return NextResponse.json({ error: "document_review_required" }, { status: 409 });
+  }
   const artifact = await materializeFinancialDocument(document);
   if (typeof artifact !== "string") {
     return new NextResponse(Buffer.from(artifact.bytes), {

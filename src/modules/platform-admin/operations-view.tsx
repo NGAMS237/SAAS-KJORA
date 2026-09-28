@@ -48,6 +48,7 @@ export type DeliveryReview = {
 };
 
 export type ProviderEvent = { eventType: string; matchedQueue: string | null; outcome: string; receivedAt: string };
+export type WhatsAppOverview = { provider: "disabled"; transactionalConsents: number; marketingConsents: number; byStatus: Record<string, number> };
 
 export type OperationsConfig = {
   emailOperational: boolean;
@@ -80,9 +81,9 @@ function Counter({ label, value }: { label: string; value: number | string }) {
   return <div className="admin-counter"><span className="admin-counter__value">{value}</span><span className="admin-counter__label">{label}</span></div>;
 }
 
-export function OperationsView({ overview, runs, reviews, events, config, error }: {
+export function OperationsView({ overview, runs, reviews, events, whatsapp, config, error }: {
   overview: OperationsOverview | null; runs: OperationRun[] | null; reviews: DeliveryReview[] | null;
-  events: ProviderEvent[] | null; config: OperationsConfig; error: "denied" | "failed" | null;
+  events: ProviderEvent[] | null; whatsapp: WhatsAppOverview | null; config: OperationsConfig; error: "denied" | "failed" | null;
 }) {
   const { language } = usePreferences();
   const lang = language === "EN" ? "en" : "fr";
@@ -233,6 +234,16 @@ export function OperationsView({ overview, runs, reviews, events, config, error 
           <button className="admin-action-button" disabled={isPending} onClick={() => setReviewTarget(null)} type="button">{t("Annuler", "Cancel")}</button>
         </div>
       </div> : null}
+    </section>
+
+    <section className="admin-section" aria-labelledby="ops-whatsapp-heading">
+      <h2 id="ops-whatsapp-heading">WhatsApp</h2>
+      <p className="admin-section__lead">{t("Fondation officielle désactivée : aucun message ne peut partir.", "Official foundation disabled: no message can be sent.")}</p>
+      <div className="admin-counters">
+        <Counter label={t("Consentements transactionnels actifs", "Active transactional consents")} value={whatsapp?.transactionalConsents ?? 0} />
+        <Counter label={t("Consentements marketing actifs", "Active marketing consents")} value={whatsapp?.marketingConsents ?? 0} />
+        <Counter label={t("Bloqués par configuration", "Blocked by configuration")} value={whatsapp?.byStatus?.blocked_configuration ?? 0} />
+      </div>
     </section>
 
     <section className="admin-section" aria-labelledby="ops-events-history-heading">

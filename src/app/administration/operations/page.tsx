@@ -12,6 +12,7 @@ import {
   type OperationRun,
   type OperationsOverview,
   type ProviderEvent,
+  type WhatsAppOverview,
 } from "@/modules/platform-admin/operations-view";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +32,12 @@ type RunRow = {
 
 export default async function AdministrationOperationsPage() {
   const supabase = await createSupabaseServerClient();
-  const [overviewResult, runsResult, reviewsResult, eventsResult] = await Promise.all([
+  const [overviewResult, runsResult, reviewsResult, eventsResult, whatsappResult] = await Promise.all([
     supabase.rpc("admin_communications_overview"),
     supabase.rpc("admin_list_operation_runs", { result_limit: 20 }),
     supabase.rpc("admin_list_delivery_reviews", { result_limit: 50 }),
     supabase.rpc("admin_list_provider_events", { result_limit: 30 }),
+    supabase.rpc("admin_whatsapp_overview"),
   ]);
   const error = overviewResult.error
     ? (overviewResult.error.code === "42501" ? "denied" as const : "failed" as const)
@@ -74,6 +76,7 @@ export default async function AdministrationOperationsPage() {
     eventType: row.event_type, matchedQueue: row.matched_queue, outcome: row.outcome, receivedAt: row.received_at,
   }));
   const email = resolveTransactionalEmailStatus(process.env);
+  const whatsapp = whatsappResult.error ? null : (whatsappResult.data as WhatsAppOverview);
   return <OperationsView
     config={{
       emailOperational: email.operational,
@@ -89,5 +92,6 @@ export default async function AdministrationOperationsPage() {
     events={events}
     reviews={reviews}
     runs={runs}
+    whatsapp={whatsapp}
   />;
 }

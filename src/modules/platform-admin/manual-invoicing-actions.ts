@@ -94,6 +94,7 @@ export async function confirmManualInvoicePaymentAction(
   currency: string,
   amountMinor: number,
   manualReference: string | null,
+  receivedOn: string,
   note: string,
   idempotencyKey: string,
 ): Promise<ManualInvoicingActionResult> {
@@ -107,6 +108,7 @@ export async function confirmManualInvoicePaymentAction(
       p_currency: currency,
       p_amount_minor: amountMinor,
       p_manual_reference: manualReference,
+      p_received_on: receivedOn,
       p_note: note,
       p_idempotency_key: idempotencyKey,
     },

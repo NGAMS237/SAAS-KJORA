@@ -52,6 +52,11 @@ export type CheckoutRequest = {
   idempotencyKey: string;
   /** Chemin interne de retour, déjà validé par safeNextPath côté appelant. */
   returnPath: string;
+  /** Price Stripe issu d'un mapping serveur fermé, jamais du navigateur. */
+  providerPriceRef?: ProviderRef;
+  /** Réutilisé lorsqu'il existe ; sinon Checkout crée le Customer. */
+  providerCustomerRef?: ProviderRef | null;
+  locale?: "fr" | "en";
 };
 
 export type CheckoutSession = {
