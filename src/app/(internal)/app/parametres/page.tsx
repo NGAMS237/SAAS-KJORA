@@ -51,6 +51,18 @@ export default async function SettingsPage() {
       <Card className="settings-card">
         <NotificationSoundToggle />
       </Card>
+      {authorization?.role === "organization_owner" ? (
+        <Card className="settings-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Communications</p>
+              <h2>Courriels automatiques</h2>
+              <p>Avis d’échéance, rappels, reçus, quittances et copie propriétaire — courriels transactionnels uniquement.</p>
+            </div>
+            <Link className="button button--secondary" href="/app/parametres/communications">Configurer</Link>
+          </div>
+        </Card>
+      ) : null}
       {hasContractRbac ? (
         <FeatureEntryCard
           ctaLabel="Configurer"

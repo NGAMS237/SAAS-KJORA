@@ -185,12 +185,13 @@ export function OperationalHealthView({ health, emailDeliveryEnabled }: { health
 
 export function OperationsPageView({
   activity, notifications, auditEntries, auditFilters, health, currentUserId,
-  activityNextHref, auditNextHref, emailDeliveryEnabled,
+  activityNextHref, auditNextHref, emailDeliveryEnabled, notificationNotice = null,
 }: {
   activity: ActivityEvent[]; notifications: NotificationSummary[]; auditEntries: AuditEntry[] | null;
   auditFilters: AuditFilters; health: OperationalHealth | null; currentUserId: string;
   activityNextHref: string | null; auditNextHref: string | null; emailDeliveryEnabled: boolean;
+  notificationNotice?: string | null;
 }) {
   const t = useCopy();
-  return <div className="page-stack operations-page"><header className="page-header"><div><p className="eyebrow">{t("Suivi", "Overview")}</p><h1>{t("Activité", "Activity")}</h1><p className="page-header__description">{t("Activité, notifications et audit restent trois couches distinctes de la même Organization active.", "Activity, notifications and audit remain three distinct layers for the same active Organization.")}</p></div></header><ActivityFeed events={activity} currentUserId={currentUserId} nextHref={activityNextHref} /><div id="notifications"><NotificationsView embedded notifications={notifications} /></div>{auditEntries ? <OperationalAuditView entries={auditEntries} filters={auditFilters} nextHref={auditNextHref} /> : null}{health ? <OperationalHealthView emailDeliveryEnabled={emailDeliveryEnabled} health={health} /> : null}</div>;
+  return <div className="page-stack operations-page"><header className="page-header"><div><p className="eyebrow">{t("Suivi", "Overview")}</p><h1>{t("Activité", "Activity")}</h1><p className="page-header__description">{t("Activité, notifications et audit restent trois couches distinctes de la même Organization active.", "Activity, notifications and audit remain three distinct layers for the same active Organization.")}</p></div></header><ActivityFeed events={activity} currentUserId={currentUserId} nextHref={activityNextHref} /><div id="notifications"><NotificationsView embedded notice={notificationNotice} notifications={notifications} /></div>{auditEntries ? <OperationalAuditView entries={auditEntries} filters={auditFilters} nextHref={auditNextHref} /> : null}{health ? <OperationalHealthView emailDeliveryEnabled={emailDeliveryEnabled} health={health} /> : null}</div>;
 }

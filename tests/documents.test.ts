@@ -15,10 +15,13 @@ const patchMigration = readFileSync(
   new URL("../supabase/migrations/20260829020000_post_6c3_receipt_ux.sql", import.meta.url),
   "utf8",
 );
-const worker = readFileSync(
-  new URL("../src/app/api/financial-communications/cron/route.ts", import.meta.url),
-  "utf8",
-);
+// NCE-01 : le worker est désormais réparti entre la configuration (interrupteur
+// explicite), le worker pur (réservation/relance) et la base (backoff borné).
+const worker = [
+  "../src/modules/communications/config.ts",
+  "../src/modules/communications/worker.ts",
+  "../supabase/migrations/20260928090000_notifications_communications_e2e_01.sql",
+].map((path) => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 
 test("les filtres d’état de compte sont validés sans ambiguïté", () => {
   const tenantId = "11000000-0000-4000-8000-000000000001";
@@ -106,8 +109,9 @@ test("l’outbox est idempotente, bornée à trois tentatives et indépendante d
   assert.match(migration, /attempt_count between 0 and 3/i);
   assert.match(migration, /financial_document_event_processing/i);
   assert.doesNotMatch(migration, /domain_events_prepare_financial_documents/i);
-  assert.match(worker, /KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED !== "true"/i);
-  assert.match(worker, /\[5, 30, 120\]/i);
+  assert.match(worker, /deliveryEnabled: "KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED"/);
+  assert.match(worker, /\[COMMUNICATIONS_ENV\.deliveryEnabled\]\?\.trim\(\) === "true"/);
+  assert.match(worker, /interval '5 minutes'[\s\S]*interval '30 minutes'[\s\S]*interval '120 minutes'/i);
 });
 
 test("le déploiement sûr n’active ni backfill ni email", () => {

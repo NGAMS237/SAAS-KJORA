@@ -292,6 +292,9 @@ export type AdminCopy = {
   colTarget: string;
   lifecycleActionLabels: Record<string, string>;
 
+  // NOTIFICATIONS-COMMUNICATIONS-E2E-01 — Supervision des opérations.
+  navOperations: string;
+
   // REVENUE-01I — Contacts commerciaux.
   navContacts: string;
   contactsTitle: string;
@@ -713,6 +716,7 @@ const fr: AdminCopy = {
     "admin.note_added": "Note interne ajoutée",
   },
 
+  navOperations: "Opérations",
   navContacts: "Contacts",
   contactsTitle: "Contacts commerciaux",
   contactsLead:
@@ -1133,6 +1137,7 @@ const en: AdminCopy = {
     "admin.note_added": "Internal note added",
   },
 
+  navOperations: "Operations",
   navContacts: "Contacts",
   contactsTitle: "Commercial contacts",
   contactsLead:

@@ -49,6 +49,7 @@ export default async function ActivityPage({
     currentUserId={authorization.userId}
     emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"}
     health={health}
+    notificationNotice={scalar(query.notice)}
     notifications={notifications}
   />;
 }

@@ -10,6 +10,7 @@ import type {
   NotificationSummary,
 } from "@/modules/documents/model";
 import { generateFinancialDocumentPdf } from "@/modules/documents/pdf";
+import { isNotificationType } from "@/modules/notifications/model";
 
 type DocumentRow = {
   id: string; organization_id: string; tenant_id: string; lease_id: string | null;
@@ -132,14 +133,27 @@ export async function createFinancialDocumentSignedUrl(storagePath: string) {
 }
 
 export async function getNotifications(organizationId: string): Promise<NotificationSummary[]> {
+  // NCE-01 : lecture par RPC (mêmes gardes que la policy RLS : destinataire +
+  // capacité + Organization active), enrichie du locataire, du bien et du
+  // logement ; les clés d'adresse électronique sont retirées du payload en base.
   const supabase = await createSupabaseServerClient();
-  const result = await supabase.from("notifications")
-    .select("id, notification_type, title_code, payload, document_id, tenant_id, lease_id, read_at, created_at")
-    .eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(100);
+  const result = await supabase.rpc("list_my_notifications", {
+    target_organization_id: organizationId, result_limit: 100,
+  });
   if (result.error) throw result.error;
-  return (result.data ?? []).map((row) => ({
-    id: row.id, type: row.notification_type as NotificationSummary["type"], titleCode: row.title_code,
-    payload: row.payload as Record<string, unknown>, documentId: row.document_id,
-    tenantId: row.tenant_id, leaseId: row.lease_id, readAt: row.read_at, createdAt: row.created_at,
-  }));
+  type Row = {
+    id: string; notification_type: string; title_code: string; payload: Record<string, unknown> | null;
+    document_id: string | null; tenant_id: string | null; lease_id: string | null;
+    tenant_name: string | null; property_name: string | null; unit_label: string | null;
+    read_at: string | null; created_at: string;
+  };
+  return ((result.data ?? []) as Row[])
+    .filter((row) => isNotificationType(row.notification_type))
+    .map((row) => ({
+      id: row.id, type: row.notification_type as NotificationSummary["type"], titleCode: row.title_code,
+      payload: row.payload ?? {}, documentId: row.document_id,
+      tenantId: row.tenant_id, leaseId: row.lease_id,
+      tenantName: row.tenant_name, propertyName: row.property_name, unitLabel: row.unit_label,
+      readAt: row.read_at, createdAt: row.created_at,
+    }));
 }

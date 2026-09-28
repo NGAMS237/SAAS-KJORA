@@ -91,7 +91,11 @@ async function mutate(body: Record<string, unknown>) {
   return { ok: response.ok, body: await response.json().catch(() => ({})) as Record<string, unknown> };
 }
 
-export function PaymentsView({ payments, canRecord }: { payments: PaymentSummary[]; canRecord: boolean }) {
+export function PaymentsView({ payments, canRecord, scope = null }: {
+  payments: PaymentSummary[]; canRecord: boolean;
+  /** NCE-01 : liste restreinte à un bail ou un locataire (arrivée depuis une notification). */
+  scope?: { kind: "lease" | "tenant"; label: string | null } | null;
+}) {
   const t = useCopy();
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("");
@@ -114,6 +118,9 @@ export function PaymentsView({ payments, canRecord }: { payments: PaymentSummary
 
   return <div className="page-stack payments-page-v2">
     <PageHeader eyebrow={t("Cycle financier", "Financial cycle")} title={t("Paiements", "Payments")} description={t("Encaissements réels, allocations et corrections traçables de l’Organization active.", "Real receipts, allocations and traceable corrections for the active Organization.")} action={canRecord ? <Link className="button button--accent" href="/app/paiements/nouveau"><Plus size={17} />{t("Nouveau paiement", "New payment")}</Link> : undefined} />
+    {scope ? <div className="payments-filter-banner" role="status"><span>{scope.kind === "lease"
+      ? t(`Paiements filtrés sur le bail${scope.label ? ` : ${scope.label}` : ""}.`, `Payments filtered by lease${scope.label ? `: ${scope.label}` : ""}.`)
+      : t(`Paiements filtrés sur le locataire${scope.label ? ` : ${scope.label}` : ""}.`, `Payments filtered by tenant${scope.label ? `: ${scope.label}` : ""}.`)}</span><Link className="button button--secondary" href="/app/paiements">{t("Voir tous les paiements", "View all payments")}</Link></div> : null}
     <div className="payment-kpi-grid">
       <FinancialStateCard icon={CircleDollarSign} label={t("Reçu dans la sélection", "Received in selection")} value={money(receivedXaf)} helper={t(`${confirmed.length} paiement(s) confirmé(s)`, `${confirmed.length} confirmed payment(s)`)} tone="positive" />
       <FinancialStateCard icon={WalletCards} label={t("Crédit créé", "Credit created")} value={money(creditXaf)} helper={t("Reliquat non alloué au moment de l’encaissement.", "Amount left unallocated at confirmation.")} tone="info" />

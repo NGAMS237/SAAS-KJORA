@@ -304,7 +304,9 @@ test("aucune adresse email n'est codée en dur dans le code applicatif", () => {
     // Tolère les placeholders d'interface et les TLD réservés aux exemples/tests
     // (RFC 2606 : .example, .test, .invalid ; example.com / exemple.com).
     const emails = source.match(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g) ?? [];
-    const suspects = emails.filter((e) => !/(exemple|example)\.com$|\.(test|example|invalid)$/.test(e));
+    // NCE-01 : delivered@resend.dev est l'adresse de SIMULATION documentée par
+    // Resend (aucune boîte réelle) — seule cible possible du test d'envoi.
+    const suspects = emails.filter((e) => !/(exemple|example)\.com$|\.(test|example|invalid)$/.test(e) && e !== "delivered@resend.dev");
     if (suspects.length) fautifs.push(`${chemin} → ${suspects.join(", ")}`);
   }
   assert.deepEqual(fautifs, [], `email en dur : ${fautifs.join(" | ")}`);

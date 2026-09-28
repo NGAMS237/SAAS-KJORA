@@ -32,6 +32,8 @@ export const MANUAL_INVOICE_ISSUE_OUTCOMES = [
   "provider_managed_subscription",
   "currency_not_supported",
   "no_catalog_price",
+  // NCE-01 : une facture non annulée existe déjà pour cette période.
+  "period_already_invoiced",
 ] as const;
 
 /** Résultats de admin_confirm_manual_invoice_payment. */
@@ -120,6 +122,11 @@ export const MANUAL_BILLING_MESSAGES: Record<ManualBillingOutcome, Message> = {
     tone: "error",
     fr: "Cet abonnement est géré par un fournisseur de paiement : il ne peut pas être facturé ni confirmé manuellement.",
     en: "This subscription is managed by a payment provider: it cannot be invoiced or confirmed manually.",
+  },
+  period_already_invoiced: {
+    tone: "error",
+    fr: "Une facture existe déjà pour cette Organization et cette période (manuelle ou automatique). Aucune seconde facture n’a été émise.",
+    en: "An invoice already exists for this Organization and period (manual or automatic). No second invoice was issued.",
   },
   currency_not_supported: {
     tone: "error",

@@ -164,10 +164,12 @@ test("aucun code d'envoi d'email réel n'existe dans ce lot", () => {
   }
 });
 
-test("vercel.json n'a pas été modifié pour ce lot : aucun cron n'est déployé", () => {
+test("vercel.json : un seul cron quotidien (orchestrateur NCE-01), aucun cron de rappel dédié", () => {
+  // NCE-01 : les rappels de facturation passent par l'orchestrateur quotidien
+  // unique (run_communications_daily_system) — jamais par un second cron.
   const parsed = JSON.parse(VERCEL_CONFIG) as { crons?: Array<{ path?: string }> };
   const paths = (parsed.crons ?? []).map((c) => c.path);
-  assert.deepEqual(paths, ["/api/financial-communications/cron"], "seul le cron loyers existant doit être présent");
+  assert.deepEqual(paths, ["/api/cron/daily-communications"], "un seul cron applicatif");
   assert.ok(!paths.some((p) => p?.includes("billing-reminder")), "aucun cron de rappel de facturation n'est déployé");
 });
 
