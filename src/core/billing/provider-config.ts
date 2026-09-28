@@ -59,6 +59,7 @@ function readSecret(key: string): string | null {
 
 export function isProviderConfigured(name: ProviderName): boolean {
   const keys = PROVIDER_ENV_KEYS[name];
+  if (name === "stripe" && process.env.BILLING_PROVIDER_STRIPE_TEST_ENABLED !== "1") return false;
   return readSecret(keys.secret) !== null && readSecret(keys.webhook) !== null;
 }
 

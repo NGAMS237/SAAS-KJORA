@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -41,20 +41,10 @@ function sansCommentaires(source: string): string {
     .replace(/^\s*--.*$/gm, "");
 }
 
-function walk(dir: string, out: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".next" || entry === ".git") continue;
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
-}
-
 const PROVIDER_TS = read("src/core/billing/provider.ts");
 const PROVIDER_CONFIG = read("src/core/billing/provider-config.ts");
 const WEBHOOK_ROUTE = read("src/app/api/billing/webhooks/[provider]/route.ts");
-const STRIPE_SKELETON = read("src/core/billing/adapters/stripe-skeleton-adapter.ts");
+const STRIPE_ADAPTER = read("src/core/billing/adapters/stripe-test-adapter.ts");
 const ENV_EXAMPLE = read(".env.example");
 
 // ---------------------------------------------------------------------------
@@ -130,82 +120,24 @@ test(".env.example ne documente que les NOMS des variables de coupe-circuit, jam
 });
 
 // ---------------------------------------------------------------------------
-// 3. Squelette Stripe — architecture "préparée", jamais opérationnelle
+// 3. Stripe Test — activation explicite, jamais Live
 // ---------------------------------------------------------------------------
 
-test("le squelette Stripe déclare le bon nom et un mode toujours sandbox, sans appel réseau", () => {
-  assert.match(STRIPE_SKELETON, /name:\s*"stripe"/);
-  assert.match(STRIPE_SKELETON, /mode:\s*providerMode\(\)/);
-  const clean = sansCommentaires(STRIPE_SKELETON);
-  assert.doesNotMatch(clean, /\bfetch\(/);
-  assert.doesNotMatch(clean, /require\(["']https?["']\)/);
-  assert.doesNotMatch(clean, /from ["']stripe["']/);
-  assert.doesNotMatch(clean, /from ["'](https|http|undici)["']/);
+test("l'adaptateur Stripe reste sandbox, refuse les clés live et exige CAD", () => {
+  assert.match(STRIPE_ADAPTER, /mode:\s*"sandbox"/);
+  assert.match(STRIPE_ADAPTER, /secret\.startsWith\("sk_test_"\)/);
+  assert.match(STRIPE_ADAPTER, /request\.currency !== "CAD"/);
+  assert.doesNotMatch(sansCommentaires(STRIPE_ADAPTER), /sk_live_[A-Za-z0-9]/);
 });
 
-test("chaque opération du contrat (obligatoire et optionnelle) rejette explicitement via notImplemented", () => {
-  const clean = sansCommentaires(STRIPE_SKELETON);
-  for (const op of [
-    "createCheckout", "createSubscription", "updateSubscription", "cancelSubscription",
-    "chargeRecurring", "retryPayment", "fetchPaymentStatus", "fetchPaymentMethod",
-    "refund", "openCustomerPortal",
-  ]) {
-    assert.match(
-      clean,
-      new RegExp(`async ${op}\\([\\s\\S]{0,300}?notImplemented\\("${op}"\\)`),
-      `${op} doit rejeter explicitement via notImplemented`,
-    );
-  }
-  // verifyWebhook est l'unique exception : il rejette sans jamais prétendre
-  // vérifier une signature (voir le test dédié ci-dessous), pas via notImplemented.
-  assert.doesNotMatch(clean, /async verifyWebhook[\s\S]{0,300}?notImplemented/);
+test("Checkout, Portal et signature utilisent le SDK officiel côté serveur", () => {
+  assert.match(STRIPE_ADAPTER, /from "stripe"/);
+  assert.match(STRIPE_ADAPTER, /checkout\.sessions\.create/);
+  assert.match(STRIPE_ADAPTER, /billingPortal\.sessions\.create/);
+  assert.match(STRIPE_ADAPTER, /webhooks\.constructEvent/);
 });
 
-test("notImplemented lève systématiquement (never), jamais une résolution silencieuse", () => {
-  const body = STRIPE_SKELETON.slice(
-    STRIPE_SKELETON.indexOf("function notImplemented"),
-    STRIPE_SKELETON.indexOf("}", STRIPE_SKELETON.indexOf("function notImplemented")) + 1,
-  );
-  assert.match(body, /: never/);
-  assert.match(body, /throw new Error/);
-});
-
-test("verifyWebhook ne vérifie jamais de signature réelle et rejette systématiquement", () => {
-  const start = STRIPE_SKELETON.indexOf("async verifyWebhook");
-  const end = STRIPE_SKELETON.indexOf("},", start);
-  const body = STRIPE_SKELETON.slice(start, end);
-  assert.match(body, /reason:\s*"provider_not_configured"/);
-  assert.match(body, /reason:\s*"invalid_signature"/);
-  // Aucun calcul HMAC, aucune comparaison de signature : verifyWebhook ne
-  // fait jamais semblant de vérifier quoi que ce soit.
-  assert.doesNotMatch(sansCommentaires(body), /hmac|signaturesMatch|timingSafeEqual/i);
-});
-
-test("le squelette Stripe ne lit jamais la clé API, seulement le secret de webhook (pour un motif de rejet honnête)", () => {
-  const clean = sansCommentaires(STRIPE_SKELETON);
-  assert.doesNotMatch(clean, /apiSecret\(/);
-  assert.match(clean, /webhookSecret\("stripe"\)/);
-});
-
-test("le squelette Stripe n'est enregistré nulle part dans le code (jamais déclaré opérationnel)", () => {
-  // Comparaison construite avec le même join() que `file` (jamais un suffixe
-  // "/"-séparé écrit en dur) : path.join() produit des chemins séparés par
-  // "\" sous Windows, donc un `file.endsWith("adapters/stripe-skeleton-
-  // adapter.ts")` littéral n'y correspond jamais. Le fichier n'était alors
-  // jamais exclu de la boucle et échouait sur sa propre déclaration
-  // `export const stripeSkeletonAdapter` — alors que le squelette lui-même
-  // est correct des deux côtés.
-  const skeletonPath = join(ROOT, "src/core/billing/adapters/stripe-skeleton-adapter.ts");
-  const sources = walk(join(ROOT, "src")).filter((f) => /\.(ts|tsx)$/.test(f));
-  for (const file of sources) {
-    if (file === skeletonPath) continue;
-    const code = sansCommentaires(readFileSync(file, "utf8"));
-    assert.doesNotMatch(code, /stripeSkeletonAdapter/, `${file} ne doit pas référencer stripeSkeletonAdapter`);
-  }
-  assert.doesNotMatch(sansCommentaires(STRIPE_SKELETON), /^\s*registerBillingProvider\(/m);
-});
-
-test("le registre de providers reste vide par défaut, avant et après l'import du squelette", () => {
+test("le registre de providers reste vide par défaut tant que le bootstrap n'est pas appelé", () => {
   resetBillingProviders();
   assert.deepEqual(registeredProviders(), []);
 });

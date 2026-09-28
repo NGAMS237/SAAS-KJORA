@@ -102,13 +102,24 @@ export function routeProvider(input: RoutingInput): RoutingDecision {
     : ROUTING_ORDER;
 
   // Un provider n'est éligible que s'il est intégrable ET réellement configuré.
-  const eligible = order.filter(
+  const providerOrder = input.currency === "CAD"
+    ? (["stripe", ...order] as ProviderName[])
+    : order;
+  const eligible = providerOrder.filter(
     (name) => isIntegrable(name) && input.configured.includes(name),
   );
 
+  // La matrice historique évalue l'éligibilité du marchand camerounais et
+  // conserve donc Stripe="rejected". Le pilote Canada constitue un marché
+  // distinct : Stripe Test est éligible uniquement en CAD, explicitement
+  // configuré et derrière son kill switch.
+  if (input.currency === "CAD" && input.configured.includes("stripe")) {
+    eligible.unshift("stripe");
+  }
+
   if (eligible.length === 0) {
     // Distinguer « rien de configuré » de « configuré mais pas pour cette devise »
-    const anyForCurrency = order.some(
+    const anyForCurrency = providerOrder.some(
       (name) => isIntegrable(name) && supportsCurrency(name, input.currency),
     );
     return {

@@ -5,6 +5,7 @@ import { isProviderName } from "@/core/billing/provider-capabilities";
 import { getBillingProvider } from "@/core/billing/provider";
 import { isProviderConfigured, isProviderKillSwitched, providerMode } from "@/core/billing/provider-config";
 import { decideWebhook, type WebhookContext } from "@/core/billing/webhook-rules";
+import { ensureBillingProviders } from "@/core/billing/provider-bootstrap";
 
 // =============================================================================
 // KJORA — Réception des webhooks provider (ALIGN-04A)
@@ -57,6 +58,7 @@ export async function POST(
     return NextResponse.json({ received: false }, { status: 503 });
   }
 
+  ensureBillingProviders();
   const adapter = getBillingProvider(provider);
   if (!adapter) return NextResponse.json({ received: false }, { status: 503 });
 
@@ -103,6 +105,32 @@ export async function POST(
     // provider cesse de réessayer.
     if (inserted.error.code === "23505") return ack();
     return NextResponse.json({ received: false }, { status: 500 });
+  }
+
+  if (provider === "stripe") {
+    const event = verification.payload;
+    const object = ((event.data as Record<string, unknown> | undefined)?.object ?? {}) as Record<string, unknown>;
+    const metadata = (object.metadata ?? {}) as Record<string, unknown>;
+    const intentKey = typeof metadata.kjora_intent_key === "string" ? metadata.kjora_intent_key : null;
+    const eventCreated = typeof event.created === "number"
+      ? new Date(event.created * 1000).toISOString()
+      : null;
+    const { error: processError } = await supabase.rpc("process_stripe_test_event", {
+      p_provider_event_id: verification.providerEventId,
+      p_event_type: verification.eventType,
+      p_event_created_at: eventCreated,
+      p_intent_key: intentKey,
+      p_customer_ref: typeof object.customer === "string" ? object.customer : null,
+      p_subscription_ref: typeof object.subscription === "string" ? object.subscription :
+        (typeof object.id === "string" && object.id.startsWith("sub_") ? object.id : null),
+      p_payment_status: typeof object.payment_status === "string" ? object.payment_status : null,
+    });
+    await supabase.from("billing_webhook_events").update({
+      disposition: processError ? "reject" : "apply",
+      disposition_reason: processError ? "stripe_event_rejected" : null,
+      processed_at: new Date().toISOString(),
+    }).eq("id", inserted.data.id);
+    return ack(processError ? 500 : 200);
   }
 
   // --- 5. Décision ---------------------------------------------------------
