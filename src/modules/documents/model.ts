@@ -9,6 +9,7 @@ export const FINANCIAL_DOCUMENT_TYPES = [
 
 export type FinancialDocumentType = (typeof FINANCIAL_DOCUMENT_TYPES)[number];
 export type FinancialDocumentStatus = "prepared" | "ready" | "invalidated";
+export type FinancialDocumentReviewStatus = "draft" | "approved" | "deferred";
 
 export type FinancialDocumentSummary = {
   id: string;
@@ -19,6 +20,9 @@ export type FinancialDocumentSummary = {
   type: FinancialDocumentType;
   reference: string;
   status: FinancialDocumentStatus;
+  /** Absent only for legacy projections; legacy ready documents are approved. */
+  reviewStatus?: FinancialDocumentReviewStatus;
+  deferredUntil?: string | null;
   language: "fr" | "en";
   issuedOn: string;
   periodStart: string | null;

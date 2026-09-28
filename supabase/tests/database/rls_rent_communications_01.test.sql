@@ -1,0 +1,13 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(8);
+select has_column('public','financial_documents','review_status','statut de revue présent');
+select has_column('public','financial_documents','supersedes_document_id','chaîne de correction présente');
+select ok(not has_function_privilege('anon','public.review_financial_document(uuid,text,date)','execute'),'anon ne révise pas');
+select ok(has_function_privilege('authenticated','public.review_financial_document(uuid,text,date)','execute'),'authenticated passe par RPC gardée');
+select trigger_is('public','message_deliveries','message_deliveries_require_approved_document','private.guard_financial_delivery_review()','la file exige approbation');
+select trigger_is('public','financial_documents','financial_documents_protect_history','private.protect_financial_document()','historique immuable');
+select ok(position('receipt.share' in pg_get_functiondef('public.review_financial_document(uuid,text,date)'::regprocedure))>0,'capability exigée');
+select ok(position('set search_path = ''''' in pg_get_functiondef('public.review_financial_document(uuid,text,date)'::regprocedure))>0,'search_path fermé');
+select * from finish();
+rollback;

@@ -137,10 +137,26 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
   document: FinancialDocumentSummary; canShare: boolean; emailDeliveryEnabled: boolean;
 }) {
   const t = useCopy();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [modal, setModal] = useState<"missing_email" | "unavailable" | null>(null);
   const downloadHref = `/api/financial-documents/${document.id}/download`;
+  const previewHref = `${downloadHref}?preview=1`;
+  const reviewStatus = document.reviewStatus ?? "approved";
+
+  async function review(action: "approve" | "defer") {
+    setBusy(true); setMessage(null);
+    const deferredUntil = action === "defer"
+      ? new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10)
+      : null;
+    const result = await mutate({ action, documentId: document.id, deferredUntil });
+    setBusy(false);
+    setMessage(result.ok
+      ? action === "approve" ? t("Document approuvé.", "Document approved.") : t("Revue différée de 7 jours.", "Review deferred for 7 days.")
+      : t("La décision n’a pas pu être enregistrée.", "The decision could not be saved."));
+    if (result.ok) router.refresh();
+  }
 
   async function queueEmail() {
     setBusy(true); setMessage(null);
@@ -177,12 +193,19 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
       <span>{document.reference} · {shortDate(document.issuedOn)}</span>
       {document.periodStart ? <small>{shortDate(document.periodStart)} → {shortDate(document.periodEnd)}</small> : null}
       {document.status === "invalidated" ? <small>{t("Invalidé — original conservé", "Invalidated — original retained")}</small> : null}
+      {reviewStatus !== "approved" ? <small>{reviewStatus === "deferred"
+        ? t(`Revue différée jusqu’au ${shortDate(document.deferredUntil ?? null)}`, `Review deferred until ${shortDate(document.deferredUntil ?? null)}`)
+        : t("À approuver avant publication", "Approval required before publishing")}</small> : null}
       {document.lastDelivery ? <small>{deliveryStatusLabel(document.lastDelivery, t)}</small> : null}
       {message ? <small role="status">{message}</small> : null}
     </div>
     <div className="document-row__actions">
-      <Link className="button button--secondary" href={downloadHref} prefetch={false} target="_blank"><Download size={15} />PDF</Link>
-      {canShare ? <button className="button button--secondary" disabled={busy || document.status === "invalidated"} onClick={onSendClick} type="button"><Send size={15} />{busy ? t("Envoi…", "Sending…") : t("Envoyer par email", "Send by email")}</button> : null}
+      <Link className="button button--secondary" href={reviewStatus === "approved" ? downloadHref : previewHref} prefetch={false} target="_blank"><Download size={15} />{reviewStatus === "approved" ? "PDF" : t("Prévisualiser", "Preview")}</Link>
+      {canShare && reviewStatus !== "approved" ? <>
+        <button className="button button--primary" disabled={busy} onClick={() => void review("approve")} type="button">{t("Approuver", "Approve")}</button>
+        <button className="button button--secondary" disabled={busy} onClick={() => void review("defer")} type="button">{t("Différer", "Defer")}</button>
+      </> : null}
+      {canShare && reviewStatus === "approved" ? <button className="button button--secondary" disabled={busy || document.status === "invalidated"} onClick={onSendClick} type="button"><Send size={15} />{busy ? t("Envoi…", "Sending…") : t("Envoyer par email", "Send by email")}</button> : null}
     </div>
     {modal === "missing_email" ? <EmailMissingModal onClose={() => setModal(null)} tenantId={document.tenantId} /> : null}
     {modal === "unavailable" ? <EmailUnavailableModal downloadHref={downloadHref} onClose={() => setModal(null)} /> : null}
@@ -210,7 +233,7 @@ export function StatementPdfAction({ tenantId, initialDocuments }: { tenantId: s
     const result = await mutate({ action: "prepare_statement", tenantId, from: from || null, to: to || null });
     setBusy(false);
     if (!result.ok || typeof result.body.documentId !== "string") return setMessage(t("Impossible de préparer le PDF.", "Unable to prepare the PDF."));
-    window.open(`/api/financial-documents/${result.body.documentId}/download`, "_blank", "noopener,noreferrer");
+    window.open(`/api/financial-documents/${result.body.documentId}/download?preview=1`, "_blank", "noopener,noreferrer");
     router.refresh();
   }
   return <Card className="statement-export-card">
