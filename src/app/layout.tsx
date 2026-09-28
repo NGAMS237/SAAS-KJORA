@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import type { ReactNode } from "react";
 import { PreferencesProvider } from "@/core/preferences/preferences-provider";
+import { ServiceWorkerRegistration } from "@/core/pwa/service-worker-registration";
 import "./globals.css";
 
 const interTight = Inter_Tight({
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html className={`${interTight.variable} ${inter.variable}`} lang="fr" suppressHydrationWarning>
       <body>
-        <PreferencesProvider>{children}</PreferencesProvider>
+        <PreferencesProvider>{children}<ServiceWorkerRegistration/></PreferencesProvider>
       </body>
     </html>
   );
