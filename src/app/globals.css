@@ -1652,17 +1652,42 @@ a.portfolio-metric:hover {
 .contract-template-preview h4 { margin: 0; font-size: .95rem; }
 .contract-template-preview p { margin: 0; color: var(--text-secondary); }
 .contract-stamp-preview { margin-top: var(--space-3); }
+/* CONTRATS-UX-PILOTE-01 — le cachet doit se distinguer AU PREMIER COUP D'ŒIL
+   d'une signature électronique (texte noir, bloc rectangulaire neutre). Un
+   cachet professionnel s'inspire du tampon encreur classique : rouge, ovale,
+   double liseré, légèrement pivoté — jamais confondable avec une ligne de
+   signature. --stamp-red est volontairement fixe (rouge tampon), inchangé
+   en thème sombre, comme un vrai cachet encreur. */
 .contract-stamp-preview__box {
+  --stamp-red: #a3231c;
   display: inline-grid;
-  gap: var(--space-1);
-  min-width: 220px;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--brand-gold, var(--border-strong));
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
+  place-items: center;
+  gap: 2px;
+  min-width: 210px;
+  min-height: 130px;
+  padding: var(--space-4);
+  border: 3px double var(--stamp-red);
+  border-radius: 50% / 40%;
+  color: var(--stamp-red);
+  background: color-mix(in srgb, var(--stamp-red) 6%, transparent);
+  transform: rotate(-7deg);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
-.contract-stamp-preview__box span { color: var(--text-muted); font-size: .85rem; }
+.contract-stamp-preview__box strong { font-size: 1rem; line-height: 1.2; }
+.contract-stamp-preview__box span { color: var(--stamp-red); opacity: .85; font-size: .78rem; }
+.contract-stamp-preview__label { font-size: .7rem; opacity: .8; }
 .contract-payment-terms-notice { border-color: var(--warning, var(--border-strong)); }
+
+/* CONTRATS-UX-PILOTE-01 — cible visuelle du lien « Compléter les modalités
+   de paiement » (#lease-payment-terms?focus=payment_terms), pour que la
+   bonne section soit repérable au premier coup d'œil après le défilement
+   automatique, pas seulement atteinte. */
+.lease-payment-terms-card--highlighted {
+  border-color: var(--brand-gold, var(--border-strong));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-gold, var(--border-strong)) 35%, transparent);
+}
 
 @media (max-width: 640px) {
   .lease-contract-entry { align-items: stretch; flex-direction: column; }

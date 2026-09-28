@@ -38,6 +38,9 @@ function mutationError(error: { code?: string; message?: string } | null) {
 function tenantRow(value: ReturnType<typeof parseTenantInput> & { ok: true }) {
   return {
     full_name: value.value.fullName,
+    civility: value.value.civility,
+    first_name: value.value.firstName,
+    last_name: value.value.lastName,
     phone: value.value.phone,
     email: value.value.email,
     preferred_language: value.value.preferredLanguage,

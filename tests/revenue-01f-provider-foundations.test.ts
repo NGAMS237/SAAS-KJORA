@@ -188,9 +188,17 @@ test("le squelette Stripe ne lit jamais la clé API, seulement le secret de webh
 });
 
 test("le squelette Stripe n'est enregistré nulle part dans le code (jamais déclaré opérationnel)", () => {
+  // Comparaison construite avec le même join() que `file` (jamais un suffixe
+  // "/"-séparé écrit en dur) : path.join() produit des chemins séparés par
+  // "\" sous Windows, donc un `file.endsWith("adapters/stripe-skeleton-
+  // adapter.ts")` littéral n'y correspond jamais. Le fichier n'était alors
+  // jamais exclu de la boucle et échouait sur sa propre déclaration
+  // `export const stripeSkeletonAdapter` — alors que le squelette lui-même
+  // est correct des deux côtés.
+  const skeletonPath = join(ROOT, "src/core/billing/adapters/stripe-skeleton-adapter.ts");
   const sources = walk(join(ROOT, "src")).filter((f) => /\.(ts|tsx)$/.test(f));
   for (const file of sources) {
-    if (file.endsWith("adapters/stripe-skeleton-adapter.ts")) continue;
+    if (file === skeletonPath) continue;
     const code = sansCommentaires(readFileSync(file, "utf8"));
     assert.doesNotMatch(code, /stripeSkeletonAdapter/, `${file} ne doit pas référencer stripeSkeletonAdapter`);
   }

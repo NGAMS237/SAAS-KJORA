@@ -8,6 +8,7 @@ import {
   parseLeaseInput,
   parseTenantInput,
   prepaymentCoverage,
+  TENANT_CIVILITIES,
 } from "../src/modules/tenancy/model.ts";
 
 const migration = readFileSync(new URL("../supabase/migrations/20260826213000_lot_6b_tenants_leases.sql", import.meta.url), "utf8");
@@ -58,6 +59,67 @@ test("none proration preserves periodic total", () => assert.equal(calendarEntry
 test("prepayment coverage derives full periods and remainder", () => assert.deepEqual(prepaymentCoverage(42000, 130000), { fullPeriods: 3, remainderXaf: 4000 }));
 test("migration derives periodic total and occupancy rather than storing a boolean", () => { assert.match(migration, /periodic_total_xaf bigint generated always/i); assert.doesNotMatch(migration, /occup(?:ied|ancy)\s+boolean/i); });
 test("migration excludes overlapping active and ended effective periods at database level", () => { assert.match(migration, /constraint leases_active_period_no_overlap exclude using gist/i); assert.match(migration, /where \(status in \('active', 'ended'\)\)/i); });
+
+// =============================================================================
+// CONTRATS-UX-PILOTE-01 — civilité/prénom/nom facultatifs et séparés pour le
+// locataire : additifs, jamais un remplacement de fullName (affichage
+// historique inchangé). Voir aussi le pgTAP rls_contracts_ux_pilot_01.test.sql
+// pour la contrainte de forme côté base.
+// =============================================================================
+test("tenant civility/firstName/lastName are absent by default (historical display untouched)", () => {
+  const parsed = parseTenantInput(tenantBase);
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) { assert.equal(parsed.value.civility, null); assert.equal(parsed.value.firstName, null); assert.equal(parsed.value.lastName, null); }
+});
+test("tenant accepts a valid civility/firstName/lastName triple", () => {
+  const parsed = parseTenantInput({ ...tenantBase, civility: "Mme", firstName: "Fatou", lastName: "Diop" });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) { assert.equal(parsed.value.civility, "Mme"); assert.equal(parsed.value.firstName, "Fatou"); assert.equal(parsed.value.lastName, "Diop"); }
+});
+test("tenant rejects a civility outside the documented set", () => {
+  assert.deepEqual(parseTenantInput({ ...tenantBase, civility: "Dr." }), { ok: false, error: "invalid_tenant_civility" });
+});
+test("tenant requires firstName and lastName together, never just one", () => {
+  assert.deepEqual(parseTenantInput({ ...tenantBase, firstName: "Fatou" }), { ok: false, error: "tenant_name_pair_required" });
+  assert.deepEqual(parseTenantInput({ ...tenantBase, lastName: "Diop" }), { ok: false, error: "tenant_name_pair_required" });
+});
+test("tenant civility alone (no first/last name) is accepted — civility is independently optional", () => {
+  const parsed = parseTenantInput({ ...tenantBase, civility: "M." });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) { assert.equal(parsed.value.civility, "M."); assert.equal(parsed.value.firstName, null); assert.equal(parsed.value.lastName, null); }
+});
+test("TENANT_CIVILITIES exposes exactly the two documented values", () => {
+  assert.deepEqual([...TENANT_CIVILITIES], ["M.", "Mme"]);
+});
+test("TenantFields only pre-fills fullName when it is still empty (suggestFullName), never overwrites it", () => {
+  assert.match(views, /function suggestFullName/);
+  assert.match(views, /!fullNameRef\.current\.value\.trim\(\)/);
+});
+test("TenantFields exposes optional civility/firstName/lastName inputs distinct from the historical fullName field", () => {
+  assert.match(views, /name="civility"/);
+  assert.match(views, /name="firstName"/);
+  assert.match(views, /name="lastName"/);
+  assert.match(views, /name="fullName"/);
+});
+test("friendlyError explains the new tenant name validation errors", () => {
+  assert.match(views, /invalid_tenant_civility/);
+});
+// AXE UX — carte "Modalités de paiement" toujours atteignable sur un bail
+// actif (le formulaire d'édition classique ne s'affiche que pour un
+// brouillon), avec ancrage/autofocus via ?focus=payment_terms.
+test("LeasePaymentTermsCard is always rendered for an active lease, not gated to drafts", () => {
+  assert.match(views, /lease\.status === "active" \? <LeasePaymentTermsCard/);
+});
+test("LeasePaymentTermsCard anchors and autofocuses on ?focus=payment_terms", () => {
+  assert.match(views, /searchParams\.get\("focus"\) === "payment_terms"/);
+  assert.match(views, /id="lease-payment-terms"/);
+  assert.match(views, /fieldRef\.current\?\.scrollIntoView/);
+  assert.match(views, /fieldRef\.current\?\.focus\(\)/);
+});
+test("LeasePaymentTermsCard saves payment terms via update_lease, never fabricating a value", () => {
+  assert.match(views, /action: "update_lease", leaseId: lease\.id/);
+  assert.match(views, /paymentTerms: value\.trim\(\) \? value : null/);
+});
 test("draft creation and explicit activation are separate", () => { assert.match(migration, /status text not null default 'draft'/i); assert.match(migration, /LEASE_ACTIVATED/); });
 test("ended leases free units while active leases prevent archival", () => { assert.match(migration, /status = 'ended'/i); assert.match(migration, /prevent_archiving_occupied_unit/i); });
 test("tenant private fields use a capability-checked projection", () => { assert.match(migration, /get_tenant_private_profile/i); assert.match(migration, /has_capability\(target_organization_id, 'tenant.manage'\)/i); });

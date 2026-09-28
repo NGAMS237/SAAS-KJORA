@@ -15,10 +15,18 @@ import { INDICATOR_LABELS, STATE_LABELS, UNMONITORED_SERVICES } from "../src/mod
 // dans cette session (même limite d'environnement que ADMIN-01).
 // =============================================================================
 
+// Normalisation CRLF -> LF : ce fichier recherche des motifs multi-lignes
+// exacts (ex. "public.admin_list_organizations(\n  page_limit") par indexOf.
+// Sur un checkout Windows avec core.autocrlf=true, le fichier source sur
+// disque contient "\r\n" : sans cette normalisation, ces motifs (qui ne
+// contiennent qu'un "\n" nu) ne sont plus trouvés en tant que sous-chaîne
+// contiguë, et les tests dérivés échouent — alors que la migration SQL
+// elle-même est parfaitement correcte des deux côtés. No-op sur ce
+// bac à sable (déjà en LF).
 const MIGRATION = readFileSync(
   new URL("../supabase/migrations/20260921120000_admin_01_1_ux_quick_wins.sql", import.meta.url),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 const ADMIN_SHELL = readFileSync(
   new URL("../src/modules/platform-admin/admin-shell.tsx", import.meta.url),
   "utf8",

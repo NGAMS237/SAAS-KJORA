@@ -43,3 +43,62 @@ test("le parcours contrat signale l'absence de modalités de paiement au lieu de
   assert.match(contractViews,/non renseignées/i);
 });
 test("le PDF final inclut contenu, preuves et cachet dans un document A4 valide",async()=>{const contract:LeaseContract={id:"00000000-0000-4000-8000-000000000001",organizationId:"00000000-0000-4000-8000-000000000002",leaseId:"00000000-0000-4000-8000-000000000003",tenantId:"00000000-0000-4000-8000-000000000004",templateId:"00000000-0000-4000-8000-000000000005",templateVersion:1,language:"fr",reference:"CTR-2026-DEMO000001",status:"tenant_signed",templateSnapshot:{name:"Bail standard"},dataSnapshot:{organization:{name:"KJORA Démo",currency:"XAF"},tenant:{name:"Awa Démo"},lease:{base_rent:80000}},contentSnapshot:[sections[0]],contentSha256:"a".repeat(64),stampSnapshot:{enabled:true,company:"KJORA Démo",position:"signature_block"},finalStoragePath:null,finalSha256:null,createdAt:"2026-09-02T10:00:00.000Z",sentAt:"2026-09-02T10:10:00.000Z",completedAt:null,signatures:[{party:"owner",signerUserId:"00000000-0000-4000-8000-000000000006",method:"stylized_name",consentCode:"owner_contract_signature_v1",consentText:"Consentement exact",contentSha256:"a".repeat(64),signedAt:"2026-09-02T10:15:00.000Z",signatureData:{displayName:"Bailleur Démo"}},{party:"tenant",signerUserId:"00000000-0000-4000-8000-000000000007",method:"drawn",consentCode:"tenant_contract_signature_v1",consentText:"Consentement exact",contentSha256:"a".repeat(64),signedAt:"2026-09-02T10:20:00.000Z",signatureData:{strokes:[{x:1,y:1},{x:20,y:10},{x:40,y:2}]}}]};const bytes=await generateContractPdf(contract);const pdf=await PDFDocument.load(bytes);assert.ok(bytes.byteLength>1000);assert.ok(pdf.getPageCount()>=1);});
+
+// =============================================================================
+// CONTRATS-UX-PILOTE-01
+// =============================================================================
+const pdfSource=readFileSync(new URL("../src/modules/contracts/pdf.ts",import.meta.url),"utf8");
+const css=readFileSync(new URL("../src/app/globals.css",import.meta.url),"utf8");
+
+// 1. Cachet rouge, ovale, distinct d'une signature électronique (texte noir).
+test("le cachet PDF est dessiné en rouge, ovale et pivoté — distinct de la signature électronique (INK/noir)",()=>{
+  assert.match(pdfSource,/STAMP_RED\s*=\s*rgb\(/);
+  assert.match(pdfSource,/drawEllipse\(\{[^}]*rotate:\s*degrees\(-7\)/);
+  assert.match(pdfSource,/borderColor:\s*STAMP_RED/);
+  assert.match(pdfSource,/color:\s*STAMP_RED/);
+});
+test("le cachet visuel (CSS) est rouge, ovale et pivoté, avec un texte d'aide qui le distingue explicitement de la signature",()=>{
+  assert.match(css,/--stamp-red/i);
+  assert.match(css,/\.contract-stamp-preview__box[\s\S]{0,400}border-radius:\s*50%/);
+  assert.match(css,/\.contract-stamp-preview__box[\s\S]{0,400}rotate\(-?\d+deg\)/);
+  assert.match(settingsView,/tampon encreur/i);
+});
+
+// 2. Aperçu de modèle facile à trouver, avec données RÉELLES de la Location
+// (jamais fictives) sur l'écran de génération — distinct de l'aperçu à
+// données fictives déjà existant dans les paramètres (FICTITIOUS_PREVIEW_SNAPSHOT).
+test("l'écran de génération propose un aperçu avec les données réelles de CETTE Location, jamais fabriquées",()=>{
+  assert.match(contractViews,/function TemplateRealDataPreview/);
+  assert.match(contractViews,/previewSnapshot/);
+  assert.doesNotMatch(contractViews,/FICTITIOUS_PREVIEW_SNAPSHOT/);
+  assert.match(contractViews,/jamais fabriquées/);
+});
+test("le lien vers tous les modèles disponibles reste accessible depuis l'écran de génération",()=>{
+  assert.match(contractViews,/href="\/app\/parametres\/contrats"/);
+  assert.match(contractViews,/Voir tous les modèles disponibles/);
+});
+
+// 3. État de chargement par action, anti double-clic, retour clair succès/erreur.
+test("chaque action du contrat a son propre libellé de progression (anti double-clic par bouton, pas un busy global unique)",()=>{
+  assert.match(contractViews,/const ACTION_LABELS: Record<string, \{ idle: string; pending: string; success: string \}>/);
+  for(const action of ["generate","validate","send","cancel"]) assert.match(contractViews,new RegExp(`${action}:\\s*\\{\\s*idle:`));
+  assert.match(contractViews,/const busy = pendingAction !== null/);
+  assert.match(contractViews,/disabled=\{busy/);
+});
+test("un succès affiche un message de confirmation explicite, une erreur reste visible séparément",()=>{
+  assert.match(contractViews,/setNotice\(ACTION_LABELS\[name\]\?\.success/);
+  assert.match(contractViews,/notice \? <p className="form-feedback" role="status">/);
+  assert.match(contractViews,/error \? <p className="form-error" role="alert">/);
+});
+
+// 4. Civilité/prénom/nom facultatifs pour l'identité individuelle du cachet
+// (bailleur) — additifs, ne remplacent jamais le champ "Nom" déjà affiché.
+test("les réglages du cachet exposent civilité/prénom/nom facultatifs, sans jamais écraser le Nom déjà renseigné",()=>{
+  assert.match(settingsView,/Civilité \(facultatif\)/);
+  assert.match(settingsView,/Prénom\(s\) \(facultatif\)/);
+  assert.match(settingsView,/Nom\(s\) \(facultatif\)/);
+  assert.match(settingsView,/current\.name\.trim\(\)\?current\.name:/);
+});
+test("le champ Nom du cachet reste le seul réellement affiché, avec une aide qui l'explique",()=>{
+  assert.match(settingsView,/Champ réellement affiché sur le cachet/);
+});
