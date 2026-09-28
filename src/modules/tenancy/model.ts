@@ -14,8 +14,20 @@ export type LeaseStatus = (typeof LEASE_STATUSES)[number];
 export type BillingFrequency = (typeof BILLING_FREQUENCIES)[number];
 export type ProrationMode = (typeof PRORATION_MODES)[number];
 
+export const TENANT_CIVILITIES = ["M.", "Mme"] as const;
+export type TenantCivility = (typeof TENANT_CIVILITIES)[number];
+
 export type TenantInput = {
   fullName: string;
+  // CONTRATS-UX-PILOTE-01 — civilité/prénom(s)/nom(s) facultatifs et
+  // SÉPARÉS de fullName : purement additifs, ils ne remplacent jamais
+  // fullName (qui reste le seul champ affiché partout et utilisé par le
+  // contrat généré). NULL pour tout locataire créé avant ce lot — aucun
+  // affichage historique n'est modifié par leur seule présence dans le
+  // modèle.
+  civility: TenantCivility | null;
+  firstName: string | null;
+  lastName: string | null;
   phone: string | null;
   email: string | null;
   preferredLanguage: TenantLanguage | null;
@@ -26,7 +38,12 @@ export type TenantInput = {
   internalNotes: string | null;
 };
 
-export type TenantSummary = Omit<TenantInput, "identityDocumentType" | "identityDocumentNumber" | "identityDocumentExpiresOn" | "internalNotes"> & {
+// CONTRATS-UX-PILOTE-01 — civility/firstName/lastName restent hors de
+// TenantSummary : list_tenant_profiles() (liste des locataires) n'a jamais
+// été modifiée pour les renvoyer (fullName suffit à cet écran), par
+// prudence — voir le rapport du lot. Ils sont disponibles sur TenantDetail
+// (lecture directe de la table, formulaire d'édition).
+export type TenantSummary = Omit<TenantInput, "civility" | "firstName" | "lastName" | "identityDocumentType" | "identityDocumentNumber" | "identityDocumentExpiresOn" | "internalNotes"> & {
   id: string;
   currentLease: LeaseSummary | null;
 };
@@ -145,10 +162,25 @@ export function parseTenantInput(input: Record<string, unknown>): ValidationResu
   }
   const identityDocumentExpiresOn = optionalDate(input.identityDocumentExpiresOn);
   if (identityDocumentExpiresOn === undefined) return { ok: false, error: "invalid_identity_expiry" };
+
+  // CONTRATS-UX-PILOTE-01 — civilité facultative et indépendante ; prénom et
+  // nom séparés vont toujours ensemble (comme le type/numéro de pièce
+  // d'identité) pour éviter une donnée à moitié structurée.
+  const civility = input.civility === "" || input.civility == null ? null : input.civility;
+  if (civility !== null && !(TENANT_CIVILITIES as readonly unknown[]).includes(civility)) {
+    return { ok: false, error: "invalid_tenant_civility" };
+  }
+  const firstName = optionalText(input.firstName, 80);
+  const lastName = optionalText(input.lastName, 80);
+  if ((firstName === null) !== (lastName === null)) return { ok: false, error: "tenant_name_pair_required" };
+
   return {
     ok: true,
     value: {
       fullName,
+      civility: civility as TenantCivility | null,
+      firstName,
+      lastName,
       phone,
       email,
       preferredLanguage: preferredLanguage as TenantLanguage | null,

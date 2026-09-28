@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { requirePlanFeature } from "@/core/entitlements/server";
+import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { parseContractId } from "@/modules/contracts/model";
-import { getContractTemplates, getLeaseContract, getLeaseContracts } from "@/modules/contracts/server";
+import { getContractStampSettings, getContractTemplates, getLeaseContract, getLeaseContracts } from "@/modules/contracts/server";
 import { InternalContractView } from "@/modules/contracts/views";
 import { UUID_PATTERN } from "@/modules/properties/model";
 import { Card, EmptyState, PageHeader } from "@/core/ui/ui";
@@ -30,7 +31,10 @@ export default async function ContractPage({ params, searchParams }: { params:Pr
       </div>
     );
   }
-  const [templates,contracts,leaseDetail]=await Promise.all([getContractTemplates(authorization.organizationId),getLeaseContracts(authorization.organizationId,leaseId),getLeaseDetail(authorization.organizationId,leaseId)]);
+  const [templates,contracts,leaseDetail,stampSettings,{activeOrganization}]=await Promise.all([
+    getContractTemplates(authorization.organizationId),getLeaseContracts(authorization.organizationId,leaseId),
+    getLeaseDetail(authorization.organizationId,leaseId),getContractStampSettings(authorization.organizationId),loadOrganizationContext(),
+  ]);
   const contractId=parseContractId(query.contract); const selected=contractId?await getLeaseContract(authorization.organizationId,contractId):null;
   if(selected&&selected.leaseId!==leaseId) notFound();
   // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B : la clause « Modalités de
@@ -38,5 +42,30 @@ export default async function ContractPage({ params, searchParams }: { params:Pr
   // on le signale ici plutôt que de laisser la clause disparaître en
   // silence (mandat : jamais de disparition non expliquée).
   const leasePaymentTermsRecorded = Boolean(leaseDetail?.paymentTerms?.trim());
-  return <InternalContractView leaseId={leaseId} templates={templates} contracts={contracts} selected={selected} leasePaymentTermsRecorded={leasePaymentTermsRecorded}/>;
+  // CONTRATS-UX-PILOTE-01 — aperçu AVANT génération avec les VRAIES données
+  // déjà connues de cette Location (jamais un jeu fictif) : un champ non
+  // encore disponible ici (ex. email/téléphone du locataire, hors de portée
+  // sans capability tenant.manage) affiche « — » via renderContractSections,
+  // exactement comme un contrat réellement généré — jamais une valeur
+  // inventée à sa place.
+  const previewSnapshot = {
+    organization: { name: activeOrganization?.name, currency: activeOrganization?.currencyCode },
+    lessor: { displayName: stampSettings.company || activeOrganization?.name, phone: stampSettings.phone, address: stampSettings.address },
+    tenant: { name: leaseDetail?.tenantName },
+    property: { name: leaseDetail?.propertyName },
+    unit: { label: leaseDetail?.unitLabel },
+    lease: leaseDetail ? {
+      start_date: leaseDetail.startDate,
+      end_date: leaseDetail.endDate,
+      end_date_sentence: leaseDetail.endDate ? ` et se termine le ${leaseDetail.endDate}` : "",
+      base_rent: leaseDetail.baseRentXaf,
+      charges: leaseDetail.recurringChargesXaf,
+      deposit: leaseDetail.securityDepositXaf,
+      initial_payment: leaseDetail.initialPrepaymentAmountXaf,
+      frequency: leaseDetail.billingFrequency,
+      due_day: leaseDetail.dueDay,
+      payment_terms: leaseDetail.paymentTerms ?? "",
+    } : {},
+  };
+  return <InternalContractView leaseId={leaseId} templates={templates} contracts={contracts} selected={selected} leasePaymentTermsRecorded={leasePaymentTermsRecorded} previewSnapshot={previewSnapshot}/>;
 }

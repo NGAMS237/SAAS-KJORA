@@ -19,6 +19,12 @@ export type ContractTemplateSummary = {
   version: number;
   isSystem: boolean;
   isDefault: boolean;
+  // CONTRATS-UX-PILOTE-01 — `list_contract_templates` renvoie déjà les
+  // sections (voir la migration Lot 6F) ; jusqu'ici cette donnée était
+  // reçue puis jetée par templateFromRow(). L'exposer permet un aperçu
+  // avec les VRAIES données de la Location directement sur l'écran de
+  // génération, sans requête supplémentaire.
+  sections: ContractSection[];
 };
 
 export type ContractTemplateVersion = ContractTemplateSummary & {
@@ -32,6 +38,13 @@ export type ContractTemplateVersion = ContractTemplateSummary & {
 export type ContractStampSettings = {
   enabled: boolean;
   name: string;
+  // CONTRATS-UX-PILOTE-01 — civilité/prénom/nom facultatifs de la personne
+  // représentée sur le cachet visuel, séparés de `name` (qui reste le champ
+  // affiché tel quel sur le cachet et dans le PDF si les champs séparés ne
+  // sont pas renseignés).
+  civility: "M." | "Mme" | null;
+  firstName: string;
+  lastName: string;
   company: string;
   phone: string;
   address: string;

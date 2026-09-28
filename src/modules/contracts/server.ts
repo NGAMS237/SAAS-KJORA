@@ -10,7 +10,10 @@ import { generateContractPdf } from "@/modules/contracts/pdf";
 
 function templateFromRow(row: Record<string, unknown>): ContractTemplateSummary {
   return { id: String(row.template_id), name: String(row.name), language: row.language === "en" ? "en" : "fr",
-    version: Number(row.version), isSystem: Boolean(row.is_system), isDefault: Boolean(row.is_default) };
+    version: Number(row.version), isSystem: Boolean(row.is_system), isDefault: Boolean(row.is_default),
+    // CONTRATS-UX-PILOTE-01 — déjà renvoyé par list_contract_templates,
+    // simplement pas mappé jusqu'ici.
+    sections: (row.sections ?? []) as ContractTemplateSummary["sections"] };
 }
 
 async function attachSignatures(contract: LeaseContract, accessId: string | null = null) {
@@ -42,7 +45,11 @@ export async function getContractTemplateHistory(organizationId: string): Promis
 export async function getContractStampSettings(organizationId:string):Promise<ContractStampSettings> {
   const supabase=await createSupabaseServerClient(); const result=await supabase.rpc("get_organization_contract_settings",{target_organization_id:organizationId});
   if(result.error) throw result.error; const row=(result.data?.[0]??{}) as Record<string,unknown>;
-  return { enabled:row.stamp_enabled!==false,name:typeof row.stamp_name==="string"?row.stamp_name:"",company:typeof row.stamp_company==="string"?row.stamp_company:"",phone:typeof row.stamp_phone==="string"?row.stamp_phone:"",address:typeof row.stamp_short_address==="string"?row.stamp_short_address:"",position:row.stamp_position==="footer"?"footer":"signature_block" };
+  return { enabled:row.stamp_enabled!==false,name:typeof row.stamp_name==="string"?row.stamp_name:"",
+    civility:row.stamp_civility==="M."||row.stamp_civility==="Mme"?row.stamp_civility:null,
+    firstName:typeof row.stamp_first_name==="string"?row.stamp_first_name:"",
+    lastName:typeof row.stamp_last_name==="string"?row.stamp_last_name:"",
+    company:typeof row.stamp_company==="string"?row.stamp_company:"",phone:typeof row.stamp_phone==="string"?row.stamp_phone:"",address:typeof row.stamp_short_address==="string"?row.stamp_short_address:"",position:row.stamp_position==="footer"?"footer":"signature_block" };
 }
 
 export async function getLeaseContracts(organizationId: string, leaseId: string) {

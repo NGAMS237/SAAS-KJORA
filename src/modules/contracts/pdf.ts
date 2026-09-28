@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { degrees, PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { LeaseContract } from "./model.ts";
 import { renderContractSections } from "./model.ts";
 
@@ -6,6 +6,11 @@ const PAGE = { width: 595.28, height: 841.89, margin: 48 };
 const INK = rgb(31 / 255, 45 / 255, 39 / 255);
 const GOLD = rgb(201 / 255, 164 / 255, 106 / 255);
 const MUTED = rgb(92 / 255, 99 / 255, 94 / 255);
+// CONTRATS-UX-PILOTE-01 — le cachet doit être visuellement distinct d'une
+// signature électronique (texte noir aligné à gauche) : rouge, ovale,
+// légèrement pivoté, comme un tampon encreur classique — jamais confondu
+// avec la ligne de signature qui le précède dans le document.
+const STAMP_RED = rgb(163 / 255, 35 / 255, 28 / 255);
 
 function safe(value: unknown) {
   return String(value ?? "—").replace(/[  ]/g, " ").replaceAll("œ", "oe").replaceAll("Œ", "OE")
@@ -65,10 +70,20 @@ export async function generateContractPdf(contract: LeaseContract) {
     }
   }
   if (contract.stampSnapshot.enabled) {
-    const stampY=contract.stampSnapshot.position==="footer"?62:y-70;const stampX=contract.stampSnapshot.position==="footer"?PAGE.width-PAGE.margin-175:PAGE.margin;
-    page.drawRectangle({ x:stampX,y:stampY,width:175,height:58,borderColor:GOLD,borderWidth:1 });
-    page.drawText(safe(contract.stampSnapshot.company ?? contract.stampSnapshot.name ?? "KJORA"), { x:stampX+10,y:stampY+34,size:10,font:bold,color:INK });
-    page.drawText(safe(contract.stampSnapshot.phone ?? contract.stampSnapshot.address ?? ""), { x:stampX+10,y:stampY+18,size:7.5,font:regular,color:MUTED });
+    // CONTRATS-UX-PILOTE-01 — cachet rouge, ovale, légèrement pivoté : un
+    // tampon encreur classique, pour qu'il ne soit jamais confondu avec la
+    // ligne de signature électronique juste au-dessus (texte noir, méthode/
+    // horodatage/SHA-256). Le contenu (company puis name, jamais fabriqué)
+    // est inchangé par rapport à la version précédente.
+    const footer = contract.stampSnapshot.position === "footer";
+    const centerX = footer ? PAGE.width - PAGE.margin - 87 : PAGE.margin + 87;
+    const centerY = footer ? 92 : y - 32;
+    page.drawEllipse({ x: centerX, y: centerY, xScale: 88, yScale: 38, rotate: degrees(-7), borderColor: STAMP_RED, borderWidth: 1.6 });
+    page.drawEllipse({ x: centerX, y: centerY, xScale: 80, yScale: 30, rotate: degrees(-7), borderColor: STAMP_RED, borderWidth: 0.6 });
+    const company = safe(contract.stampSnapshot.company ?? contract.stampSnapshot.name ?? "KJORA");
+    const contact = safe(contract.stampSnapshot.phone ?? contract.stampSnapshot.address ?? "");
+    page.drawText(company.toUpperCase(), { x: centerX - bold.widthOfTextAtSize(company.toUpperCase(), 9) / 2, y: centerY + 6, size: 9, font: bold, color: STAMP_RED });
+    page.drawText(contact, { x: centerX - regular.widthOfTextAtSize(contact, 7) / 2, y: centerY - 10, size: 7, font: regular, color: STAMP_RED });
   }
   page.drawText(`SHA-256: ${safe(contract.contentSha256 ?? contract.finalSha256 ?? "pending")}`, { x:PAGE.margin,y:45,size:7,font:regular,color:MUTED });
   return pdf.save({ useObjectStreams:false, addDefaultPage:false, objectsPerTick:50 });

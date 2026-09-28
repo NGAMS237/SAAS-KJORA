@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
 
   if (input.action === "save_settings") {
     const position=input.position==="footer"?"footer":"signature_block";
-    const result=await supabase.rpc("save_organization_contract_settings",{ target_organization_id:authorization.organizationId,target_enabled:input.enabled===true,target_name:typeof input.name==="string"?input.name:"",target_company:typeof input.company==="string"?input.company:"",target_phone:typeof input.phone==="string"?input.phone:"",target_address:typeof input.address==="string"?input.address:"",target_position:position });
+    const civility=input.civility==="M."||input.civility==="Mme"?input.civility:null;
+    const result=await supabase.rpc("save_organization_contract_settings",{ target_organization_id:authorization.organizationId,target_enabled:input.enabled===true,target_name:typeof input.name==="string"?input.name:"",target_company:typeof input.company==="string"?input.company:"",target_phone:typeof input.phone==="string"?input.phone:"",target_address:typeof input.address==="string"?input.address:"",target_position:position,
+      target_civility:civility,target_first_name:typeof input.firstName==="string"?input.firstName:"",target_last_name:typeof input.lastName==="string"?input.lastName:"" });
     return result.error?applyAuthState(NextResponse.json({error:result.error.message},{status:400})):applyAuthState(NextResponse.json({organizationId:result.data}));
   }
   if(input.action==="duplicate_template") {

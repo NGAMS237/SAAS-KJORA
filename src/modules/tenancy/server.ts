@@ -19,6 +19,9 @@ import type { UnitType } from "@/modules/properties/model";
 type TenantRow = {
   id: string;
   full_name: string;
+  civility: "M." | "Mme" | null;
+  first_name: string | null;
+  last_name: string | null;
   phone: string | null;
   email: string | null;
   preferred_language: TenantLanguage | null;
@@ -162,7 +165,7 @@ export async function listTenants(organizationId: string): Promise<TenantSummary
 export async function getTenantDetail(organizationId: string, tenantId: string): Promise<TenantDetail | null> {
   const supabase = await createSupabaseServerClient();
   const [tenantResult, privateResult, leases] = await Promise.all([
-    supabase.from("tenants").select("id, full_name").eq("organization_id", organizationId).eq("id", tenantId).maybeSingle(),
+    supabase.from("tenants").select("id, full_name, civility, first_name, last_name").eq("organization_id", organizationId).eq("id", tenantId).maybeSingle(),
     supabase.rpc("get_tenant_private_profile", { target_tenant_id: tenantId }),
     listLeases(organizationId),
   ]);
@@ -183,6 +186,9 @@ export async function getTenantDetail(organizationId: string, tenantId: string):
   return {
     id: row.id,
     fullName: row.full_name,
+    civility: row.civility,
+    firstName: row.first_name,
+    lastName: row.last_name,
     phone: privateRow?.phone ?? null,
     email: privateRow?.email ?? null,
     preferredLanguage: privateRow?.preferred_language ?? null,

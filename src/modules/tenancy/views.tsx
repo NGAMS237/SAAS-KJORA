@@ -26,6 +26,7 @@ import {
   DUE_NOTICE_DAYS,
   filterTenants,
   prepaymentCoverage,
+  TENANT_CIVILITIES,
   type BillingFrequency,
   type LeaseInput,
   type LeaseOptions,
@@ -111,6 +112,8 @@ function friendlyError(code: string | undefined, t: ReturnType<typeof useCopy>) 
   if (code === "lease_period_overlap") return t("Activation refusée : cette unité est occupée sur tout ou partie de cette période.", "Activation refused: this unit is occupied during all or part of this period.");
   if (code === "proration_override_reason_required") return t("Toute correction de prorata exige un motif.", "Every proration override requires a reason.");
   if (code === "invalid_payment_terms") return t("Les modalités de paiement doivent contenir entre 3 et 1000 caractères.", "Payment terms must be between 3 and 1000 characters.");
+  if (code === "tenant_name_pair_required") return t("Le prénom et le nom vont ensemble : complétez les deux ou laissez les deux vides.", "First and last name go together: fill in both or leave both empty.");
+  if (code === "invalid_tenant_civility") return t("Civilité non reconnue.", "Unrecognized civility.");
   if (code === "forbidden") return t("Vous n’avez plus la permission d’effectuer cette action.", "You no longer have permission to perform this action.");
   if (code?.startsWith("invalid_")) return t("Vérifiez les informations saisies.", "Check the information you entered.");
   if (code === "business_rule_rejected") return t("La règle métier refuse cette modification.", "A business rule rejected this change.");
@@ -126,14 +129,35 @@ async function mutate(payload: Record<string, unknown>) {
 function TenantFields({ tenant, autoFocusEmail }: { tenant?: TenantDetail; autoFocusEmail?: boolean }) {
   const t = useCopy();
   const emailRef = useRef<HTMLInputElement>(null);
+  const fullNameRef = useRef<HTMLInputElement>(null);
+  const [civility, setCivility] = useState(tenant?.civility ?? "");
+  const [firstName, setFirstName] = useState(tenant?.firstName ?? "");
+  const [lastName, setLastName] = useState(tenant?.lastName ?? "");
   useEffect(() => {
     // Lien profond depuis la modal "Adresse email manquante" (§9) : le champ
     // email doit être visible et prêt à recevoir la saisie sans action
     // supplémentaire de l'utilisateur.
     if (autoFocusEmail) emailRef.current?.focus();
   }, [autoFocusEmail]);
+  // CONTRATS-UX-PILOTE-01 — civilité/prénom/nom sont facultatifs et
+  // SÉPARÉS du Nom complet, qui reste le seul champ réellement affiché et
+  // utilisé par le contrat généré. Quand les deux sont renseignés, on
+  // SUGGÈRE un Nom complet composé — uniquement si le champ est encore
+  // vide — pour éviter une double saisie sans jamais écraser une valeur
+  // existante (donc sans jamais casser l'affichage historique d'un
+  // locataire déjà créé).
+  function suggestFullName(nextFirstName: string, nextLastName: string, nextCivility: string) {
+    if (fullNameRef.current && !fullNameRef.current.value.trim() && nextFirstName.trim() && nextLastName.trim()) {
+      fullNameRef.current.value = [nextCivility, nextFirstName.trim(), nextLastName.trim()].filter(Boolean).join(" ");
+    }
+  }
   return <>
-    <label className="field"><span>{t("Nom complet", "Full name")}</span><input defaultValue={tenant?.fullName ?? ""} maxLength={160} minLength={2} name="fullName" required /></label>
+    <div className="form-grid">
+      <label className="field"><span>{t("Civilité (facultatif)", "Civility (optional)")}</span><select name="civility" value={civility} onChange={(event) => { setCivility(event.target.value); suggestFullName(firstName, lastName, event.target.value); }}><option value="">{t("Non précisée", "Not specified")}</option>{TENANT_CIVILITIES.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+      <label className="field"><span>{t("Prénom(s) (facultatif)", "First name(s) (optional)")}</span><input maxLength={80} name="firstName" value={firstName} onChange={(event) => { setFirstName(event.target.value); suggestFullName(event.target.value, lastName, civility); }} /></label>
+      <label className="field"><span>{t("Nom(s) (facultatif)", "Last name(s) (optional)")}</span><input maxLength={80} name="lastName" value={lastName} onChange={(event) => { setLastName(event.target.value); suggestFullName(firstName, event.target.value, civility); }} /></label>
+    </div>
+    <label className="field"><span>{t("Nom complet", "Full name")}</span><input defaultValue={tenant?.fullName ?? ""} maxLength={160} minLength={2} name="fullName" ref={fullNameRef} required /><small>{t("Champ affiché partout (listes, contrat généré). La civilité/prénom/nom ci-dessus ne font que le pré-remplir : vous pouvez toujours le corriger vous-même.", "Shown everywhere (lists, generated contract). Civility/first/last name above only prefill it — you can always edit it yourself.")}</small></label>
     <div className="form-grid">
       <label className="field"><span>{t("Téléphone", "Phone")}</span><input defaultValue={tenant?.phone ?? ""} maxLength={32} name="phone" inputMode="tel" placeholder="+237…" /></label>
       <label className="field"><span>Email</span><input defaultValue={tenant?.email ?? ""} maxLength={320} name="email" ref={emailRef} type="email" /></label>
@@ -150,7 +174,8 @@ function TenantFields({ tenant, autoFocusEmail }: { tenant?: TenantDetail; autoF
 
 function tenantPayload(form: FormData) {
   return {
-    fullName: form.get("fullName"), phone: form.get("phone"), email: form.get("email"),
+    fullName: form.get("fullName"), civility: form.get("civility"), firstName: form.get("firstName"), lastName: form.get("lastName"),
+    phone: form.get("phone"), email: form.get("email"),
     preferredLanguage: form.get("preferredLanguage"), profession: form.get("profession"),
     identityDocumentType: form.get("identityDocumentType"), identityDocumentNumber: form.get("identityDocumentNumber"),
     identityDocumentExpiresOn: form.get("identityDocumentExpiresOn"), internalNotes: form.get("internalNotes"),
@@ -349,6 +374,44 @@ export function LeaseCreateForm({ options, initialTenantId, initialUnitId }: { o
   return <div className="page-stack demo-narrow form-page-v2"><Link className="demo-back" href="/app/locations"><ArrowLeft size={17} />{t("Toutes les locations", "All leases")}</Link><PageHeader eyebrow={t("Locations", "Leases")} title={t("Créer un brouillon", "Create a draft")} description={t("Les montants sont préparés sans générer d’échéance, ledger ou paiement.", "Amounts are prepared without generating dues, ledger entries or payments.")} /><LiveDataNotice /><Card><form className="form-stack" onSubmit={submit}><LeaseFields value={draft} options={options} onChange={setDraft} /><label className="field"><span>{t("Montant déjà réellement reçu (facultatif)", "Amount already actually received (optional)")}</span><input min="0" inputMode="numeric" type="number" value={initialReceived} onChange={(event) => setInitialReceived(event.target.value)} /><small>{t("Après activation, KJORA ouvrira l’étape de répartition. Aucun paiement n’est créé par le brouillon.", "After activation, KJORA opens the allocation step. The draft creates no payment.")}</small></label><button className="button button--primary" disabled={busy} type="submit">{busy ? t("Enregistrement…", "Saving…") : t("Enregistrer le brouillon", "Save draft")}</button>{message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}</form></Card></div>;
 }
 
+// CONTRATS-UX-PILOTE-01 — le formulaire complet (LeaseFields) reste réservé
+// aux baux « draft » (les conditions financières d'un bail actif sont
+// verrouillées par le trigger active_lease_terms_immutable). Mais
+// `payment_terms` n'a JAMAIS fait partie de cette liste verrouillée — il
+// reste modifiable même sur un bail actif (déjà couvert par pgTAP,
+// rls_africa_contracts_performance_01_axis_b.test.sql). Avant ce correctif,
+// le bouton « Compléter sur le bail » du parcours contrat menait donc à une
+// impasse pour tout bail actif : le formulaire d'édition n'apparaît que
+// pour un brouillon, la clause restait donc impossible à compléter dans les
+// faits. Cette carte dédiée, toujours visible, corrige ce défaut et sert
+// de cible d'ancrage (`?focus=payment_terms`) pour le bouton du parcours
+// contrat.
+function LeasePaymentTermsCard({ lease, canManage }: { lease: LeaseSummary; canManage: boolean }) {
+  const t = useCopy();
+  const searchParams = useSearchParams();
+  const shouldFocus = searchParams.get("focus") === "payment_terms";
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const [value, setValue] = useState(lease.paymentTerms ?? "");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (shouldFocus) fieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (shouldFocus) fieldRef.current?.focus();
+  }, [shouldFocus]);
+  async function save() {
+    setBusy(true); setMessage(null);
+    const result = await mutate({ action: "update_lease", leaseId: lease.id, ...lease, paymentTerms: value.trim() ? value : null });
+    setBusy(false);
+    setMessage(result.ok ? t("Modalités de paiement enregistrées.", "Payment terms saved.") : friendlyError(result.body.error as string | undefined, t));
+  }
+  return <Card id="lease-payment-terms" className={shouldFocus ? "lease-payment-terms-card lease-payment-terms-card--highlighted" : "lease-payment-terms-card"}>
+    <div className="section-heading"><div><p className="eyebrow">{t("Contrat", "Contract")}</p><h2>{t("Modalités de paiement", "Payment terms")}</h2></div></div>
+    <label className="field"><span>{t("Modalités de paiement (facultatif)", "Payment terms (optional)")}</span><textarea maxLength={1000} minLength={3} placeholder={t("Ex. virement bancaire avant le 5 de chaque mois, référence « LOYER-<nom> ».", "E.g. bank transfer before the 5th of each month, reference “RENT-<name>”.")} ref={fieldRef} rows={3} value={value} onChange={(event) => setValue(event.target.value)} /><small>{t("Repris tel quel dans la clause « Modalités de paiement » du contrat généré. Modifiable même après activation de la location.", "Carried as-is into the generated contract's “Payment terms” clause. Editable even after the lease is activated.")}</small></label>
+    {canManage ? <button className="button button--primary" disabled={busy} onClick={save} type="button">{busy ? t("Enregistrement…", "Saving…") : t("Enregistrer", "Save")}</button> : null}
+    {message ? <p className="form-feedback" role="status">{message}</p> : null}
+  </Card>;
+}
+
 export function LeaseDetailView({ lease, options, canManage, financial, tenantFinancial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled, initialReceivedXaf = 0 }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null; tenantFinancial: TenantFinancialPosition | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean; initialReceivedXaf?: number }) {
   const t = useCopy();
   const { language } = usePreferences();
@@ -417,6 +480,12 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
       <LiveDataNotice />
       {message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}
       {editing ? <Card><form className="form-stack" onSubmit={update}><LeaseFields value={draft} options={options} onChange={setDraft} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
+      {/* CONTRATS-UX-PILOTE-01 — payment_terms n'est PAS verrouillé par
+          active_lease_terms_immutable : contrairement au reste des
+          conditions du bail, il reste éditable même une fois la location
+          active. Affiché uniquement dans ce cas pour éviter un doublon avec
+          le champ déjà présent dans LeaseFields (brouillon, ci-dessus). */}
+      {lease.status === "active" ? <LeasePaymentTermsCard lease={lease} canManage={canManage} /> : null}
 
       <nav className="record-tabs" aria-label={t("Sections de la location", "Lease sections")}>
         <a aria-current="page" href="#informations">{t("Informations", "Information")}</a>
