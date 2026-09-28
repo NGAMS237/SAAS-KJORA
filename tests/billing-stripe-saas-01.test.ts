@@ -41,8 +41,19 @@ test("le webhook signé brut est la seule voie d'activation payante", () => {
 
 test("rejeux et événements hors ordre sont neutralisés", () => {
   assert.match(migration, /unique \(organization_id, provider, idempotency_key\)/);
+  assert.match(migration, /insert into public\.billing_webhook_events[\s\S]*on conflict \(provider, provider_event_id\) do nothing/);
+  assert.match(migration, /return jsonb_build_object\('outcome','ignored_duplicate'\)/);
+  assert.doesNotMatch(webhook, /provider === "stripe"[\s\S]*\.from\("billing_webhook_events"\)\.insert/);
   assert.match(migration, /p_event_created_at < intent\.last_provider_event_created_at/);
   assert.match(migration, /ignored_out_of_order/);
+});
+
+test("les mises à jour Stripe distinguent activation, échec, annulation programmée et annulation", () => {
+  assert.match(migration, /p_cancel_at_period_end then 'cancellation_scheduled'/);
+  assert.match(migration, /p_provider_status in \('past_due','unpaid'\) then 'payment_failed'/);
+  assert.match(migration, /p_provider_status in \('active','trialing'\)/);
+  assert.match(migration, /p_current_period_end::date/);
+  assert.doesNotMatch(migration, /customer\.subscription\.updated' then 'grace'/);
 });
 
 test("la migration Stripe ne touche aucune table de loyers", () => {

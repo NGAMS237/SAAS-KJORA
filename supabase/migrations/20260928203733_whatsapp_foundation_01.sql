@@ -11,7 +11,7 @@ alter table private.domain_events add constraint domain_events_event_type_check 
 create table public.tenant_communication_preferences (
   tenant_id uuid primary key references public.tenants(id) on delete cascade,
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  phone_e164 text check (phone_e164 is null or phone_e164 ~ '^\\+[1-9][0-9]{7,14}$'),
+  phone_e164 text check (phone_e164 is null or phone_e164 ~ '^\+[1-9][0-9]{7,14}$'),
   whatsapp_capable boolean not null default false,
   preferred_channel text not null default 'in_app' check (preferred_channel in ('in_app','email','whatsapp')),
   whatsapp_transactional_consented_at timestamptz,
@@ -82,7 +82,7 @@ begin
      or not private.has_capability(tenant.organization_id,'tenant.manage') then
     raise exception 'forbidden' using errcode='42501';
   end if;
-  if p_phone_e164 is not null and p_phone_e164 !~ '^\\+[1-9][0-9]{7,14}$' then
+  if p_phone_e164 is not null and p_phone_e164 !~ '^\+[1-9][0-9]{7,14}$' then
     raise exception 'invalid_e164' using errcode='22023';
   end if;
   insert into public.tenant_communication_preferences(

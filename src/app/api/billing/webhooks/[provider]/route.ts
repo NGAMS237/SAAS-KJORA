@@ -38,6 +38,33 @@ function ack(status = 200) {
   return NextResponse.json({ received: true }, { status });
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+}
+
+function stripeIntentKey(object: Record<string, unknown>): string | null {
+  const direct = record(object.metadata).kjora_intent_key;
+  const subscriptionDetails = record(object.subscription_details);
+  const nested = record(subscriptionDetails.metadata).kjora_intent_key;
+  const parentSubscription = record(record(record(object.parent).subscription_details).metadata).kjora_intent_key;
+  for (const candidate of [direct, nested, parentSubscription]) {
+    if (typeof candidate === "string" && candidate.length >= 16) return candidate;
+  }
+  return null;
+}
+
+function stripeRef(value: unknown, prefix: string): string | null {
+  if (typeof value === "string" && value.startsWith(prefix)) return value;
+  const id = record(value).id;
+  return typeof id === "string" && id.startsWith(prefix) ? id : null;
+}
+
+function stripeTimestamp(value: unknown): string | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? new Date(value * 1000).toISOString()
+    : null;
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ provider: string }> },
@@ -82,9 +109,35 @@ export async function POST(
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // --- 4. Idempotence par contrainte d'unicité -----------------------------
+  // --- 4. Empreinte du corps signé -----------------------------------------
   const digest = createHash("sha256").update(rawBody).digest("hex");
 
+  if (provider === "stripe") {
+    const event = verification.payload;
+    const object = record(record(event.data).object);
+    const intentKey = stripeIntentKey(object);
+    const eventCreated = stripeTimestamp(event.created);
+    const subscriptionRef = stripeRef(object.subscription, "sub_") ?? stripeRef(object, "sub_");
+    const { error: processError } = await supabase.rpc("process_stripe_test_event", {
+      p_provider_event_id: verification.providerEventId,
+      p_event_type: verification.eventType,
+      p_event_created_at: eventCreated,
+      p_intent_key: intentKey,
+      p_customer_ref: stripeRef(object.customer, "cus_"),
+      p_subscription_ref: subscriptionRef,
+      p_payment_status: typeof object.payment_status === "string" ? object.payment_status : null,
+      p_payload_digest: digest,
+      p_provider_status: typeof object.status === "string" ? object.status : null,
+      p_cancel_at_period_end: object.cancel_at_period_end === true,
+      p_current_period_end: stripeTimestamp(object.current_period_end),
+    });
+    // La RPC journalise et applique atomiquement. Une erreur annule aussi le
+    // journal : le 500 permet alors à Stripe de rejouer sans perte d'événement.
+    return ack(processError ? 500 : 200);
+  }
+
+  // Les fournisseurs non encore reliés au moteur Stripe conservent le journal
+  // générique. L'unicité DB neutralise leurs rejeux concurrents.
   const inserted = await supabase
     .from("billing_webhook_events")
     .insert({
@@ -100,37 +153,8 @@ export async function POST(
     .single();
 
   if (inserted.error) {
-    // 23505 = violation d'unicité : l'événement a déjà été reçu. C'est le
-    // chemin normal d'un rejeu, pas une erreur. On répond 200 pour que le
-    // provider cesse de réessayer.
     if (inserted.error.code === "23505") return ack();
     return NextResponse.json({ received: false }, { status: 500 });
-  }
-
-  if (provider === "stripe") {
-    const event = verification.payload;
-    const object = ((event.data as Record<string, unknown> | undefined)?.object ?? {}) as Record<string, unknown>;
-    const metadata = (object.metadata ?? {}) as Record<string, unknown>;
-    const intentKey = typeof metadata.kjora_intent_key === "string" ? metadata.kjora_intent_key : null;
-    const eventCreated = typeof event.created === "number"
-      ? new Date(event.created * 1000).toISOString()
-      : null;
-    const { error: processError } = await supabase.rpc("process_stripe_test_event", {
-      p_provider_event_id: verification.providerEventId,
-      p_event_type: verification.eventType,
-      p_event_created_at: eventCreated,
-      p_intent_key: intentKey,
-      p_customer_ref: typeof object.customer === "string" ? object.customer : null,
-      p_subscription_ref: typeof object.subscription === "string" ? object.subscription :
-        (typeof object.id === "string" && object.id.startsWith("sub_") ? object.id : null),
-      p_payment_status: typeof object.payment_status === "string" ? object.payment_status : null,
-    });
-    await supabase.from("billing_webhook_events").update({
-      disposition: processError ? "reject" : "apply",
-      disposition_reason: processError ? "stripe_event_rejected" : null,
-      processed_at: new Date().toISOString(),
-    }).eq("id", inserted.data.id);
-    return ack(processError ? 500 : 200);
   }
 
   // --- 5. Décision ---------------------------------------------------------

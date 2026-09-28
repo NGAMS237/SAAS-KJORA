@@ -1,6 +1,6 @@
 const CACHE_NAME = "kjora-public-v1";
 const PRECACHE = ["/icon.svg", "/manifest.webmanifest", "/hors-ligne/"];
-const PUBLIC_PAGE_PREFIXES = ["/hors-ligne/", "/partenaires/"];
+const PUBLIC_PAGES = new Set(["/hors-ligne/", "/partenaires", "/partenaires/"]);
 const NEVER_CACHE_PREFIXES = ["/api/", "/app/", "/administration/", "/portal/", "/auth/", "/connexion/", "/onboarding/"];
 
 self.addEventListener("install", (event) => {
@@ -20,7 +20,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin || NEVER_CACHE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
 
   if (request.mode === "navigate") {
-    if (!PUBLIC_PAGE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
+    if (!PUBLIC_PAGES.has(url.pathname)) return;
     event.respondWith(fetch(request).then((response) => {
       if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
       return response;

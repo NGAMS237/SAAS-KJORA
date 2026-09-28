@@ -1,5 +1,8 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { PartnerApplicationStatus } from "@/modules/partners/application-status";
+
+export const metadata: Metadata = { robots: { index: false, follow: false }, referrer: "no-referrer" };
 
 export default async function PartnerTracking({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){
   const p=await searchParams;

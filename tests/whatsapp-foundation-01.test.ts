@@ -7,7 +7,8 @@ const sql=read("../supabase/migrations/20260928203733_whatsapp_foundation_01.sql
 const provider=read("../src/modules/communications/whatsapp-provider.ts");
 
 test("les numéros sont strictement E.164 et WhatsApp reste une indication distincte",()=>{
-  assert.match(sql,/\^\\\\\+\[1-9\]\[0-9\]\{7,14\}\$/);
+  assert.ok(sql.includes("'^\\+[1-9][0-9]{7,14}$'"));
+  assert.ok(!sql.includes("'^\\\\+[1-9][0-9]{7,14}$'"), "le motif SQL ne doit pas exiger un antislash avant le +");
   assert.match(sql,/whatsapp_capable boolean/);
 });
 test("les consentements transactionnel et marketing sont séparés et révocables",()=>{

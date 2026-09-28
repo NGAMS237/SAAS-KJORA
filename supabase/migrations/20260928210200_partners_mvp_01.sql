@@ -4,9 +4,11 @@ create table public.partner_applications (
   id uuid primary key default gen_random_uuid(),
   applicant_name text not null check (char_length(applicant_name) between 2 and 120),
   applicant_email text not null check (char_length(applicant_email) between 5 and 254),
-  partner_type text not null check (partner_type in ('commercial','influencer')),
+  partner_type text not null check (partner_type in ('commercial','referral_partner','influencer','agency')),
   locale text not null check (locale in ('fr','en')),
   motivation text not null check (char_length(motivation) between 20 and 2000),
+  terms_version text not null check (terms_version = 'pilot-2026-09-28'),
+  terms_accepted_at timestamptz not null default now(),
   status text not null default 'submitted' check (status in ('submitted','under_review','approved','refused','suspended')),
   status_token_hash text not null unique check (status_token_hash ~ '^[a-f0-9]{64}$'),
   submitter_fingerprint text not null check (submitter_fingerprint ~ '^[a-f0-9]{64}$'),
@@ -21,7 +23,7 @@ create table public.partners (
   id uuid primary key default gen_random_uuid(),
   application_id uuid not null unique references public.partner_applications(id) on delete restrict,
   user_id uuid unique references auth.users(id) on delete set null,
-  display_name text not null, partner_type text not null check (partner_type in ('commercial','influencer')),
+  display_name text not null, partner_type text not null check (partner_type in ('commercial','referral_partner','influencer','agency')),
   status text not null default 'approved' check (status in ('approved','active','suspended','closed')),
   approved_by uuid not null references auth.users(id), approved_at timestamptz not null default now(),
   created_at timestamptz not null default now()
@@ -50,7 +52,8 @@ create table public.partner_rewards (
   paid_by uuid references auth.users(id), paid_at timestamptz,
   payment_reference text check (payment_reference is null or char_length(payment_reference) <= 120),
   created_at timestamptz not null default now(), unique(attribution_id,event_key),
-  check (status <> 'paid' or (approved_by is not null and paid_by is not null and paid_by <> approved_by and paid_at is not null))
+  check (status <> 'paid' or (approved_by is not null and paid_by is not null and paid_by <> approved_by and paid_at is not null
+    and payment_reference is not null and char_length(trim(payment_reference)) > 0))
 );
 create table public.partner_reward_events (
   id bigint generated always as identity primary key, reward_id uuid not null references public.partner_rewards(id) on delete restrict,
@@ -89,23 +92,24 @@ revoke all on public.partner_applications, public.partners, public.partner_codes
   public.partner_attributions, public.partner_rewards, public.partner_reward_events, public.partner_admin_events from public,anon,authenticated;
 
 create or replace function public.submit_partner_application(
-  p_name text, p_email text, p_partner_type text, p_locale text, p_motivation text,
+  p_name text, p_email text, p_partner_type text, p_locale text, p_motivation text, p_terms_version text,
   p_status_token_hash text, p_submitter_fingerprint text
 ) returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_window timestamptz := date_trunc('hour',now()); v_attempts integer; v_id uuid;
 begin
   if p_name is null or char_length(trim(p_name)) not between 2 and 120
      or p_email is null or lower(trim(p_email)) !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
-     or p_partner_type not in ('commercial','influencer') or p_locale not in ('fr','en')
+     or p_partner_type not in ('commercial','referral_partner','influencer','agency') or p_locale not in ('fr','en')
      or char_length(trim(p_motivation)) not between 20 and 2000
+     or p_terms_version is distinct from 'pilot-2026-09-28'
      or p_status_token_hash !~ '^[a-f0-9]{64}$' or p_submitter_fingerprint !~ '^[a-f0-9]{64}$' then
     raise exception 'invalid_application' using errcode='22023';
   end if;
   insert into private.partner_submission_limits(fingerprint,window_start,attempts) values(p_submitter_fingerprint,v_window,1)
   on conflict(fingerprint,window_start) do update set attempts=private.partner_submission_limits.attempts+1 returning attempts into v_attempts;
   if v_attempts > 3 then raise exception 'rate_limited' using errcode='P0001'; end if;
-  insert into public.partner_applications(applicant_name,applicant_email,partner_type,locale,motivation,status_token_hash,submitter_fingerprint)
-  values(trim(p_name),lower(trim(p_email)),p_partner_type,p_locale,trim(p_motivation),p_status_token_hash,p_submitter_fingerprint)
+  insert into public.partner_applications(applicant_name,applicant_email,partner_type,locale,motivation,terms_version,status_token_hash,submitter_fingerprint)
+  values(trim(p_name),lower(trim(p_email)),p_partner_type,p_locale,trim(p_motivation),p_terms_version,p_status_token_hash,p_submitter_fingerprint)
   returning id into v_id;
   return jsonb_build_object('applicationId',v_id,'status','submitted');
 exception when unique_violation then raise exception 'application_already_open' using errcode='23505';
@@ -156,6 +160,9 @@ begin
     raise exception 'invalid_transition' using errcode='22023';
   end if;
   if p_status='paid' and r.approved_by=actor then raise exception 'four_eyes_required' using errcode='42501'; end if;
+  if p_status='paid' and (p_payment_reference is null or char_length(trim(p_payment_reference))=0) then
+    raise exception 'payment_reference_required' using errcode='22023';
+  end if;
   update public.partner_rewards set status=p_status,
     approved_by=case when p_status='approved' then actor else approved_by end,
     approved_at=case when p_status='approved' then now() else approved_at end,
@@ -182,13 +189,13 @@ begin
     'rewards',(select coalesce(jsonb_object_agg(status,total),'{}'::jsonb) from (select r.status,count(*) total from public.partner_rewards r join public.partner_attributions a on a.id=r.attribution_id where a.partner_id=p.id group by r.status) x));
 end; $$;
 
-revoke all on function public.submit_partner_application(text,text,text,text,text,text,text) from public,authenticated;
+revoke all on function public.submit_partner_application(text,text,text,text,text,text,text,text) from public,authenticated;
 revoke all on function public.read_partner_application_status(uuid,text) from public,authenticated;
 revoke all on function public.admin_list_partner_applications(integer,integer) from public,anon;
 revoke all on function public.admin_review_partner_application(uuid,text,text) from public,anon;
 revoke all on function public.admin_transition_partner_reward(uuid,text,text,text) from public,anon;
 revoke all on function public.partner_dashboard_self() from public,anon;
-grant execute on function public.submit_partner_application(text,text,text,text,text,text,text) to anon;
+grant execute on function public.submit_partner_application(text,text,text,text,text,text,text,text) to anon;
 grant execute on function public.read_partner_application_status(uuid,text) to anon;
 grant execute on function public.admin_list_partner_applications(integer,integer) to authenticated;
 grant execute on function public.admin_review_partner_application(uuid,text,text) to authenticated;

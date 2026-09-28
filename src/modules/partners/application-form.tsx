@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, useState } from "react";
+import { PARTNER_TERMS_VERSION } from "./program";
 
 export function PartnerApplicationForm({locale}:{locale:"fr"|"en"}){
   const [busy,setBusy]=useState(false);
@@ -10,7 +11,8 @@ export function PartnerApplicationForm({locale}:{locale:"fr"|"en"}){
     event.preventDefault();setBusy(true);setMessage("");
     const form=new FormData(event.currentTarget);
     const response=await fetch("/api/partners/applications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
-      name:form.get("name"),email:form.get("email"),partnerType:form.get("partnerType"),motivation:form.get("motivation"),locale
+      name:form.get("name"),email:form.get("email"),partnerType:form.get("partnerType"),motivation:form.get("motivation"),locale,
+      termsAccepted:form.get("termsAccepted") === "yes",termsVersion:PARTNER_TERMS_VERSION,
     })});
     const payload=await response.json() as {applicationId?:string;statusToken?:string};
     if(response.ok&&payload.applicationId&&payload.statusToken)setTrackingUrl(`/partenaires/suivi?applicationId=${encodeURIComponent(payload.applicationId)}&token=${encodeURIComponent(payload.statusToken)}&locale=${locale}`);
@@ -22,9 +24,9 @@ export function PartnerApplicationForm({locale}:{locale:"fr"|"en"}){
   return <form className="form-stack" onSubmit={submit}>
     <label className="field"><span>{t("Nom complet","Full name")}</span><input name="name" minLength={2} maxLength={120} required/></label>
     <label className="field"><span>Email</span><input name="email" type="email" maxLength={254} required/></label>
-    <label className="field"><span>{t("Profil","Profile")}</span><select name="partnerType"><option value="commercial">{t("Commercial","Sales partner")}</option><option value="influencer">{t("Influenceur","Creator / influencer")}</option></select></label>
+    <label className="field"><span>{t("Profil","Profile")}</span><select name="partnerType"><option value="commercial">{t("Commercial","Sales partner")}</option><option value="referral_partner">{t("Apporteur d’affaires","Referral partner")}</option><option value="influencer">{t("Influenceur","Creator / influencer")}</option><option value="agency">{t("Agence partenaire","Partner agency")}</option></select></label>
     <label className="field"><span>{t("Votre projet","Your project")}</span><textarea name="motivation" minLength={20} maxLength={2000} required/></label>
-    <label className="communication-toggle"><input type="checkbox" required/><span>{t("J’accepte que KJORA étudie cette candidature selon les conditions du programme pilote.","I agree that KJORA may review this application under the pilot program terms.")}</span></label>
+    <label className="communication-toggle"><input name="termsAccepted" value="yes" type="checkbox" required/><span>{t("J’accepte que KJORA étudie cette candidature selon les conditions du programme pilote.","I agree that KJORA may review this application under the pilot program terms.")}</span></label>
     <button className="button button--primary" disabled={busy}>{busy?t("Envoi…","Sending…"):t("Devenir partenaire","Apply to become a partner")}</button>
     {message?<p className="form-feedback" role="status">{message}</p>:null}
     {trackingUrl?<a className="button button--secondary" href={trackingUrl}>{t("Suivre ma candidature","Track my application")}</a>:null}
