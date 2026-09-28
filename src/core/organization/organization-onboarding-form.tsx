@@ -404,7 +404,7 @@ export function OrganizationOnboardingForm({
             <select name="timezone" required value={timezone}
               onChange={(e) => setTimezone(e.target.value)}>
               {ORGANIZATION_TIMEZONES.map(([id, label]) => (
-                <option key={id} value={id}>{label} · {id}</option>
+                <option key={id} value={id}>{label[locale]} · {id}</option>
               ))}
             </select>
           </label>
