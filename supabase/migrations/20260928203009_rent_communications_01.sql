@@ -15,9 +15,34 @@ alter table public.financial_documents
   add column if not exists deferred_until date,
   add column if not exists supersedes_document_id uuid references public.financial_documents(id) on delete restrict;
 
+-- Installer la version du garde qui connaît le mode `review` AVANT le
+-- backfill. Sur une base non vide, l'ancien garde d'immutabilité refuse toute
+-- mise à jour qui n'est ni une finalisation ni une invalidation.
+create or replace function private.protect_financial_document()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if tg_op = 'DELETE' then raise exception 'financial_document_history_is_immutable' using errcode = '23514'; end if;
+  if current_setting('kjora.document_maintenance', true) = 'finalize'
+    and old.status = 'prepared' and new.status = 'ready'
+    and to_jsonb(new) - array['status','storage_path','content_sha256','content_bytes','ready_at']
+      = to_jsonb(old) - array['status','storage_path','content_sha256','content_bytes','ready_at'] then return new; end if;
+  if current_setting('kjora.document_maintenance', true) = 'invalidate'
+    and old.status in ('prepared','ready') and new.status = 'invalidated'
+    and to_jsonb(new) - array['status','invalidated_by','invalidated_at','invalidation_reason']
+      = to_jsonb(old) - array['status','invalidated_by','invalidated_at','invalidation_reason'] then return new; end if;
+  if current_setting('kjora.document_maintenance', true) = 'review'
+    and old.status = new.status and old.snapshot = new.snapshot
+    and to_jsonb(new) - array['review_status','approved_by','approved_at','deferred_until']
+      = to_jsonb(old) - array['review_status','approved_by','approved_at','deferred_until'] then return new; end if;
+  raise exception 'financial_document_history_is_immutable' using errcode = '23514';
+end;
+$$;
+
+select set_config('kjora.document_maintenance', 'review', true);
 update public.financial_documents
    set approved_at = coalesce(ready_at, created_at), approved_by = created_by
  where review_status = 'approved' and approved_at is null;
+select set_config('kjora.document_maintenance', '', true);
 
 alter table public.financial_documents
   add constraint financial_documents_review_state check (
@@ -40,26 +65,6 @@ $$;
 create trigger financial_statement_review_default
 before insert on public.financial_documents
 for each row execute function private.financial_statement_review_default();
-
-create or replace function private.protect_financial_document()
-returns trigger language plpgsql set search_path = '' as $$
-begin
-  if tg_op = 'DELETE' then raise exception 'financial_document_history_is_immutable' using errcode = '23514'; end if;
-  if current_setting('kjora.document_maintenance', true) = 'finalize'
-    and old.status = 'prepared' and new.status = 'ready'
-    and to_jsonb(new) - array['status','storage_path','content_sha256','content_bytes','ready_at']
-      = to_jsonb(old) - array['status','storage_path','content_sha256','content_bytes','ready_at'] then return new; end if;
-  if current_setting('kjora.document_maintenance', true) = 'invalidate'
-    and old.status in ('prepared','ready') and new.status = 'invalidated'
-    and to_jsonb(new) - array['status','invalidated_by','invalidated_at','invalidation_reason']
-      = to_jsonb(old) - array['status','invalidated_by','invalidated_at','invalidation_reason'] then return new; end if;
-  if current_setting('kjora.document_maintenance', true) = 'review'
-    and old.status = new.status and old.snapshot = new.snapshot
-    and to_jsonb(new) - array['review_status','approved_by','approved_at','deferred_until']
-      = to_jsonb(old) - array['review_status','approved_by','approved_at','deferred_until'] then return new; end if;
-  raise exception 'financial_document_history_is_immutable' using errcode = '23514';
-end;
-$$;
 
 create or replace function public.review_financial_document(
   target_document_id uuid, p_decision text, p_deferred_until date default null
