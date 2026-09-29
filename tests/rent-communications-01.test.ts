@@ -15,6 +15,17 @@ test("les états de compte commencent en revue et restent immuables", () => {
   assert.match(migration, /supersedes_document_id/);
 });
 
+test("le garde compatible review est installé avant le backfill des documents existants", () => {
+  const guard = migration.indexOf("create or replace function private.protect_financial_document()");
+  const maintenance = migration.indexOf("set_config('kjora.document_maintenance', 'review', true)");
+  const backfill = migration.indexOf("update public.financial_documents");
+  const reset = migration.indexOf("set_config('kjora.document_maintenance', '', true)");
+
+  assert.ok(guard >= 0 && guard < maintenance);
+  assert.ok(maintenance < backfill);
+  assert.ok(backfill < reset);
+});
+
 test("approbation et report exigent receipt.share et sont audités", () => {
   assert.match(migration, /private\.has_capability\(doc\.organization_id,'receipt\.share'\)/);
   assert.match(migration, /FINANCIAL_DOCUMENT_REVIEWED/);
