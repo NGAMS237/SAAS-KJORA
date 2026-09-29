@@ -76,14 +76,5 @@ export async function updateSession(request: NextRequest) {
     return redirect;
   }
 
-  if (authenticated && pathname === "/connexion") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/app";
-    url.search = "";
-    const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
-    return redirect;
-  }
-
   return response;
 }

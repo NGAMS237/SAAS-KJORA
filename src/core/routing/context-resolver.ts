@@ -168,18 +168,20 @@ export async function resolveUserContext(): Promise<ResolvedContext> {
   }
 
   // 4. Memberships internes actifs
-  const { data: membershipData } = await supabase
-    .from("memberships")
-    .select("organization_id, role, status")
-    .eq("user_id", userId)
-    .eq("status", "active");
+  const [membershipResult, portalResult] = await Promise.all([
+    supabase
+      .from("memberships")
+      .select("organization_id, role, status")
+      .eq("user_id", userId)
+      .eq("status", "active"),
+    supabase.rpc("has_tenant_portal_identity"),
+  ]);
 
-  const memberships = ((membershipData ?? []) as MembershipRow[]).filter((row) =>
+  const memberships = ((membershipResult.data ?? []) as MembershipRow[]).filter((row) =>
     isInternalRole(row.role),
   );
 
-  // Identité portail (lue une seule fois, réutilisée)
-  const portalResult = await supabase.rpc("has_tenant_portal_identity");
+  // Identité portail (lue en parallèle, une seule fois, puis réutilisée)
   const hasPortalIdentity = !portalResult.error && portalResult.data === true;
 
   if (memberships.length === 0) {
