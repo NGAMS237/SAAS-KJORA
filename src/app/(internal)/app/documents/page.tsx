@@ -38,15 +38,17 @@ export default async function DocumentsPage() {
     : null;
   const canViewContracts = hasContractRbac && !contractEntitlementError;
 
-  const documents = canViewFinancialDocuments
-    ? await getFinancialDocuments(authorization.organizationId)
-    : [];
-  const monthEndResult = canViewFinancialDocuments
-    ? await (await createSupabaseServerClient()).rpc("preview_africa_month_end", {
-      target_organization_id: authorization.organizationId,
-      target_month: new Date().toISOString().slice(0, 10),
-    })
-    : { data: null, error: null };
+  const [documents, monthEndResult] = canViewFinancialDocuments
+    ? await Promise.all([
+      getFinancialDocuments(authorization.organizationId),
+      createSupabaseServerClient().then((supabase) =>
+        supabase.rpc("preview_africa_month_end", {
+          target_organization_id: authorization.organizationId,
+          target_month: null,
+        }),
+      ),
+    ])
+    : [[], { data: null, error: null }];
   const monthEnd = monthEndResult.error ? null : monthEndResult.data as null | {
     currency: string; leasesSelected: number; duesSelected: number; documentsPrepared: number;
     documentsMissing: number; awaitingApproval: number; deferred: number; approved: number; queued: number;

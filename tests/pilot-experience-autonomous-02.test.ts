@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 
 const migration = readFileSync(new URL("../supabase/migrations/20261001090000_pilot_month_end_africa_preview.sql", import.meta.url), "utf8");
+const documentsPage = readFileSync(new URL("../src/app/(internal)/app/documents/page.tsx", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
 const proxy = readFileSync(new URL("../src/lib/supabase/proxy.ts", import.meta.url), "utf8");
 
@@ -16,6 +17,33 @@ test("la simulation de fin de mois est strictement en lecture seule et tenant-sc
 test("les six devises immobilières restent séparées sans conversion", () => {
   for (const currency of ["XAF","XOF","NGN","CDF","KES","ZAR"]) assert.match(migration, new RegExp(`'${currency}'`));
   assert.doesNotMatch(migration, /exchange_rate|currency_conversion/i);
+});
+
+test("le mois implicite vient du fuseau IANA de l'Organization", () => {
+  assert.match(migration, /target_month date default null/);
+  assert.match(migration, /select p\.currency_code, p\.timezone\s+into rental_currency, organization_timezone/);
+  assert.match(migration, /\(current_timestamp at time zone organization_timezone\)::date/);
+  assert.match(migration, /reference_date := coalesce\(\s*target_month,/);
+  assert.match(migration, /month_start := date_trunc\('month', reference_date\)::date/);
+});
+
+test("le profil, la devise et le fuseau sont validés en mode fail-closed", () => {
+  for (const error of [
+    "organization_profile_required",
+    "organization_currency_required",
+    "unsupported_rental_currency",
+    "organization_timezone_required",
+    "invalid_organization_timezone",
+  ]) assert.match(migration, new RegExp(`raise exception '${error}' using errcode = '22023'`));
+  assert.match(migration, /pg_catalog\.pg_timezone_names/);
+});
+
+test("la page charge les documents et la prévisualisation en parallèle sans imposer un mois UTC", () => {
+  assert.doesNotMatch(documentsPage, /toISOString\(\)\.slice\(0, 10\)/);
+  assert.match(documentsPage, /Promise\.all\(\[\s*getFinancialDocuments\(/);
+  assert.match(documentsPage, /supabase\.rpc\("preview_africa_month_end"/);
+  assert.match(documentsPage, /target_month: null/);
+  assert.match(documentsPage, /monthEndResult\.error \? null/);
 });
 
 test("la simulation expose les étapes sans provoquer d'envoi", () => {

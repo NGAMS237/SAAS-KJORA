@@ -1,4 +1,4 @@
-# KJORA — PILOT-EXPERIENCE-AUTONOMOUS-02 — Rapport final
+# KJORA — PILOT-EXPERIENCE-AUTONOMOUS-02 — Rapport final v2
 
 Date : 2026-09-29
 
@@ -51,11 +51,14 @@ Base obligatoire : `ded50c2c4b7f2f7a7c9c5f4f699b9c9514a5170b`
 ### Fin de mois Afrique
 
 - Migration additive `20261001090000_pilot_month_end_africa_preview.sql` : RPC stable, `SECURITY DEFINER`, `search_path=''`, contrôle `auth.uid()` et capability `due.view`.
+- Le mois implicite n'utilise plus la date UTC du navigateur : `target_month` vaut `NULL` par défaut et la RPC calcule la date locale depuis le fuseau IANA de l'Organization. Une date explicite reste acceptée pour consulter un autre mois.
+- La RPC charge `currency_code` et `timezone` avant tout calcul de période et échoue avec `22023` si le profil, la devise ou le fuseau est absent, si la devise est hors catalogue ou si le fuseau IANA est invalide.
 - Prévisualisation déterministe et strictement en lecture seule des baux/échéances, avis préparés ou manquants, approbations, reports et files.
 - XAF, XOF, NGN, CDF, KES et ZAR sont conservées telles quelles ; `conversionApplied=false`.
 - Les contraintes uniques historiques restent l'autorité d'idempotence. La RPC n'écrit ni facture, ni document, ni file et n'appelle aucun fournisseur.
 - L'aperçu, l'approbation, le report et la mise en file réutilisent le workflow documentaire existant. L'invalidation conserve l'historique.
-- Nouveau pgTAP de privilèges écrit, mais NON EXÉCUTÉ (aucun PostgreSQL/Supabase local).
+- La page Documents lance en parallèle la lecture documentaire et la prévisualisation avec `Promise.all`, transmet `target_month: null` et conserve son repli sûr lorsque la RPC est indisponible.
+- Le pgTAP comporte exactement 29 assertions comportementales : contrat et privilèges, RBAC/capability, isolation inter-Organization, compteurs contrôlés, mois explicite et local, devises/fuseaux fail-closed et preuve d'absence d'écriture. Il reste NON EXÉCUTÉ faute de PostgreSQL/Supabase local.
 
 ### Partenaires
 
@@ -83,17 +86,18 @@ Base obligatoire : `ded50c2c4b7f2f7a7c9c5f4f699b9c9514a5170b`
 
 | Gate | Résultat exact |
 |---|---|
-| Tests Node complets | PASS — 924/924, 0 échec, 0 ignoré |
+| Tests Node ciblés v2 | PASS — 9/9, 0 échec, 0 ignoré |
+| Tests Node complets | PASS — 927/927, 0 échec, 0 ignoré |
 | TypeScript | PASS |
 | ESLint | PASS |
-| Next.js 16.3.4 Webpack | PASS — compilation finale 16,3 s ; TypeScript build 7,3 s ; 78/78 pages générées en 2,6 s |
+| Next.js 16.3.4 Webpack | PASS — compilation finale 43 s ; TypeScript build 16,2 s ; 78/78 pages générées en 9,5 s |
 | `git diff --check` | PASS |
 | Liens internes statiques | PASS |
 | Cache des routes privées | PASS statique |
 | Contrôle anti-secrets du diff | PASS |
 | Fichiers interdits suivis | PASS — aucun `.env` secret, `node_modules`, `.next`, `.vercel`, `supabase/.temp`, ZIP ou journal ; `.env.example` est volontairement suivi |
 | Replay migrations depuis zéro | NON EXÉCUTÉ — Docker, Supabase CLI et `psql` absents |
-| pgTAP complet | NON EXÉCUTÉ — aucun PostgreSQL/Supabase local |
+| pgTAP comportemental (29 assertions) | NON EXÉCUTÉ — aucun PostgreSQL/Supabase local |
 | Navigateur authentifié/mobile | NON EXÉCUTÉ — aucune Preview sûre autorisée dans ce lot |
 
 Le build final confirme 62 pages, 48 route handlers et 78 pages statiques générées. L'inventaire final contient 59 migrations.
@@ -107,19 +111,20 @@ Le build final confirme 62 pages, 48 route handlers et 78 pages statiques géné
 5. `880935a771adddddfc04285a96f7115a7df71b0f` — documentation pilote.
 6. `bbca8dd758336262d78e75db4c2202d87a4ee246` — correction ESLint du retry partenaire.
 7. `aed26a246051ef5bdf0f43a37fecb40630c7865f` — états Admin fondés sur les preuves disponibles.
+8. Correction v2 — mois local de l'Organization, validation fail-closed et pgTAP comportemental (SHA consigné dans la remise finale).
 
 Le SHA final et l'arbre Git sont consignés après le commit de ce rapport et dans le manifeste du patch.
 
 ## Limites et décisions différées
 
-- La nouvelle migration n'a été appliquée nulle part ; elle doit passer un replay complet et pgTAP dans une base éphémère avant toute Preview.
+- La nouvelle migration n'a été appliquée nulle part ; malgré la couverture statique/Node et le pgTAP renforcé, elle doit encore passer un replay complet et les 29 assertions pgTAP dans une base éphémère avant toute Preview.
 - Les parcours authentifiés et le comportement d'installation PWA nécessitent la matrice navigateur en Preview.
 - Aucun état fournisseur n'est une preuve distante. Stripe Test, Resend et WhatsApp n'ont pas été appelés.
 - Les décisions juridiques, commerciales, financières et de lancement public restent ouvertes et désactivées par défaut.
 
 ## Verdict
 
-PATCH LOCAL : PRÊT
+PATCH V2 LOCAL : PRÊT
 
 READY FOR ISOLATED SQL VALIDATION : OUI
 
