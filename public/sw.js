@@ -1,7 +1,14 @@
-const CACHE_NAME = "kjora-public-v1";
+const CACHE_NAME = "kjora-public-v2";
 const PRECACHE = ["/icon.svg", "/manifest.webmanifest", "/hors-ligne/"];
 const PUBLIC_PAGES = new Set(["/hors-ligne/", "/partenaires", "/partenaires/"]);
 const NEVER_CACHE_PREFIXES = ["/api/", "/app/", "/administration/", "/portal/", "/auth/", "/connexion/", "/onboarding/"];
+
+function isPublicCacheable(response) {
+  const cacheControl = response.headers.get("cache-control") || "";
+  return response.ok
+    && !response.headers.has("set-cookie")
+    && !/(private|no-store)/i.test(cacheControl);
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)));
@@ -22,7 +29,7 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     if (!PUBLIC_PAGES.has(url.pathname)) return;
     event.respondWith(fetch(request).then((response) => {
-      if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+      if (isPublicCacheable(response)) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
       return response;
     }).catch(async () => (await caches.match(request)) || (await caches.match("/hors-ligne/"))));
     return;
@@ -30,7 +37,7 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/_next/static/") || url.pathname === "/icon.svg" || url.pathname === "/manifest.webmanifest") {
     event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-      if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request,response.clone()));
+      if (isPublicCacheable(response)) caches.open(CACHE_NAME).then((cache) => cache.put(request,response.clone()));
       return response;
     })));
   }

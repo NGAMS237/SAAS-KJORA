@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LoginForm } from "@/core/auth/login-form";
 import { getAuthCallbackMessage } from "@/core/auth/callback-diagnostics";
 import { safeNextPath } from "@/core/auth/safe-next-path";
 import { appendSiteAppIntent, parseSiteAppIntent, planLabel, type SiteAppSearchParams } from "@/core/onboarding/plan-intent";
 import { PublicFooter } from "@/core/ui/public-footer";
+import { destinationFor, resolveUserContext } from "@/core/routing/context-resolver";
 
 // ALIGN-02: plan_requested comes from the marketing site CTA.
 // It is non-trustworthy — validated here only for UX messaging.
@@ -34,6 +36,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     ? appendSiteAppIntent("/onboarding/organization", intent)
     : "/app";
   const nextPath = safeNextPath(rawNext ?? defaultNext);
+
+  // Reuse a valid session instead of asking for another magic link. The
+  // destination still comes from server-side context resolution; URL role,
+  // Organization and entitlement hints never participate in that decision.
+  const context = await resolveUserContext();
+  if (context.kind !== "unauthenticated") {
+    if (rawNext) redirect(safeNextPath(rawNext));
+    const destination = destinationFor(context);
+    redirect(planRequested && destination === "/onboarding/organization"
+      ? appendSiteAppIntent(destination, intent)
+      : destination);
+  }
 
   const english = intent.locale === "en";
   const t = (fr: string, en: string) => english ? en : fr;
