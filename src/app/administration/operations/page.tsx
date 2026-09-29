@@ -1,4 +1,5 @@
 import { resolveBillingLegalIdentity } from "@/core/billing/legal-identity";
+import { isProviderConfigured } from "@/core/billing/provider-config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   COMMUNICATIONS_ENV,
@@ -81,11 +82,22 @@ export default async function AdministrationOperationsPage() {
     config={{
       emailOperational: email.operational,
       missingEmailVariables: email.missing,
-      senderAddress: email.senderAddress,
       saasAutoInvoicing: isSaasAutoInvoicingEnabled(process.env),
       webhookSecretConfigured: Boolean(process.env[COMMUNICATIONS_ENV.webhookSecret]?.trim()),
       cronSecretConfigured: expectedCronAuthorization(process.env) !== null,
       legalIdentityConfigured: resolveBillingLegalIdentity(process.env) !== null,
+      systems: {
+        owner_app: "operational",
+        tenant_portal: "operational",
+        partners: "operational",
+        africa_billing: overview ? "operational" : "attention_required",
+        stripe_test: isProviderConfigured("stripe") ? "operational" : "configuration_missing",
+        resend: email.operational ? "operational" : "configuration_missing",
+        whatsapp: "configured_disabled",
+        automations: expectedCronAuthorization(process.env) ? "operational" : "configuration_missing",
+        pwa: "operational",
+        migrations: overview ? "operational" : "attention_required",
+      },
     }}
     error={error}
     overview={overview}

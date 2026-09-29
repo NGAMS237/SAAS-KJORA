@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
@@ -53,11 +54,19 @@ export type WhatsAppOverview = { provider: "disabled"; transactionalConsents: nu
 export type OperationsConfig = {
   emailOperational: boolean;
   missingEmailVariables: string[];
-  senderAddress: string | null;
   saasAutoInvoicing: boolean;
   webhookSecretConfigured: boolean;
   cronSecretConfigured: boolean;
   legalIdentityConfigured: boolean;
+  systems: Record<SystemKey, SystemStatus>;
+};
+
+type SystemStatus = "operational" | "configured_disabled" | "configuration_missing" | "attention_required";
+type SystemKey = "owner_app" | "tenant_portal" | "partners" | "africa_billing" | "stripe_test" | "resend" | "whatsapp" | "automations" | "pwa" | "migrations";
+
+const SYSTEM_LINKS: Partial<Record<SystemKey, string>> = {
+  owner_app: "/app", tenant_portal: "/portal", partners: "/administration/partenaires",
+  africa_billing: "/administration/finances", stripe_test: "/app/billing", pwa: "/hors-ligne/",
 };
 
 const STATUSES = [
@@ -136,6 +145,24 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
     retry_failed_deliveries: t("Relance des échecs", "Failed delivery retry"),
     delivery_review: t("Décision de revue", "Review decision"),
   };
+  const systemLabels: Record<SystemKey, string> = {
+    owner_app: t("Application propriétaire", "Owner application"),
+    tenant_portal: t("Portail locataire", "Tenant portal"),
+    partners: t("Programme partenaires", "Partner program"),
+    africa_billing: t("Facturation Afrique", "Africa billing"),
+    stripe_test: "Stripe Test",
+    resend: "Resend",
+    whatsapp: "WhatsApp",
+    automations: t("Automatisations", "Automations"),
+    pwa: "PWA",
+    migrations: t("Migrations", "Migrations"),
+  };
+  const statusLabels: Record<SystemStatus, string> = {
+    operational: t("opérationnel", "operational"),
+    configured_disabled: t("configuré désactivé", "configured disabled"),
+    configuration_missing: t("configuration manquante", "configuration missing"),
+    attention_required: t("attention requise", "attention required"),
+  };
 
   return <div className="admin-page">
     <header className="admin-page__header">
@@ -145,11 +172,23 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
 
     {error ? <p className="admin-error" role="alert">{error === "denied" ? t("Accès refusé.", "Access denied.") : t("Lecture impossible pour le moment.", "Unable to load right now.")}</p> : null}
 
+    <section className="admin-section" aria-labelledby="ops-control-heading">
+      <h2 id="ops-control-heading">{t("Centre de contrôle", "Control center")}</h2>
+      <p className="admin-section__lead">{t("État agrégé sans appel fournisseur au rendu et sans valeur secrète.", "Aggregated status without provider calls during rendering and without secret values.")}</p>
+      <div className="admin-control-grid">
+        {(Object.keys(config.systems) as SystemKey[]).map((key) => {
+          const content = <><strong>{systemLabels[key]}</strong><span className={`admin-system-status admin-system-status--${config.systems[key]}`}>{statusLabels[config.systems[key]]}</span></>;
+          return SYSTEM_LINKS[key]
+            ? <Link className="admin-control-card" href={SYSTEM_LINKS[key]!} key={key}>{content}</Link>
+            : <div className="admin-control-card" key={key}>{content}</div>;
+        })}
+      </div>
+    </section>
+
     <section className="admin-section" aria-labelledby="ops-config-heading">
       <h2 id="ops-config-heading">{t("Configuration (noms de variables seulement)", "Configuration (variable names only)")}</h2>
       <div className="admin-table-wrap"><table className="admin-table"><tbody>
         <tr><th scope="row">{t("Envoi de courriels", "Email delivery")}</th><td>{config.emailOperational ? t("Opérationnel", "Operational") : `${t("Inactif — manquant :", "Inactive — missing:")} ${config.missingEmailVariables.join(", ")}`}</td></tr>
-        <tr><th scope="row">{t("Expéditeur", "Sender")}</th><td>{config.senderAddress ?? "—"}</td></tr>
         <tr><th scope="row">KJORA_SAAS_AUTO_INVOICING_ENABLED</th><td>{config.saasAutoInvoicing ? t("Activé (écriture réelle)", "Enabled (real writes)") : t("Désactivé (dry-run)", "Disabled (dry-run)")}</td></tr>
         <tr><th scope="row">RESEND_WEBHOOK_SECRET</th><td>{config.webhookSecretConfigured ? t("Configuré", "Configured") : t("Absent", "Missing")}</td></tr>
         <tr><th scope="row">CRON_SECRET</th><td>{config.cronSecretConfigured ? t("Configuré", "Configured") : t("Absent ou trop court", "Missing or too short")}</td></tr>

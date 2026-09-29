@@ -5428,6 +5428,36 @@ ul.notification-popover__list {
   word-break: break-word;
 }
 
+.admin-control-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.admin-control-card {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  min-height: 88px;
+  padding: 14px;
+  text-decoration: none;
+}
+
+a.admin-control-card:hover,
+a.admin-control-card:focus-visible { border-color: var(--brand-gold); }
+.admin-system-status { font-size: .78rem; text-transform: uppercase; }
+.admin-system-status--operational { color: var(--success); }
+.admin-system-status--configured_disabled { color: var(--text-muted); }
+.admin-system-status--configuration_missing,
+.admin-system-status--attention_required { color: var(--warning); }
+
+.partner-code-list { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.partner-code-list > li { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; }
+.partner-code-list > li > div:first-child { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: space-between; }
+
 .pwa-update {
   background: var(--brand-gold);
   border: 0;
