@@ -96,7 +96,9 @@ export default async function AdministrationOperationsPage() {
         whatsapp: "configured_disabled",
         automations: expectedCronAuthorization(process.env) ? "operational" : "configuration_missing",
         pwa: "operational",
-        migrations: overview ? "operational" : "attention_required",
+        // No remote migration check is performed during rendering. Keep this
+        // honest until a supervised environment check supplies evidence.
+        migrations: "attention_required",
       },
     }}
     error={error}
