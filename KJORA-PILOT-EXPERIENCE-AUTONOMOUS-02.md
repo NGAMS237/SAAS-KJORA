@@ -1,7 +1,9 @@
 # KJORA — PILOT-EXPERIENCE-AUTONOMOUS-02 — Rapport final
 
-Date : 2026-09-29  
-Branche locale : `codex/kjora-pilot-experience-autonomous-02`  
+Date : 2026-09-29
+
+Branche locale : `codex/kjora-pilot-experience-autonomous-02`
+
 Base obligatoire : `ded50c2c4b7f2f7a7c9c5f4f699b9c9514a5170b`
 
 ## Intégrité et isolation
@@ -117,7 +119,10 @@ Le SHA final et l'arbre Git sont consignés après le commit de ce rapport et da
 
 ## Verdict
 
-PATCH LOCAL : PRÊT  
-READY FOR ISOLATED SQL VALIDATION : OUI  
-READY FOR SUPERVISED PREVIEW AFTER SQL GATE : OUI  
+PATCH LOCAL : PRÊT
+
+READY FOR ISOLATED SQL VALIDATION : OUI
+
+READY FOR SUPERVISED PREVIEW AFTER SQL GATE : OUI
+
 READY FOR PRODUCTION : NON
