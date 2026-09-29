@@ -149,21 +149,21 @@ select set_config('request.jwt.claim.sub', 'da000000-0000-4000-8000-000000000001
 
 select is(
   (select public.admin_confirm_manual_invoice_payment('da100000-0000-4000-8000-0000000000ff', 'XAF', 5900,
-    null, 'Reçu Mobile Money', 'da-pay-key-unknown') ->> 'outcome'),
+    null, current_date, 'Reçu Mobile Money', 'da-pay-key-unknown') ->> 'outcome'),
   'invoice_not_found',
   'une facture inconnue renvoie invoice_not_found'
 );
 
 select is(
   (select public.admin_confirm_manual_invoice_payment((current_setting('kjora_test.da_invoice_p1'))::uuid, 'XAF', 5900,
-    'OM-DA-1', 'Reçu Mobile Money, note interne', 'da-pay-key-1') ->> 'outcome'),
+    'OM-DA-1', current_date, 'Reçu Mobile Money, note interne', 'da-pay-key-1') ->> 'outcome'),
   'confirmed',
   'le règlement exact est confirmé malgré un pending_cycle NULL'
 );
 
 select is(
   (select public.admin_confirm_manual_invoice_payment((current_setting('kjora_test.da_invoice_p1'))::uuid, 'XAF', 5900,
-    'OM-DA-1', 'Rejeu', 'da-pay-key-1') ->> 'replayed'),
+    'OM-DA-1', current_date, 'Rejeu', 'da-pay-key-1') ->> 'replayed'),
   'true',
   'rejouer le même jeton est reconnu comme un rejeu (already_paid, replayed=true), sans effet'
 );
@@ -196,21 +196,21 @@ select set_config('request.jwt.claim.sub', 'da000000-0000-4000-8000-000000000001
 
 select is(
   (select public.admin_confirm_manual_invoice_payment((current_setting('kjora_test.da_invoice_p2'))::uuid, 'XAF', 5900,
-    null, 'Tentative avec un jeton déjà utilisé', 'da-pay-key-1') ->> 'outcome'),
+    null, current_date, 'Tentative avec un jeton déjà utilisé', 'da-pay-key-1') ->> 'outcome'),
   'payment_idempotency_conflict',
   'un jeton de confirmation déjà utilisé pour une autre facture est refusé'
 );
 
 select is(
   (select public.admin_confirm_manual_invoice_payment((current_setting('kjora_test.da_invoice_r'))::uuid, 'XAF', 5900,
-    null, 'Règlement reçu', 'da-pay-key-r') ->> 'outcome'),
+    null, current_date, 'Règlement reçu', 'da-pay-key-r') ->> 'outcome'),
   'organization_archived',
   'aucune confirmation pour une Organization archivée'
 );
 
 select is(
   (select public.admin_confirm_manual_invoice_payment((current_setting('kjora_test.da_invoice_s'))::uuid, 'XAF', 5900,
-    null, 'Régularisation reçue', 'da-pay-key-s') ->> 'outcome'),
+    null, current_date, 'Régularisation reçue', 'da-pay-key-s') ->> 'outcome'),
   'confirmed',
   'une Organization suspendue peut régulariser sa facture'
 );

@@ -148,7 +148,7 @@ select set_config('request.jwt.claim.sub', 'b0000000-0000-4000-8000-000000000001
 select is(
   (select (public.admin_confirm_manual_invoice_payment(
     (current_setting('kjora_test.rb01_invoice_id'))::uuid,
-    'XAF', 1::bigint, 'REF-1', 'Paiement Orange Money reçu', 'rb-confirm-key-bad-amount'
+    'XAF', 1::bigint, 'REF-1', current_date, 'Paiement Orange Money reçu', 'rb-confirm-key-bad-amount'
   ))->>'outcome'),
   'amount_mismatch',
   'un montant déclaré différent de la facture est refusé'
@@ -157,7 +157,7 @@ select is(
 select is(
   (select (public.admin_confirm_manual_invoice_payment(
     (current_setting('kjora_test.rb01_invoice_id'))::uuid,
-    'CAD', 5900::bigint, 'REF-1', 'Paiement Orange Money reçu', 'rb-confirm-key-bad-currency'
+    'CAD', 5900::bigint, 'REF-1', current_date, 'Paiement Orange Money reçu', 'rb-confirm-key-bad-currency'
   ))->>'outcome'),
   'currency_mismatch',
   'une devise déclarée différente de la facture est refusée'
@@ -166,7 +166,7 @@ select is(
 select is(
   (select (public.admin_confirm_manual_invoice_payment(
     (current_setting('kjora_test.rb01_invoice_id'))::uuid,
-    'XAF', 5900::bigint, 'REF-1', 'x', 'rb-confirm-key-bad-note'
+    'XAF', 5900::bigint, 'REF-1', current_date, 'x', 'rb-confirm-key-bad-note'
   ))->>'outcome'),
   'note_required',
   'une note administrative de moins de 3 caractères est refusée'
@@ -175,7 +175,7 @@ select is(
 select is(
   (select (public.admin_confirm_manual_invoice_payment(
     (current_setting('kjora_test.rb01_invoice_id'))::uuid,
-    'XAF', 5900::bigint, 'REF-OM-2026-10', 'Paiement Orange Money reçu, capture jointe', 'rb-confirm-key-1'
+    'XAF', 5900::bigint, 'REF-OM-2026-10', current_date, 'Paiement Orange Money reçu, capture jointe', 'rb-confirm-key-1'
   ))->>'outcome'),
   'confirmed',
   'un règlement manuel exact (devise + montant) est confirmé'
@@ -215,7 +215,7 @@ select set_config('request.jwt.claim.sub', 'b0000000-0000-4000-8000-000000000001
 select is(
   (select (public.admin_confirm_manual_invoice_payment(
     (current_setting('kjora_test.rb01_invoice_id'))::uuid,
-    'XAF', 5900::bigint, 'REF-OM-2026-10', 'Rejeu après confirmation', 'rb-confirm-key-2'
+    'XAF', 5900::bigint, 'REF-OM-2026-10', current_date, 'Rejeu après confirmation', 'rb-confirm-key-1'
   ))->>'outcome'),
   'already_paid',
   'reconfirmer une facture déjà payée est idempotent, sans réappliquer l''effet'
