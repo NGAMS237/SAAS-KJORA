@@ -83,6 +83,19 @@ select
   (select count(*) from public.message_deliveries) as deliveries_count,
   (select count(*) from public.ledger_entries) as ledger_count;
 
+-- Capture the cross-Organization control while still privileged. Once the test
+-- switches to the authenticated owner, RLS must hide that Organization.
+select set_config(
+  'pilot_month_end.expected_other_org_dues',
+  (
+    select count(*)::text
+    from public.dues
+    where organization_id = 'f2000000-0000-4000-8000-00000000000b'
+      and due_date between '2026-10-01' and '2026-10-31'
+  ),
+  true
+);
+
 set local role anon;
 select set_config('request.jwt.claim.sub', '', true);
 select throws_ok($$ select public.preview_africa_month_end('f2000000-0000-4000-8000-00000000000a', '2026-10-15') $$, '42501', null, 'anon is refused');
@@ -111,7 +124,7 @@ select is((public.preview_africa_month_end('f2000000-0000-4000-8000-00000000000a
 select is((public.preview_africa_month_end('f2000000-0000-4000-8000-00000000000a', '2026-10-15')->>'queued')::integer, 1, 'one delivery queued');
 select is((public.preview_africa_month_end('f2000000-0000-4000-8000-00000000000a', '2026-10-15')->>'sent')::integer, 0, 'no delivery sent');
 select ok(
-  (select count(*) = 1 from public.dues where organization_id = 'f2000000-0000-4000-8000-00000000000b' and due_date between '2026-10-01' and '2026-10-31')
+  current_setting('pilot_month_end.expected_other_org_dues', true)::integer = 1
   and (public.preview_africa_month_end('f2000000-0000-4000-8000-00000000000a', '2026-10-15')->>'duesSelected')::integer = 2,
   'another Organization fixture never enters the counters'
 );
