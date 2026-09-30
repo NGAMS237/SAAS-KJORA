@@ -38,3 +38,31 @@ Pendant ce pilote, garder le provider désactivé et les secrets absents. Aucun 
 - PASS requis : tests Node, typecheck, lint, build Webpack, `git diff --check`, replay SQL et pgTAP dans la base isolée, matrice navigateur.
 - En cas d'incident : désactiver communications/Stripe Test, arrêter la Preview, préserver les logs expurgés, nettoyer les fixtures et suivre le rollback de `KJORA-ROADMAP-LAUNCH.md`.
 - Une validation locale ou Preview ne vaut jamais autorisation Production.
+
+## Séquence supervisée OPERATIONS-03
+
+### Testable maintenant, sans fournisseur
+
+1. Ouvrir `/app/documents`, laisser le mois vide puis choisir explicitement un autre mois.
+2. Vérifier devise unique, compteurs, absence de conversion et absence d'écriture avant/après.
+3. Prévisualiser un brouillon, l'approuver ou le reporter; ne pas mettre en file si l'envoi est désactivé.
+4. Ouvrir `/administration/operations` et vérifier les quatre états factuels. Une configuration complète sans preuve fournisseur reste `attention_required`.
+5. Examiner les aperçus fictifs email/WhatsApp : aucun appel réseau, adresse ou numéro complet.
+6. Parcourir candidature, suivi, connexion et tableau partenaire en FR et EN.
+
+### Nécessite une configuration Preview externe
+
+- Supabase Preview jetable pour replay SQL, pgTAP, concurrence et parcours authentifiés multi-rôles.
+- Stripe Test pour confirmer Checkout, Portal, webhook signé et événements hors ordre.
+- Domaine Resend vérifié, DNS SPF/DKIM/DMARC et destinataire de développement explicitement autorisé.
+- Cron Preview avec secret dédié; un secret présent sans exécution observée ne vaut pas preuve opérationnelle.
+
+### Différé
+
+- WhatsApp/Meta reste `disabled`; aucun token ni numéro fournisseur n'est requis pour ce pilote.
+- Les listes Admin partenaires (attributions, campagnes, récompenses, audit) attendent une RPC bornée dédiée.
+- Production, Live, DNS, domaine personnalisé, paiement et communication réels attendent des autorisations séparées.
+
+## Historique Supabase
+
+`20261001090000_pilot_month_end_africa_preview.sql` est considéré aligné sur KJORA Dev et ne doit pas être modifié. Les écarts historiques antérieurs sont inventoriés seulement; aucun `db pull`, `db push`, `migration repair` ou `db reset` n'est autorisé par ce runbook.

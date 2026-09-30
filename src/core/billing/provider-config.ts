@@ -16,6 +16,7 @@ import "server-only";
 
 import type { ProviderName } from "./provider-capabilities.ts";
 import type { ProviderMode } from "./provider.ts";
+import { isStripeTestSecret, isStripeWebhookSecret } from "./stripe-test-safety.ts";
 
 /** Noms des variables d'environnement, par provider. Jamais de valeurs ici. */
 export const PROVIDER_ENV_KEYS: Record<ProviderName, { secret: string; webhook: string }> = {
@@ -59,7 +60,11 @@ function readSecret(key: string): string | null {
 
 export function isProviderConfigured(name: ProviderName): boolean {
   const keys = PROVIDER_ENV_KEYS[name];
-  if (name === "stripe" && process.env.BILLING_PROVIDER_STRIPE_TEST_ENABLED !== "1") return false;
+  if (name === "stripe") {
+    if (process.env.BILLING_PROVIDER_STRIPE_TEST_ENABLED !== "1") return false;
+    if (!isStripeTestSecret(readSecret(keys.secret))) return false;
+    if (!isStripeWebhookSecret(readSecret(keys.webhook))) return false;
+  }
   return readSecret(keys.secret) !== null && readSecret(keys.webhook) !== null;
 }
 

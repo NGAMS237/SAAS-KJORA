@@ -176,3 +176,34 @@ Cette checklist n'est **pas** à exécuter maintenant — `isLiveModeAllowed()` 
 **ALIGN-04A.2 = WAITING FOR SANDBOX CREDENTIALS — READY TO RESUME.**
 
 Aucun compte Flutterwave ni CamPay n'existe dans ce dépôt ou cet environnement. Ce guide fournit tout ce qui est nécessaire pour que Blaise ouvre l'un des deux comptes ; l'implémentation reprendra dès qu'un jeu de clés de test sera disponible côté serveur, en suivant la **RESUME CHECKLIST** ci-dessus dans l'ordre.
+
+---
+
+## 6. Complément OPERATIONS-03 — Stripe Test, Resend et WhatsApp
+
+### 6.1 Stripe Test Canada
+
+1. Activer le mode Test du Dashboard Stripe; ne créer ni utiliser de clé Live.
+2. Créer les six Prices CAD fermés (Essentiel/Avancé/Patrimoine × mensuel/annuel), puis renseigner leurs noms `STRIPE_TEST_PRICE_*_CAD` côté serveur Preview.
+3. Configurer le webhook Test vers `/api/billing/webhooks/stripe`; stocker sa signature dans `STRIPE_SANDBOX_WEBHOOK_SECRET` et la clé `sk_test_` dans `STRIPE_SANDBOX_SECRET_KEY`.
+4. Définir `KJORA_APP_ORIGIN` sur l'origine HTTPS exacte de Preview. Les chemins de retour externes, protocol-relative, avec identifiants ou origine HTTP non locale sont refusés.
+5. Garder `BILLING_PROVIDER_STRIPE_TEST_ENABLED=0` jusqu'au test supervisé. `BILLING_KILL_SWITCH_STRIPE=1` doit permettre l'arrêt immédiat.
+6. Tester ensuite, avec mocks puis Stripe Test : signature brute, idempotence, rejeu, ordre ancien, montant/devise incohérents et aucun changement des tables de loyers.
+
+La présence de toutes les variables ne prouve pas que Stripe répond : le centre Admin conserve `attention_required` jusqu'à une vérification externe supervisée.
+
+### 6.2 Resend
+
+1. Vérifier un domaine d'expédition dédié dans Resend; ne jamais utiliser une adresse non vérifiée en Production.
+2. Copier exactement les enregistrements SPF et DKIM fournis par Resend. Définir une politique DMARC progressive après revue de la réception; aucune valeur DNS n'est inventée dans Git.
+3. Configurer en Preview seulement `RESEND_TRANSACTIONAL_API_KEY`, `KJORA_TRANSACTIONAL_EMAIL_FROM`, `RESEND_WEBHOOK_SECRET`, `CRON_SECRET`; garder `KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED=false` avant le test supervisé.
+4. Une identité légale absente retient les courriels SaaS sans consommer de tentative. Un timeout, 5xx, 409 ou 2xx sans identifiant passe en revue manuelle et ne repart jamais automatiquement.
+5. Les aperçus de `/administration/operations` utilisent uniquement des données fictives et n'appellent pas Resend.
+
+### 6.3 WhatsApp officiel
+
+La seule voie envisagée est la plateforme WhatsApp Business/Cloud API officielle de Meta. L'adapter reste `disabled`, les numéros sont E.164, les consentements transactionnel et marketing sont distincts et révocables, et la file ne stocke aucun corps de message ni numéro complet.
+
+La politique officielle consultée le 30 septembre 2026 exige notamment un modèle approuvé pour les conversations initiées par l'entreprise et applique les tarifs en vigueur. Aucun palier gratuit durable n'est affirmé ici : tarifs et éventuels crédits doivent être revérifiés dans le Dashboard Meta au moment d'un futur lot. Source officielle : https://business.whatsapp.com/policy/preview?lang=fr_FR
+
+Interdits : WhatsApp Web automatisé, scraping, bibliothèque non officielle, journalisation du numéro complet ou activation par simple présence d'un token.

@@ -18,6 +18,8 @@
 - Simulation de fin de mois en lecture seule et parcours partenaires exploitable.
 - Matrice navigateur et contrôle des liens internes disponibles.
 
+**Mesure factuelle OPERATIONS-03 : 5/5 contrôles locaux obligatoires exécutés** (tests Node, TypeScript, ESLint, build Webpack, diff check), soit **100 % de ce gate technique local**. Ce pourcentage ne couvre ni SQL, ni navigateur, ni fournisseur.
+
 ## Gate 2 — Preview privée supervisée
 
 - Appliquer les migrations sur une base Preview jetable, jamais directement en Production.
@@ -26,9 +28,13 @@
 - Tester chaque rôle avec des comptes éphémères distincts et nettoyer les données après revue.
 - Garder Stripe Test, Resend contrôlé et WhatsApp désactivé.
 
+**Mesure factuelle OPERATIONS-03 : 0/4 familles de preuves Preview exécutées**, soit **0 %** : replay SQL/pgTAP, comptes multi-rôles, matrice navigateur authentifiée, fournisseurs Test. Le code local prêt ne change pas ce résultat.
+
 ## Gate 3 — décision de pilote
 
 Décision humaine requise après revue navigateur, journaux et incidents. Les éléments suivants ne sont pas implicitement autorisés : fournisseurs Live, paiement réel, communication en masse, domaine/DNS, migration Production, publication publique ou promesse commerciale partenaire.
+
+**Mesure factuelle : 0/3 validations externes** (revue Blaise, domaine/DNS, fournisseurs supervisés), soit **0 %**. `READY FOR PRODUCTION` demeure NON.
 
 ## Rollback préparé
 

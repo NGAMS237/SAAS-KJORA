@@ -3,7 +3,8 @@ import { FileCheck2 } from "lucide-react";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { requirePlanFeature } from "@/core/entitlements/server";
 import { getFinancialDocuments } from "@/modules/documents/server";
-import { FinancialDocumentsPanel } from "@/modules/documents/views";
+import { parseMonthEndSelection, type MonthEndPreview } from "@/modules/documents/month-end";
+import { FinancialDocumentsPanel, MonthEndPreviewPanel } from "@/modules/documents/views";
 import { listLeases } from "@/modules/tenancy/server";
 import { getLeaseContracts } from "@/modules/contracts/server";
 import { PageHeader, Card, EmptyState } from "@/core/ui/ui";
@@ -24,9 +25,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MAX_LEASES_SCANNED = 60;
 
-export default async function DocumentsPage() {
-  const authorization = await getActiveAuthorization();
+export default async function DocumentsPage({ searchParams }: {
+  searchParams: Promise<{ month?: string | string[] }>;
+}) {
+  const [authorization, query] = await Promise.all([getActiveAuthorization(), searchParams]);
   if (!authorization) return null;
+  const monthSelection = parseMonthEndSelection(query.month);
+  const monthEndArgs = monthSelection.targetMonth
+    ? { target_organization_id: authorization.organizationId, target_month: monthSelection.targetMonth }
+    : { target_organization_id: authorization.organizationId, target_month: null };
 
   const canViewFinancialDocuments = authorization.capabilities.includes("due.view")
     || authorization.capabilities.includes("receipt.view");
@@ -42,17 +49,11 @@ export default async function DocumentsPage() {
     ? await Promise.all([
       getFinancialDocuments(authorization.organizationId),
       createSupabaseServerClient().then((supabase) =>
-        supabase.rpc("preview_africa_month_end", {
-          target_organization_id: authorization.organizationId,
-          target_month: null,
-        }),
+        supabase.rpc("preview_africa_month_end", monthEndArgs),
       ),
     ])
     : [[], { data: null, error: null }];
-  const monthEnd = monthEndResult.error ? null : monthEndResult.data as null | {
-    currency: string; leasesSelected: number; duesSelected: number; documentsPrepared: number;
-    documentsMissing: number; awaitingApproval: number; deferred: number; approved: number; queued: number;
-  };
+  const monthEnd = monthEndResult.error ? null : monthEndResult.data as MonthEndPreview | null;
 
   // Les contrats vivent par bail : on agrège en relisant les baux existants.
   // Aucune RPC nouvelle, aucune duplication de donnée.
@@ -95,13 +96,12 @@ export default async function DocumentsPage() {
       />
 
       {canViewFinancialDocuments ? (
-        <><Card>
-          <div className="section-heading"><div><p className="eyebrow">Dry-run</p><h2>Fin de mois Afrique</h2></div></div>
-          {monthEnd ? <><p>Simulation déterministe en <strong>{monthEnd.currency}</strong>, sans conversion, écriture, paiement ni envoi.</p>
-            <div className="admin-counters"><div className="admin-counter"><span className="admin-counter__value">{monthEnd.leasesSelected}</span><span className="admin-counter__label">Baux sélectionnés</span></div><div className="admin-counter"><span className="admin-counter__value">{monthEnd.duesSelected}</span><span className="admin-counter__label">Échéances</span></div><div className="admin-counter"><span className="admin-counter__value">{monthEnd.documentsPrepared}</span><span className="admin-counter__label">Avis préparés</span></div><div className="admin-counter"><span className="admin-counter__value">{monthEnd.awaitingApproval}</span><span className="admin-counter__label">À approuver</span></div><div className="admin-counter"><span className="admin-counter__value">{monthEnd.deferred}</span><span className="admin-counter__label">Différés</span></div><div className="admin-counter"><span className="admin-counter__value">{monthEnd.queued}</span><span className="admin-counter__label">En file</span></div></div>
-            {monthEnd.documentsMissing ? <p className="form-feedback" role="status">{monthEnd.documentsMissing} avis restent à préparer par le workflow quotidien.</p> : null}
-            <p className="auth-footnote">L’approbation, le report, l’aperçu et la mise en file restent des décisions explicites dans la liste ci-dessous. L’annulation d’une échéance invalide son avis sans effacer l’historique.</p></> : <p className="form-feedback">Simulation indisponible tant que la migration locale du pilote n’est pas appliquée.</p>}
-        </Card><FinancialDocumentsPanel
+        <><MonthEndPreviewPanel
+          emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"}
+          invalidMonth={monthSelection.invalid}
+          preview={monthEnd}
+          selectedMonth={monthSelection.selectedMonth}
+        /><FinancialDocumentsPanel
           canShare={authorization.capabilities.includes("receipt.share")}
           documents={documents}
           emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"}

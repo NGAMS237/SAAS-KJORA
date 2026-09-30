@@ -1,5 +1,4 @@
 import { resolveBillingLegalIdentity } from "@/core/billing/legal-identity";
-import { isProviderConfigured } from "@/core/billing/provider-config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   COMMUNICATIONS_ENV,
@@ -7,6 +6,7 @@ import {
   isSaasAutoInvoicingEnabled,
   resolveTransactionalEmailStatus,
 } from "@/modules/communications/config";
+import { buildProviderTemplatePreviews } from "@/modules/communications/provider-previews";
 import {
   OperationsView,
   type DeliveryReview,
@@ -15,6 +15,7 @@ import {
   type ProviderEvent,
   type WhatsAppOverview,
 } from "@/modules/platform-admin/operations-view";
+import { resolveOperationsReadiness } from "@/modules/platform-admin/operations-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,20 @@ export default async function AdministrationOperationsPage() {
   }));
   const email = resolveTransactionalEmailStatus(process.env);
   const whatsapp = whatsappResult.error ? null : (whatsappResult.data as WhatsAppOverview);
+  const resendProviderEvidence = Boolean(
+    overview && (
+      Number(overview.rentDeliveries.sent ?? 0) > 0
+      || Number(overview.rentDeliveries.delivered ?? 0) > 0
+      || Number(overview.saasDeliveries.sent ?? 0) > 0
+      || Number(overview.saasDeliveries.delivered ?? 0) > 0
+      || Number(overview.providerEvents30d["email.delivered"] ?? 0) > 0
+    ),
+  );
+  const systems = resolveOperationsReadiness(process.env, {
+    africaOverviewAvailable: overview !== null,
+    resendProviderEvidence,
+    automationRunObserved: Boolean(overview?.lastDailyRun || overview?.dbCronLastRun),
+  });
   return <OperationsView
     config={{
       emailOperational: email.operational,
@@ -86,26 +101,14 @@ export default async function AdministrationOperationsPage() {
       webhookSecretConfigured: Boolean(process.env[COMMUNICATIONS_ENV.webhookSecret]?.trim()),
       cronSecretConfigured: expectedCronAuthorization(process.env) !== null,
       legalIdentityConfigured: resolveBillingLegalIdentity(process.env) !== null,
-      systems: {
-        owner_app: "operational",
-        tenant_portal: "operational",
-        partners: "operational",
-        africa_billing: overview ? "operational" : "attention_required",
-        stripe_test: isProviderConfigured("stripe") ? "operational" : "configuration_missing",
-        resend: email.operational ? "operational" : "configuration_missing",
-        whatsapp: "configured_disabled",
-        automations: expectedCronAuthorization(process.env) ? "operational" : "configuration_missing",
-        pwa: "operational",
-        // No remote migration check is performed during rendering. Keep this
-        // honest until a supervised environment check supplies evidence.
-        migrations: "attention_required",
-      },
+      systems,
     }}
     error={error}
     overview={overview}
     events={events}
     reviews={reviews}
     runs={runs}
+    templatePreviews={buildProviderTemplatePreviews()}
     whatsapp={whatsapp}
   />;
 }
