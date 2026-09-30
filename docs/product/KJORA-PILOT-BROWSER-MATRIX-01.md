@@ -18,8 +18,15 @@ Cette matrice exige une Preview isolée et des comptes de développement identif
 3. URL hostile : `next`, rôle, Organization, plan, devise et entitlement externes ne modifient aucun droit.
 4. Multi-Organization : changer d'Organization et vérifier qu'aucune donnée/carte/cache de l'ancienne ne subsiste.
 5. Hors ligne : `/hors-ligne/` reste visible ; `/app`, `/portal`, `/administration` et `/api` ne sont jamais servis depuis le cache.
-6. Fin de mois : la simulation affiche une seule devise, ne change aucun compteur métier et ne déclenche aucun envoi.
+6. Fin de mois : mois local implicite puis mois explicite, neuf compteurs, une seule devise, aucun changement métier et aucun envoi.
 7. Partenaires : candidature FR/EN, suivi privé, état vide, erreur réseau, copie du code/lien.
+8. Centre Admin : dix systèmes, exactement quatre états possibles, noms des variables manquantes seulement, liens internes valides.
+9. Fournisseurs : clé Stripe Live refusée, origine de retour externe refusée, Resend sans preuve non déclaré opérationnel, WhatsApp désactivé.
+10. Documents : brouillon → aperçu → approbation ou report → mise en file seulement si le canal est activé; distinguer avis, quittance et facture SaaS.
+
+## Résultat de ce lot local
+
+Les scénarios authentifiés ci-dessus nécessitent des comptes et une base Preview : **NON EXÉCUTÉS** dans OPERATIONS-03. La compilation des 78 pages et les tests statiques ne remplacent pas cette matrice navigateur. Lighthouse, mobile réel et lecteur d'écran : **NON EXÉCUTÉS** sans navigateur supervisé.
 
 ## Preuves à conserver hors Git
 
