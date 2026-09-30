@@ -12,6 +12,13 @@ import {
   type DeliveryReviewDecision,
   type OperationsActionResult,
 } from "@/modules/platform-admin/operations-actions";
+import {
+  OPERATIONS_SYSTEM_KEYS,
+  type OperationsSystemKey,
+  type OperationsSystemReadiness,
+  type OperationsSystemStatus,
+} from "@/modules/platform-admin/operations-readiness";
+import type { ProviderTemplatePreview } from "@/modules/communications/provider-previews";
 
 // =============================================================================
 // NCE-01 — Vue Admin « Opérations » : compteurs uniquement. Jamais une
@@ -58,15 +65,14 @@ export type OperationsConfig = {
   webhookSecretConfigured: boolean;
   cronSecretConfigured: boolean;
   legalIdentityConfigured: boolean;
-  systems: Record<SystemKey, SystemStatus>;
+  systems: Record<OperationsSystemKey, OperationsSystemReadiness>;
 };
 
-type SystemStatus = "operational" | "configured_disabled" | "configuration_missing" | "attention_required";
-type SystemKey = "owner_app" | "tenant_portal" | "partners" | "africa_billing" | "stripe_test" | "resend" | "whatsapp" | "automations" | "pwa" | "migrations";
-
-const SYSTEM_LINKS: Partial<Record<SystemKey, string>> = {
+const SYSTEM_LINKS: Partial<Record<OperationsSystemKey, string>> = {
   owner_app: "/app", tenant_portal: "/portal", partners: "/administration/partenaires",
-  africa_billing: "/administration/finances", stripe_test: "/app/billing", pwa: "/hors-ligne/",
+  africa_billing: "/administration/finances", stripe_test: "/app/billing",
+  resend: "/app/parametres/communications", whatsapp: "/app/parametres/communications",
+  automations: "/administration/operations#ops-actions-heading", pwa: "/hors-ligne/",
 };
 
 const STATUSES = [
@@ -90,9 +96,10 @@ function Counter({ label, value }: { label: string; value: number | string }) {
   return <div className="admin-counter"><span className="admin-counter__value">{value}</span><span className="admin-counter__label">{label}</span></div>;
 }
 
-export function OperationsView({ overview, runs, reviews, events, whatsapp, config, error }: {
+export function OperationsView({ overview, runs, reviews, events, whatsapp, config, error, templatePreviews }: {
   overview: OperationsOverview | null; runs: OperationRun[] | null; reviews: DeliveryReview[] | null;
   events: ProviderEvent[] | null; whatsapp: WhatsAppOverview | null; config: OperationsConfig; error: "denied" | "failed" | null;
+  templatePreviews: ProviderTemplatePreview[];
 }) {
   const { language } = usePreferences();
   const lang = language === "EN" ? "en" : "fr";
@@ -145,7 +152,7 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
     retry_failed_deliveries: t("Relance des échecs", "Failed delivery retry"),
     delivery_review: t("Décision de revue", "Review decision"),
   };
-  const systemLabels: Record<SystemKey, string> = {
+  const systemLabels: Record<OperationsSystemKey, string> = {
     owner_app: t("Application propriétaire", "Owner application"),
     tenant_portal: t("Portail locataire", "Tenant portal"),
     partners: t("Programme partenaires", "Partner program"),
@@ -157,7 +164,7 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
     pwa: "PWA",
     migrations: t("Migrations", "Migrations"),
   };
-  const statusLabels: Record<SystemStatus, string> = {
+  const statusLabels: Record<OperationsSystemStatus, string> = {
     operational: t("opérationnel", "operational"),
     configured_disabled: t("configuré désactivé", "configured disabled"),
     configuration_missing: t("configuration manquante", "configuration missing"),
@@ -176,8 +183,11 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
       <h2 id="ops-control-heading">{t("Centre de contrôle", "Control center")}</h2>
       <p className="admin-section__lead">{t("État agrégé sans appel fournisseur au rendu et sans valeur secrète.", "Aggregated status without provider calls during rendering and without secret values.")}</p>
       <div className="admin-control-grid">
-        {(Object.keys(config.systems) as SystemKey[]).map((key) => {
-          const content = <><strong>{systemLabels[key]}</strong><span className={`admin-system-status admin-system-status--${config.systems[key]}`}>{statusLabels[config.systems[key]]}</span></>;
+        {OPERATIONS_SYSTEM_KEYS.map((key) => {
+          const readiness = config.systems[key];
+          const content = <><strong>{systemLabels[key]}</strong><span className={`admin-system-status admin-system-status--${readiness.status}`}>{statusLabels[readiness.status]}</span>
+            <small>{readiness.testableNow ? t("Testable maintenant", "Testable now") : t("Non testable sans configuration externe", "Not testable without external configuration")}</small>
+            {readiness.missing.length ? <small>{t("Variables à compléter :", "Variables to complete:")} {readiness.missing.join(", ")}</small> : null}</>;
           return SYSTEM_LINKS[key]
             ? <Link className="admin-control-card" href={SYSTEM_LINKS[key]!} key={key}>{content}</Link>
             : <div className="admin-control-card" key={key}>{content}</div>;
@@ -188,12 +198,21 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
     <section className="admin-section" aria-labelledby="ops-config-heading">
       <h2 id="ops-config-heading">{t("Configuration (noms de variables seulement)", "Configuration (variable names only)")}</h2>
       <div className="admin-table-wrap"><table className="admin-table"><tbody>
-        <tr><th scope="row">{t("Envoi de courriels", "Email delivery")}</th><td>{config.emailOperational ? t("Opérationnel", "Operational") : `${t("Inactif — manquant :", "Inactive — missing:")} ${config.missingEmailVariables.join(", ")}`}</td></tr>
+        <tr><th scope="row">{t("Envoi de courriels", "Email delivery")}</th><td>{config.emailOperational ? t("Configuration complète — preuve fournisseur affichée séparément", "Configuration complete — provider evidence shown separately") : `${t("Inactif — manquant :", "Inactive — missing:")} ${config.missingEmailVariables.join(", ")}`}</td></tr>
         <tr><th scope="row">KJORA_SAAS_AUTO_INVOICING_ENABLED</th><td>{config.saasAutoInvoicing ? t("Activé (écriture réelle)", "Enabled (real writes)") : t("Désactivé (dry-run)", "Disabled (dry-run)")}</td></tr>
         <tr><th scope="row">RESEND_WEBHOOK_SECRET</th><td>{config.webhookSecretConfigured ? t("Configuré", "Configured") : t("Absent", "Missing")}</td></tr>
         <tr><th scope="row">CRON_SECRET</th><td>{config.cronSecretConfigured ? t("Configuré", "Configured") : t("Absent ou trop court", "Missing or too short")}</td></tr>
         <tr><th scope="row">{t("Identité légale de facturation", "Billing legal identity")}</th><td>{config.legalIdentityConfigured ? t("Configurée", "Configured") : t("Absente — courriels SaaS retenus (documents provisoires)", "Missing — SaaS emails held (provisional documents)")}</td></tr>
       </tbody></table></div>
+    </section>
+
+    <section className="admin-section" aria-labelledby="ops-template-preview-heading">
+      <h2 id="ops-template-preview-heading">{t("Aperçus locaux des modèles", "Local template previews")}</h2>
+      <p className="admin-section__lead">{t("Données fictives uniquement. Cette vue ne contacte ni Resend ni Meta et ne déclenche aucun envoi.", "Fictitious data only. This view contacts neither Resend nor Meta and triggers no delivery.")}</p>
+      <div className="admin-table-wrap"><table className="admin-table">
+        <thead><tr><th scope="col">{t("Canal", "Channel")}</th><th scope="col">{t("Modèle", "Template")}</th><th scope="col">FR</th><th scope="col">EN</th><th scope="col">{t("Destinataire fictif", "Fictitious recipient")}</th></tr></thead>
+        <tbody>{templatePreviews.map((preview) => <tr key={`${preview.channel}:${preview.key}`}><td>{preview.channel}</td><td>{preview.key}</td><td>{preview.fr}</td><td>{preview.en}</td><td>{preview.recipientMasked ?? "—"}</td></tr>)}</tbody>
+      </table></div>
     </section>
 
     {overview ? <>

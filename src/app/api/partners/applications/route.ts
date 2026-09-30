@@ -14,6 +14,10 @@ const privateResponse = (body: unknown, init?: ResponseInit) => NextResponse.jso
 
 export async function POST(request: Request) {
   try {
+    const origin = request.headers.get("origin");
+    if (!origin || origin !== new URL(request.url).origin) {
+      return privateResponse({error:"forbidden"},{status:403});
+    }
     const salt=process.env.KJORA_PARTNERS_HASH_SALT?.trim();
     if(!salt || salt.length<32) return privateResponse({error:"temporarily_unavailable"},{status:503});
     const body=await request.json() as Record<string,unknown>;

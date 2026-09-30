@@ -9,6 +9,7 @@ import type {
   CustomerPortalSession,
   WebhookVerification,
 } from "../provider";
+import { stripeReturnUrl } from "../stripe-test-safety";
 
 export type StripeTestGateway = {
   checkout(request: CheckoutRequest, secret: string): Promise<CheckoutSession>;
@@ -17,9 +18,7 @@ export type StripeTestGateway = {
 };
 
 function absoluteReturnUrl(path: string): string {
-  const origin = process.env.KJORA_APP_ORIGIN?.trim();
-  if (!origin || !/^https?:\/\//.test(origin)) throw new Error("STRIPE_TEST_ORIGIN_NOT_CONFIGURED");
-  return new URL(path, origin).toString();
+  return stripeReturnUrl(process.env.KJORA_APP_ORIGIN, path);
 }
 
 const liveGateway: StripeTestGateway = {

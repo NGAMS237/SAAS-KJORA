@@ -7,6 +7,7 @@ import { Bell, BellRing, CheckCheck, Download, ExternalLink, FileCheck2, FileClo
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Card, EmptyState } from "@/core/ui/ui";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
+import type { MonthEndPreview } from "@/modules/documents/month-end";
 import { markAllNotificationsReadAction, setNotificationReadAction } from "@/modules/notifications/actions";
 import { badgeLabel, notificationActionMessage, notificationDisplay, notificationNoticeMessage, parseNotificationNotice } from "@/modules/notifications/model";
 import { clearLocalReadState, setLocalReadState, useNotificationsWithLocalReadState } from "@/modules/notifications/read-state";
@@ -81,6 +82,41 @@ function friendlyDeliveryError(code: string | undefined, t: ReturnType<typeof us
 function useCopy() {
   const { language } = usePreferences();
   return (fr: string, en: string) => language === "FR" ? fr : en;
+}
+
+export function MonthEndPreviewPanel({ preview, selectedMonth, invalidMonth, emailDeliveryEnabled }: {
+  preview: MonthEndPreview | null;
+  selectedMonth: string;
+  invalidMonth: boolean;
+  emailDeliveryEnabled: boolean;
+}) {
+  const t = useCopy();
+  const counters = preview ? [
+    [t("Baux sélectionnés", "Selected leases"), preview.leasesSelected],
+    [t("Échéances", "Dues"), preview.duesSelected],
+    [t("Documents préparés", "Prepared documents"), preview.documentsPrepared],
+    [t("Documents manquants", "Missing documents"), preview.documentsMissing],
+    [t("Brouillons à approuver", "Drafts awaiting approval"), preview.awaitingApproval],
+    [t("Reports", "Deferred"), preview.deferred],
+    [t("Approuvés", "Approved"), preview.approved],
+    [t("En file", "Queued"), preview.queued],
+    [t("Envoyés ou remis", "Sent or delivered"), preview.sent],
+  ] as const : [];
+  return <Card id="month-end-preview">
+    <div className="section-heading"><div><p className="eyebrow">Dry-run</p><h2>{t("Fin de mois Afrique", "Africa month-end")}</h2></div></div>
+    <form action="/app/documents" className="form-grid" method="get">
+      <label className="field"><span>{t("Mois à consulter", "Month to review")}</span><input defaultValue={selectedMonth} name="month" type="month" /></label>
+      <div className="demo-form-actions"><button className="button button--secondary" type="submit">{t("Actualiser l’aperçu", "Refresh preview")}</button>
+        {selectedMonth ? <Link className="button button--secondary" href="/app/documents">{t("Revenir au mois local courant", "Return to current local month")}</Link> : null}</div>
+    </form>
+    {invalidMonth ? <p className="form-feedback form-feedback--error" role="alert">{t("Le mois demandé est invalide; le mois local courant est affiché.", "The requested month is invalid; the current local month is shown.")}</p> : null}
+    {preview ? <><p>{t("Simulation déterministe", "Deterministic simulation")} <strong>{preview.currency}</strong> — {t("sans conversion, écriture, paiement ni envoi.", "without conversion, writes, payment, or delivery.")}</p>
+      <div className="admin-counters">{counters.map(([label, value]) => <div className="admin-counter" key={label}><span className="admin-counter__value">{value}</span><span className="admin-counter__label">{label}</span></div>)}</div>
+      <p className="auth-footnote">{t("Un avis annonce une échéance; une quittance prouve un loyer réglé; la facturation SaaS KJORA reste séparée. L’aperçu ne modifie aucun de ces registres.", "A due notice announces a due; a rent receipt proves paid rent; KJORA SaaS billing remains separate. The preview changes none of these records.")}</p>
+      <div className="admin-actions-row"><Link className="button button--secondary" href="#documents">{t("Voir les documents concernés", "View related documents")}</Link><Link className="button button--secondary" href="/app/activite#notifications">{t("Voir les notifications", "View notifications")}</Link></div>
+      {!emailDeliveryEnabled ? <p className="form-feedback" role="status">{t("Le fournisseur d’envoi est désactivé : prévisualiser, approuver ou reporter reste local; aucun courriel ne part.", "The delivery provider is disabled: previewing, approving, or deferring remains local; no email is sent.")}</p> : null}
+    </> : <p className="form-feedback" role="status">{t("Simulation indisponible. Aucun résultat partiel n’est affiché et aucune écriture n’a été tentée.", "Preview unavailable. No partial result is shown and no write was attempted.")}</p>}
+  </Card>;
 }
 
 function shortDate(value: string | null) {
