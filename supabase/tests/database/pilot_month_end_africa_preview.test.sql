@@ -45,6 +45,15 @@ insert into public.leases (
 ) values
   ('f6000000-0000-4000-8000-00000000000a', 'f2000000-0000-4000-8000-00000000000a', 'f3000000-0000-4000-8000-00000000000a', 'f4000000-0000-4000-8000-00000000000a', 'f5000000-0000-4000-8000-00000000000a', 'active', '2026-01-01', 40000, 2000, 0, 'monthly', 5, 5, 'f1000000-0000-4000-8000-000000000001'),
   ('f6000000-0000-4000-8000-00000000000b', 'f2000000-0000-4000-8000-00000000000b', 'f3000000-0000-4000-8000-00000000000b', 'f4000000-0000-4000-8000-00000000000b', 'f5000000-0000-4000-8000-00000000000b', 'active', '2026-01-01', 50000, 0, 0, 'monthly', 5, 5, 'f1000000-0000-4000-8000-000000000002');
+
+-- Creating an active lease can generate a due according to the database clock.
+-- Remove that unrelated side effect so this preview fixture stays deterministic.
+delete from public.dues
+where organization_id in (
+  'f2000000-0000-4000-8000-00000000000a',
+  'f2000000-0000-4000-8000-00000000000b'
+);
+
 insert into public.dues (
   id, organization_id, lease_id, tenant_id, kind, generation_key, reference,
   period_start, period_end, due_date, notice_date, rent_amount_xaf,
