@@ -6,5 +6,5 @@ export default async function PortalAccountPage() {
   const context = await loadPortalContext();
   if (!context?.activeAccess) notFound();
   const home = await getPortalHome(context.activeAccess.accessId);
-  return <PortalAccountView home={home} language={context.activeAccess.preferredLanguage} />;
+  return <PortalAccountView accessId={context.activeAccess.accessId} home={home} language={context.activeAccess.preferredLanguage} />;
 }

@@ -4,6 +4,7 @@ import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
 import { NotificationSoundToggle } from "@/core/notifications/notification-sound";
 import { PinSecurityPanel } from "@/core/security/pin-controls";
 import type { PortalDocument, PortalDue, PortalHome, PortalLease, PortalPayment } from "@/tenant-portal/model";
+import { PortalWhatsAppPreferences } from "@/tenant-portal/whatsapp-preferences";
 
 type Language = "fr" | "en";
 const copy = (language: Language, fr: string, en: string) => language === "en" ? en : fr;
@@ -76,10 +77,11 @@ export function PortalDocumentsView({ documents, home, language, lease }: { docu
   return <div className="page-stack portal-page"><PageHeader eyebrow={copy(language, "Documents privés", "Private documents")} title={copy(language, "Mes reçus", "My receipts")} description={copy(language, "Aucun lien public permanent n’est créé.", "No permanent public link is created.")} /><PortalLeaseSelector destination="/portal/recus" home={home} language={language} selected={lease} />{documents.length ? <div className="portal-document-list">{documents.map((document) => <Card className="portal-document-card" key={document.documentId}><span className="demo-list-row__icon"><ReceiptText size={19} /></span><div><strong>{document.documentType === "payment_receipt" ? copy(language, "Reçu de paiement", "Payment receipt") : document.documentType === "rent_receipt" ? copy(language, "Quittance", "Rent receipt") : copy(language, "Avis d’échéance", "Due notice")}</strong><span>{document.reference} · {date(document.issuedOn, language)}</span></div>{status(document.status, language)}{document.status !== "invalidated" ? <a className="button button--secondary" href={`/api/tenant-portal/documents/${document.documentId}/download`} target="_blank"><Download size={16} />{copy(language, "Télécharger", "Download")}</a> : null}</Card>)}</div> : <Card><EmptyState icon={ReceiptText} title={copy(language, "Aucun document", "No document")} description={copy(language, "Les reçus et quittances autorisés apparaîtront ici.", "Authorized receipts will appear here.")} /></Card>}</div>;
 }
 
-export function PortalAccountView({ home, language }: { home: PortalHome; language: Language }) {
+export function PortalAccountView({ accessId, home, language }: { accessId: string; home: PortalHome; language: Language }) {
   return <div className="page-stack portal-page"><PageHeader eyebrow={copy(language, "Compte portail", "Portal account")} title={copy(language, "Mon compte", "My account")} description={copy(language, "Cet accès est distinct des membres internes de l’Organization.", "This access is separate from internal Organization members.")} />
     <Card><div className="section-heading"><div><p className="eyebrow">{copy(language, "Identité / contact", "Identity / contact")}</p><h2>{home.tenantName}</h2></div><ShieldCheck size={21} /></div><dl className="record-detail-list"><div><dt>Email</dt><dd>{home.email ?? "—"}</dd></div><div><dt>{copy(language, "Téléphone", "Phone")}</dt><dd>{home.phone ?? "—"}</dd></div></dl></Card>
     <Card><div className="section-heading"><div><p className="eyebrow">{copy(language, "Sécurité / appareil", "Security / device")}</p><h2>{copy(language, "Session protégée", "Protected session")}</h2></div><ShieldCheck size={21} /></div><p>{copy(language, "Votre accès reste actif. Pour votre sécurité, KJORA peut parfois vous demander de vous reconnecter. Le PIN local facultatif verrouille seulement cet appareil.", "Your access remains active. For security, KJORA may occasionally ask you to sign in again. The optional local PIN only locks this device.")}</p></Card>
+    <Card><div className="section-heading"><div><p className="eyebrow">WhatsApp</p><h2>{copy(language,"Préférences de service","Service preferences")}</h2></div></div><PortalWhatsAppPreferences accessId={accessId} hasPhone={Boolean(home.phone)} language={language}/></Card>
     <Card><PinSecurityPanel language={language} /></Card>
     <Card><NotificationSoundToggle language={language} /></Card>
   </div>;
