@@ -1,7 +1,11 @@
-const CACHE_NAME = "kjora-public-v2";
+const CACHE_NAME = "kjora-public-v3";
 const PRECACHE = ["/icon.svg", "/manifest.webmanifest", "/hors-ligne/"];
 const PUBLIC_PAGES = new Set(["/hors-ligne/", "/partenaires", "/partenaires/"]);
-const NEVER_CACHE_PREFIXES = ["/api/", "/app/", "/administration/", "/portal/", "/auth/", "/connexion/", "/onboarding/"];
+const NEVER_CACHE_PREFIXES = [
+  "/api/", "/app/", "/administration/", "/portal/", "/partenaire/", "/auth/",
+  "/connexion/", "/onboarding/", "/invitation/", "/verrouillage/", "/organisation-suspendue/",
+];
+const PRIVATE_RESOURCE_MARKERS = ["/contracts/", "/contrats/", "/documents/", "/financial-documents/", "/factures/", ".pdf"];
 
 function isPublicCacheable(response) {
   const cacheControl = response.headers.get("cache-control") || "";
@@ -24,7 +28,9 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || NEVER_CACHE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
+  if (request.headers.has("authorization") || url.origin !== self.location.origin
+      || NEVER_CACHE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
+      || PRIVATE_RESOURCE_MARKERS.some((marker) => url.pathname.toLowerCase().includes(marker))) return;
 
   if (request.mode === "navigate") {
     if (!PUBLIC_PAGES.has(url.pathname)) return;
