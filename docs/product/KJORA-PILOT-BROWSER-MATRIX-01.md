@@ -33,3 +33,15 @@ Les scénarios authentifiés ci-dessus nécessitent des comptes et une base Prev
 - URL et SHA de Preview, date, navigateur et largeur.
 - Captures sans donnée personnelle, résultat de chaque ligne, logs expurgés.
 - Comptages avant/après des fixtures, puis preuve de nettoyage.
+
+## Extension RESILIENCE-WHATSAPP-04
+
+| Axe | Scénarios supervisés | Preuve locale |
+|---|---|---|
+| Auth | Owner, collaborateur, locataire, partenaire, Admin : session valide/expirée, panne temporaire, interdit, Organization indisponible, invitation expirée, retour OTP interne | statique |
+| PWA | bannière hors ligne, page publique, refus app/portal/partenaire/Admin/API/PDF, retour réseau, mise à jour SW | statique |
+| WhatsApp | déclaré/non déclaré, consentement présent/retiré, changement de numéro, document non approuvé, autre Organization, rôle refusé, FR/EN, mobile/desktop | pur + statique |
+| Documents | aperçu, approbation, PDF mobile, identités, bien, unité, loyer, devise, dépôt, dates, clauses, signature/cachet distincts | régression Node |
+| Admin | site, app, portail, partenaires, paiements, fournisseurs, PWA, migrations, support; aucune fuite | statique |
+
+Fixtures recommandées : Organizations A/B, Owner et collaborateur distincts, locataires FR/EN, partenaire et Admin, documents `draft/approved/ready`, numéros fictifs réservés aux tests. Pour WhatsApp, examiner l'URL puis fermer avant Envoyer.

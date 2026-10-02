@@ -175,6 +175,8 @@
 
 | D-153 | CONFIRMÉ | **OPERATIONS-03 — préparation factuelle et désactivée par défaut.** Le centre opérationnel n'utilise que `operational`, `configured_disabled`, `configuration_missing` et `attention_required`. Une variable présente ne constitue jamais une preuve fournisseur : Stripe Test configuré mais non vérifié reste en attention, Resend n'est opérationnel qu'avec configuration complète et événement fournisseur observé, WhatsApp reste désactivé. L'aperçu fin de mois reste une lecture tenant-scoped sans conversion ni écriture; un mois explicite est accepté, sinon la RPC utilise le fuseau de l'Organization. Toute prévisualisation de communication utilise des données fictives, aucun provider réel. Cette décision n'active ni fournisseur, ni domaine, ni Production et ne modifie aucune migration historique. | 2026-09-30 |
 
+| D-154 | PROPOSÉ — VALIDATION SQL REQUISE | **PILOT-RESILIENCE-WHATSAPP-04 — handoff manuel sans fournisseur.** Le numéro est résolu côté serveur depuis un document approuvé et la fiche locataire; `declared` n'est jamais `verified`. Service et marketing restent séparés. L'ouverture `wa.me` journalise uniquement `whatsapp_open_requested`, sans prouver envoi, livraison ou lecture. Meta Cloud API demeure `configured_disabled`. | 2026-09-30 |
+
 ## Hypothèses / propositions ouvertes
 
 | ID | Statut | Sujet |

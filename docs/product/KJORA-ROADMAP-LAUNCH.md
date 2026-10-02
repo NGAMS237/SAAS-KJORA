@@ -49,3 +49,13 @@ Décision humaine requise après revue navigateur, journaux et incidents. Les é
 - Validation juridique des communications et des conditions partenaires.
 - Activation d'un fournisseur de paiement ou de communication réel.
 - Critères de passage du pilote privé vers un lancement public.
+
+## Lot PILOT-RESILIENCE-WHATSAPP-04 — prêt pour revue de patch
+
+- Reconnexion partenaire avec destination interne validée et actions bilingues.
+- PWA limitée au shell public, bannière réseau et refus explicite du cache privé.
+- Handoff WhatsApp manuel sur document approuvé, sans fournisseur ni fausse confirmation.
+- États/consentements audités par migration additive; Meta Cloud API reste désactivée.
+- Centre Admin étendu au site commercial, WhatsApp manuel, future API et support.
+
+Restent obligatoires : replay complet et pgTAP isolés, matrice authentifiée desktop/mobile, focus/lecteur d'écran et autorisation explicite avant application de la migration. `READY FOR PRODUCTION` demeure NON.

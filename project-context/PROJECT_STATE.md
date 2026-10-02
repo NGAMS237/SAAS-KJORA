@@ -336,3 +336,10 @@
 - Migration `20260830190349_post_6d_settings_deposit_ux.sql` appliquée au seul projet Production KJORA `alvheiwlfzuefljcfrtv` et enregistrée à distance sous `20260831004839_post_6d_settings_deposit_ux` ; aucun backfill, email financier, portail/public ni fournisseur de paiement activé.
 - Validation du patch : TypeScript réussi, ESLint réussi, 128 tests Node réussis, build Next.js 16.3.2 réussi avec 39 pages générées et pgTAP Production transactionnel réussi (`11/11`, rollback). Advisors sans niveau critique ; la nouvelle RPC `SECURITY DEFINER` est volontairement limitée à `authenticated`, contrôle `auth.uid()` et `organization.profile.manage`, avec `PUBLIC`/`anon` révoqués et `search_path` vide.
 - Lot 6D reste en validation fonctionnelle Blaise ; Lot 6E est migré, testé et déployé sur `https://saas-kjora.vercel.app`, mais reste en attente de la validation fonctionnelle explicite de Blaise.
+
+### PILOT-RESILIENCE-WHATSAPP-AUTONOMOUS-04 — état local
+
+- Base isolée `d31ac7ebf02faa0cd9eb48d1c9eb02b50d765a7f`, incluant OPERATIONS-03; aucun distant modifié.
+- PWA : bannière réseau/repli bilingues et cache fermé aux espaces privés, API, contrats, documents et PDF.
+- WhatsApp : handoff manuel consent-aware sur document approuvé, aucun provider/statut de livraison fabriqué. Migration additive et pgTAP créés mais non appliqués/non exécutés faute de PostgreSQL.
+- Identité WhatsApp structurée Owner/partenaire différée; aucune donnée historique écrasée.
