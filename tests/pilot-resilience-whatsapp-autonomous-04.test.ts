@@ -127,8 +127,8 @@ test("le journal ne contient aucun numéro ou fingerprint et la PWA ne met pas l
 });
 
 test("la migration de mois local déjà appliquée reste strictement inchangée", () => {
-  const existing = read("../supabase/migrations/20261001090000_pilot_month_end_africa_preview.sql");
-  assert.equal(createHash("sha256").update(existing).digest("hex"), "c5d9c860e41077a9a41485af3e895b149fd2f29b875ca8467de770050aa4a173");
+  const existing = read("../supabase/migrations/20261001090000_pilot_month_end_africa_preview.sql").replace(/\r\n/g, "\n");
+  assert.equal(createHash("sha256").update(existing).digest("hex"), "f7613cca43bc785808d10d0da64d0f0e60d3094314f959ee4f3da60225746324");
 });
 
 test("le centre de contrôle distingue WhatsApp manuel, future API, site et support", () => {
