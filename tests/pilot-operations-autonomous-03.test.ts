@@ -40,7 +40,8 @@ test("le centre Admin ne confond jamais configuration locale et preuve fournisse
   });
   assert.equal(disabled.stripe_test.status, "configured_disabled");
   assert.equal(disabled.resend.status, "configured_disabled");
-  assert.equal(disabled.whatsapp.status, "configured_disabled");
+  assert.equal(disabled.whatsapp_api.status, "configured_disabled");
+  assert.equal(disabled.whatsapp_manual.status, "attention_required");
 
   const enabled = resolveOperationsReadiness({
     BILLING_PROVIDER_STRIPE_TEST_ENABLED: "1",
