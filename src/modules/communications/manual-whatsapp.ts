@@ -9,7 +9,7 @@ export const SUPPORTED_CALLING_CODES: Record<string, string> = Object.fromEntrie
 
 export function normalizePhoneE164(countryCode: string, nationalNumber: string): string | null {
   const country = phoneDefaultsForCountry(countryCode.trim().toUpperCase());
-  if (!country || !new RegExp(`^[1-9][0-9]{${country.nationalLength - 1}}$`).test(nationalNumber)) return null;
+  if (!country || !new RegExp(country.nationalPattern).test(nationalNumber)) return null;
   return `+${country.callingCode}${nationalNumber}`;
 }
 

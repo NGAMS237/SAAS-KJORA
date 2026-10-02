@@ -177,6 +177,7 @@
 
 | D-154 | PROPOSÉ — VALIDATION SQL REQUISE | **PILOT-RESILIENCE-WHATSAPP-04 — handoff manuel sans fournisseur.** Le numéro est résolu côté serveur depuis un document approuvé et la fiche locataire; `declared` n'est jamais `verified`. Service et marketing restent séparés. L'ouverture `wa.me` journalise uniquement `whatsapp_open_requested`, sans prouver envoi, livraison ou lecture. Meta Cloud API demeure `configured_disabled`. | 2026-09-30 |
 | D-155 | PROPOSÉ — VALIDATION SQL REQUISE | **Correctif WhatsApp v2.** `tenant_confirmed` est distinct de `verified`; catalogue fermé de 14 pays et E.164 strict; préférences Owner/partenaire séparées des droits; marketing locataire par action directe seulement; journaux append-only sans numéro ni fingerprint. | 2026-10-02 |
+| D-156 | PROPOSÉ — VALIDATION SQL REQUISE | **Correctif WhatsApp v3 — motifs nationaux par pays.** Le catalogue TypeScript et SQL conserve un motif fermé par pays au lieu d'interdire globalement le zéro initial. CI accepte les préfixes mobiles `01`, `05`, `07` sur dix chiffres et conserve le zéro après `+225`; BJ exige `01` sur dix chiffres et le conserve après `+229`. Pays, indicatif, national et E.164 doivent concorder exactement; aucune déduction, suppression ou réécriture permissive. | 2026-10-02 |
 
 ## Hypothèses / propositions ouvertes
 

@@ -10,12 +10,12 @@ export function PartnerApplicationForm({locale}:{locale:"fr"|"en"}){
   const [trackingUrl,setTrackingUrl]=useState("");
   const [copied,setCopied]=useState(false);
   const [country,setCountry]=useState("CM");
+  const phoneCountry=SUPPORTED_PHONE_COUNTRIES.find((item)=>item.countryCode===country)!;
   const t=(fr:string,en:string)=>locale==="en"?en:fr;
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setMessage("");
     const form=new FormData(event.currentTarget);
     try {
-      const phoneCountry=SUPPORTED_PHONE_COUNTRIES.find((item)=>item.countryCode===country)!;
       const nationalNumber=String(form.get("nationalNumber")??"");const phoneE164=normalizePhoneE164(country,nationalNumber);
       const response=await fetch("/api/partners/applications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
         name:form.get("name"),email:form.get("email"),partnerType:form.get("partnerType"),motivation:form.get("motivation"),locale,
@@ -40,7 +40,7 @@ export function PartnerApplicationForm({locale}:{locale:"fr"|"en"}){
     <label className="field"><span>{t("Votre projet","Your project")}</span><textarea name="motivation" minLength={20} maxLength={2000} required/></label>
     <fieldset className="form-stack"><legend>{t("Communications personnelles","Personal communications")}</legend>
       <label className="field"><span>{t("Pays du numéro","Phone country")}</span><select value={country} onChange={(event)=>setCountry(event.target.value)}>{SUPPORTED_PHONE_COUNTRIES.map((item)=><option key={item.countryCode} value={item.countryCode}>{item.label[locale]} (+{item.callingCode})</option>)}</select></label>
-      <label className="field"><span>{t("Numéro national sans préfixe 0","National number without leading 0")}</span><input name="nationalNumber" inputMode="numeric" required/></label>
+      <label className="field"><span>{t(`Numéro national — ${phoneCountry.nationalLength} chiffres. Exemple : ${phoneCountry.nationalExample}`,`National number — ${phoneCountry.nationalLength} digits. Example: ${phoneCountry.nationalExample}`)}</span><input name="nationalNumber" inputMode="numeric" pattern={phoneCountry.nationalPattern} placeholder={phoneCountry.nationalExample} required/></label>
       <label className="field"><span>{t("Canal préféré","Preferred channel")}</span><select name="preferredChannel" defaultValue="email"><option value="email">Email</option><option value="whatsapp">WhatsApp</option></select></label>
       <label className="communication-toggle"><input name="whatsappDeclared" value="yes" type="checkbox"/><span>{t("Je déclare utiliser ce numéro sur WhatsApp (non vérifié).","I declare that I use this number on WhatsApp (not verified).")}</span></label>
       <label className="communication-toggle"><input name="serviceConsent" value="yes" type="checkbox"/><span>{t("J’accepte les communications nécessaires au service.","I agree to necessary service communications.")}</span></label>

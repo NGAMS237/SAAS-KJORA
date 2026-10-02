@@ -4,11 +4,15 @@ begin;
 create table private.supported_phone_countries (
   country_code text primary key check (country_code ~ '^[A-Z]{2}$'),
   calling_code text not null unique check (calling_code ~ '^[1-9][0-9]{0,3}$'),
-  national_length smallint not null check (national_length between 6 and 14)
+  national_length smallint not null check (national_length between 6 and 14),
+  national_pattern text not null check (national_pattern ~ '^\^' and national_pattern ~ '\$$')
 );
 insert into private.supported_phone_countries values
- ('CA','1',10),('CM','237',9),('SN','221',9),('CI','225',10),('BJ','229',10),('BF','226',8),('GW','245',9),
- ('ML','223',8),('NE','227',8),('TG','228',8),('NG','234',10),('CD','243',9),('KE','254',9),('ZA','27',9);
+ ('CA','1',10,'^[1-9][0-9]{9}$'),('CM','237',9,'^[1-9][0-9]{8}$'),('SN','221',9,'^[1-9][0-9]{8}$'),
+ ('CI','225',10,'^0[157][0-9]{8}$'),('BJ','229',10,'^01[0-9]{8}$'),('BF','226',8,'^[1-9][0-9]{7}$'),
+ ('GW','245',9,'^[1-9][0-9]{8}$'),('ML','223',8,'^[1-9][0-9]{7}$'),('NE','227',8,'^[1-9][0-9]{7}$'),
+ ('TG','228',8,'^[1-9][0-9]{7}$'),('NG','234',10,'^[1-9][0-9]{9}$'),('CD','243',9,'^[1-9][0-9]{8}$'),
+ ('KE','254',9,'^[1-9][0-9]{8}$'),('ZA','27',9,'^[1-9][0-9]{8}$');
 revoke all on private.supported_phone_countries from public,anon,authenticated;
 
 create or replace function private.assert_supported_whatsapp_phone(p_country_code text,p_calling_code text,p_national_number text,p_phone_e164 text)
@@ -17,7 +21,7 @@ declare c private.supported_phone_countries%rowtype;
 begin
   select * into c from private.supported_phone_countries where country_code=p_country_code;
   if c.country_code is null or p_calling_code is distinct from c.calling_code
-    or p_national_number is null or p_national_number !~ ('^[1-9][0-9]{'||(c.national_length-1)::text||'}$')
+    or p_national_number is null or p_national_number !~ c.national_pattern
     or p_phone_e164 is distinct from ('+'||c.calling_code||p_national_number) then
     raise exception 'invalid_whatsapp_phone' using errcode='22023';
   end if;

@@ -1,11 +1,12 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(66);
+select plan(86);
 
 -- Contrat, privilèges et garde-fous structurels.
 select has_column('public','tenant_communication_preferences','whatsapp_status','état WhatsApp explicite');
 select has_column('public','tenant_communication_preferences','country_code','pays structuré');
 select has_column('public','tenant_communication_preferences','national_number','numéro national structuré');
+select has_column('private','supported_phone_countries','national_pattern','motif national fermé par pays');
 select has_table('public','tenant_whatsapp_consent_events','historique locataire sans numéro');
 select has_table('public','user_communication_preferences','préférences personnelles Owner/partenaire');
 select has_table('public','partner_application_communication_preferences','préférences de candidature partenaire');
@@ -50,6 +51,28 @@ select ok(position('tenant_marketing_consent_requires_tenant_action' in pg_get_f
 select ok(position('coalesce(d.review_status' in pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure))=0,'aucun statut review NULL n’est approuvé implicitement');
 select ok(position('review_status is distinct from ''approved''' in pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure))>0,'seul approved autorise le handoff');
 select ok(null is distinct from 'approved' and 'pending' is distinct from 'approved' and 'rejected' is distinct from 'approved' and 'refused' is distinct from 'approved','NULL, pending, rejected et refused sont tous non approuvés');
+
+-- Le catalogue SQL valide le numéro national significatif exact, sans
+-- supprimer ni déduire aucun chiffre. CI et BJ conservent leur zéro initial.
+select lives_ok($$select private.assert_supported_whatsapp_phone('CA','1','5145550100','+15145550100')$$,'CA reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('CM','237','699001122','+237699001122')$$,'CM reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('SN','221','771234567','+221771234567')$$,'SN reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('CI','225','0701020304','+2250701020304')$$,'CI conserve le zéro du préfixe mobile 07');
+select lives_ok($$select private.assert_supported_whatsapp_phone('BJ','229','0197123456','+2290197123456')$$,'BJ conserve le préfixe national 01');
+select lives_ok($$select private.assert_supported_whatsapp_phone('BF','226','70123456','+22670123456')$$,'BF reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('GW','245','955123456','+245955123456')$$,'GW reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('ML','223','76123456','+22376123456')$$,'ML reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('NE','227','90123456','+22790123456')$$,'NE reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('TG','228','90123456','+22890123456')$$,'TG reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('NG','234','8031234567','+2348031234567')$$,'NG reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('CD','243','812345678','+243812345678')$$,'CD reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('KE','254','712345678','+254712345678')$$,'KE reste accepté');
+select lives_ok($$select private.assert_supported_whatsapp_phone('ZA','27','821234567','+27821234567')$$,'ZA reste accepté');
+select throws_ok($$select private.assert_supported_whatsapp_phone('CI','225','7010203045','+2257010203045')$$,'22023','invalid_whatsapp_phone','CI sans zéro initial est refusé');
+select throws_ok($$select private.assert_supported_whatsapp_phone('CI','225','070102030','+225070102030')$$,'22023','invalid_whatsapp_phone','CI de mauvaise longueur est refusé');
+select throws_ok($$select private.assert_supported_whatsapp_phone('BJ','229','9712345600','+2299712345600')$$,'22023','invalid_whatsapp_phone','BJ sans préfixe 01 est refusé');
+select throws_ok($$select private.assert_supported_whatsapp_phone('BJ','229','019712345','+229019712345')$$,'22023','invalid_whatsapp_phone','BJ de mauvaise longueur est refusé');
+select throws_ok($$select private.assert_supported_whatsapp_phone('CI','225','0701020304','+2250501020304')$$,'22023','invalid_whatsapp_phone','divergence entre numéro national et E164 refusée');
 
 -- Petite fixture contrôlée, multi-Organization et entièrement rollbackée.
 insert into auth.users (id,aud,role,email,email_confirmed_at,created_at,updated_at) values

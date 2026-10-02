@@ -71,29 +71,32 @@ export type PhoneCountry = {
   label: { fr: string; en: string };
   callingCode: string;
   nationalLength: number;
+  nationalPattern: string;
+  nationalExample: string;
 };
 
 /**
  * Catalogue ferme des numéros personnels utilisables dans KJORA. Il reprend
  * tous les pays immobiliers officiellement supportés et le Canada, marché de
- * facturation pilote. Le numéro national est toujours fourni sans préfixe
- * national `0`; aucune déduction permissive n'est effectuée.
+ * facturation pilote. Chaque pays porte son propre motif de numéro national
+ * significatif. Le zéro initial fait notamment partie du numéro pour CI et
+ * BJ : aucun chiffre n'est ajouté, retiré ou déduit implicitement.
  */
 export const SUPPORTED_PHONE_COUNTRIES: readonly PhoneCountry[] = [
-  { countryCode: "CA", label: { fr: "Canada", en: "Canada" }, callingCode: "1", nationalLength: 10 },
-  { countryCode: "CM", label: { fr: "Cameroun", en: "Cameroon" }, callingCode: "237", nationalLength: 9 },
-  { countryCode: "SN", label: { fr: "Sénégal", en: "Senegal" }, callingCode: "221", nationalLength: 9 },
-  { countryCode: "CI", label: { fr: "Côte d'Ivoire", en: "Ivory Coast" }, callingCode: "225", nationalLength: 10 },
-  { countryCode: "BJ", label: { fr: "Bénin", en: "Benin" }, callingCode: "229", nationalLength: 10 },
-  { countryCode: "BF", label: { fr: "Burkina Faso", en: "Burkina Faso" }, callingCode: "226", nationalLength: 8 },
-  { countryCode: "GW", label: { fr: "Guinée-Bissau", en: "Guinea-Bissau" }, callingCode: "245", nationalLength: 9 },
-  { countryCode: "ML", label: { fr: "Mali", en: "Mali" }, callingCode: "223", nationalLength: 8 },
-  { countryCode: "NE", label: { fr: "Niger", en: "Niger" }, callingCode: "227", nationalLength: 8 },
-  { countryCode: "TG", label: { fr: "Togo", en: "Togo" }, callingCode: "228", nationalLength: 8 },
-  { countryCode: "NG", label: { fr: "Nigeria", en: "Nigeria" }, callingCode: "234", nationalLength: 10 },
-  { countryCode: "CD", label: { fr: "RD Congo", en: "DR Congo" }, callingCode: "243", nationalLength: 9 },
-  { countryCode: "KE", label: { fr: "Kenya", en: "Kenya" }, callingCode: "254", nationalLength: 9 },
-  { countryCode: "ZA", label: { fr: "Afrique du Sud", en: "South Africa" }, callingCode: "27", nationalLength: 9 },
+  { countryCode: "CA", label: { fr: "Canada", en: "Canada" }, callingCode: "1", nationalLength: 10, nationalPattern: "^[1-9][0-9]{9}$", nationalExample: "5145550100" },
+  { countryCode: "CM", label: { fr: "Cameroun", en: "Cameroon" }, callingCode: "237", nationalLength: 9, nationalPattern: "^[1-9][0-9]{8}$", nationalExample: "699001122" },
+  { countryCode: "SN", label: { fr: "Sénégal", en: "Senegal" }, callingCode: "221", nationalLength: 9, nationalPattern: "^[1-9][0-9]{8}$", nationalExample: "771234567" },
+  { countryCode: "CI", label: { fr: "Côte d'Ivoire", en: "Ivory Coast" }, callingCode: "225", nationalLength: 10, nationalPattern: "^0[157][0-9]{8}$", nationalExample: "0701020304" },
+  { countryCode: "BJ", label: { fr: "Bénin", en: "Benin" }, callingCode: "229", nationalLength: 10, nationalPattern: "^01[0-9]{8}$", nationalExample: "0197123456" },
+  { countryCode: "BF", label: { fr: "Burkina Faso", en: "Burkina Faso" }, callingCode: "226", nationalLength: 8, nationalPattern: "^[1-9][0-9]{7}$", nationalExample: "70123456" },
+  { countryCode: "GW", label: { fr: "Guinée-Bissau", en: "Guinea-Bissau" }, callingCode: "245", nationalLength: 9, nationalPattern: "^[1-9][0-9]{8}$", nationalExample: "955123456" },
+  { countryCode: "ML", label: { fr: "Mali", en: "Mali" }, callingCode: "223", nationalLength: 8, nationalPattern: "^[1-9][0-9]{7}$", nationalExample: "76123456" },
+  { countryCode: "NE", label: { fr: "Niger", en: "Niger" }, callingCode: "227", nationalLength: 8, nationalPattern: "^[1-9][0-9]{7}$", nationalExample: "90123456" },
+  { countryCode: "TG", label: { fr: "Togo", en: "Togo" }, callingCode: "228", nationalLength: 8, nationalPattern: "^[1-9][0-9]{7}$", nationalExample: "90123456" },
+  { countryCode: "NG", label: { fr: "Nigeria", en: "Nigeria" }, callingCode: "234", nationalLength: 10, nationalPattern: "^[1-9][0-9]{9}$", nationalExample: "8031234567" },
+  { countryCode: "CD", label: { fr: "RD Congo", en: "DR Congo" }, callingCode: "243", nationalLength: 9, nationalPattern: "^[1-9][0-9]{8}$", nationalExample: "812345678" },
+  { countryCode: "KE", label: { fr: "Kenya", en: "Kenya" }, callingCode: "254", nationalLength: 9, nationalPattern: "^[1-9][0-9]{8}$", nationalExample: "712345678" },
+  { countryCode: "ZA", label: { fr: "Afrique du Sud", en: "South Africa" }, callingCode: "27", nationalLength: 9, nationalPattern: "^[1-9][0-9]{8}$", nationalExample: "821234567" },
 ];
 
 export function phoneDefaultsForCountry(countryCode: string): PhoneCountry | null {

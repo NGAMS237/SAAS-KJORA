@@ -26,12 +26,37 @@ test("la PWA refuse explicitement toutes les surfaces privées et les documents"
 
 test("la normalisation produit des E.164 supportés sans unicité ni identité implicite", () => {
   assert.equal(SUPPORTED_PHONE_COUNTRIES.length, 14);
-  for (const code of ["CA","CM","SN","CI","BJ","BF","GW","ML","NE","TG","NG","CD","KE","ZA"]) assert.ok(SUPPORTED_PHONE_COUNTRIES.some((entry)=>entry.countryCode===code));
-  assert.equal(normalizePhoneE164("CM", "699001122"), "+237699001122");
-  assert.equal(normalizePhoneE164("CA", "5145550100"), "+15145550100");
-  assert.equal(normalizePhoneE164("CI", "7080910112"), "+2257080910112");
+  for (const entry of SUPPORTED_PHONE_COUNTRIES) {
+    assert.equal(normalizePhoneE164(entry.countryCode, entry.nationalExample), `+${entry.callingCode}${entry.nationalExample}`);
+  }
+  assert.equal(normalizePhoneE164("CI", "0701020304"), "+2250701020304");
+  assert.equal(normalizePhoneE164("BJ", "0197123456"), "+2290197123456");
   assert.equal(normalizePhoneE164("XX", "699001122"), null);
   for (const invalid of ["069900112", "69900112", "6990011220", "699 001 122", "+237699001122", "69900A122"]) assert.equal(normalizePhoneE164("CM", invalid), null);
+  for (const invalid of ["7010203045", "070102030", "0801020304"]) assert.equal(normalizePhoneE164("CI", invalid), null);
+  for (const invalid of ["97123456", "0097123456", "019712345"]) assert.equal(normalizePhoneE164("BJ", invalid), null);
+});
+
+test("les catalogues TypeScript et SQL portent exactement les mêmes motifs nationaux", () => {
+  const sql = read("../supabase/migrations/20261002120000_pilot_resilience_whatsapp_manual_04.sql");
+  assert.match(sql, /national_pattern text not null/);
+  assert.match(sql, /p_national_number !~ c\.national_pattern/);
+  for (const entry of SUPPORTED_PHONE_COUNTRIES) {
+    const literal = `('${entry.countryCode}','${entry.callingCode}',${entry.nationalLength},'${entry.nationalPattern}')`;
+    assert.ok(sql.includes(literal), `catalogue SQL divergent pour ${entry.countryCode}`);
+  }
+  assert.doesNotMatch(sql, /national_length-1|national_length\s*-\s*1/);
+});
+
+test("les formulaires affichent un exemple par pays sans consigne globale sur le zéro", () => {
+  const forms = [
+    read("../src/modules/communications/personal-whatsapp-preferences.tsx"),
+    read("../src/modules/tenancy/tenant-whatsapp-preferences.tsx"),
+    read("../src/modules/partners/application-form.tsx"),
+  ].join("\n");
+  assert.match(forms, /nationalExample/);
+  assert.match(forms, /nationalPattern/);
+  assert.doesNotMatch(forms, /sans (?:0|préfixe 0) initial|sans préfixe 0|no leading 0|without leading 0/i);
 });
 
 test("le contexte serveur du handoff est fermé, bilingue et tolère un nom vide", () => {
@@ -77,7 +102,7 @@ test("la migration est additive, consent-aware, append-only et garde le fourniss
   for (const parameter of ["p_whatsapp_declared", "p_service_consent", "p_marketing_consent"]) assert.match(sql, new RegExp(`${parameter} is null`));
   assert.match(sql, /old\.whatsapp_status in \('tenant_confirmed','verified'\)/); assert.match(sql, /whatsapp_status=next_status/);
   assert.match(sql, /tenant_marketing_consent_requires_tenant_action/); assert.match(sql, /pg_advisory_xact_lock/);
-  assert.match(sql, /supported_phone_countries/); assert.match(sql, /national_length/);
+  assert.match(sql, /supported_phone_countries/); assert.match(sql, /national_length/); assert.match(sql, /national_pattern/);
   assert.match(sql, /set search_path=''/); assert.match(sql, /revoke all .* from public,anon/);
   assert.doesNotMatch(sql, /phone_fingerprint|unique\s*\([^)]*phone|provider\s*=\s*'meta'|status\s*=\s*'sent'/i);
   assert.match(read("../src/modules/communications/whatsapp-provider.ts"), /enabled: false/);

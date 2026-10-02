@@ -342,5 +342,5 @@
 - Base isolée `d31ac7ebf02faa0cd9eb48d1c9eb02b50d765a7f`, incluant OPERATIONS-03; aucun distant modifié.
 - PWA : bannière réseau/repli bilingues et cache fermé aux espaces privés, API, contrats, documents et PDF.
 - WhatsApp : handoff manuel consent-aware sur document approuvé, aucun provider/statut de livraison fabriqué. Migration additive et pgTAP créés mais non appliqués/non exécutés faute de PostgreSQL.
-- Correctif v2 local : catalogue téléphone fermé de 14 pays, préférences Owner/partenaire/locataire structurées, `tenant_confirmed` séparé de `verified`, consentement marketing locataire direct seulement et journaux sans téléphone/fingerprint.
+- Correctif v3 local : catalogue téléphone fermé de 14 pays avec motifs nationaux identiques en TypeScript et SQL; CI conserve les préfixes mobiles `01`/`05`/`07`, BJ exige et conserve `01`; préférences Owner/partenaire/locataire structurées, `tenant_confirmed` séparé de `verified`, consentement marketing locataire direct seulement et journaux sans téléphone/fingerprint.
 - Migration et pgTAP restent non appliqués/non exécutés tant qu'aucun PostgreSQL isolé n'est disponible; fournisseur WhatsApp toujours désactivé.

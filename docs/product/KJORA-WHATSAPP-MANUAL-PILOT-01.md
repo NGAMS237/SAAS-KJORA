@@ -16,7 +16,7 @@ L'utilisateur décide seul d'appuyer sur Envoyer. KJORA affiche qu'il ne peut co
 
 Service et marketing sont séparés. Le marketing est désactivé par défaut et seul le locataire peut l'accepter pour son dossier; un bailleur ne peut jamais le faire à sa place. Source, version, date et retrait sont audités; l'Admin ne peut fabriquer un consentement.
 
-Le catalogue fermé comprend CA, CM, SN, CI, BJ, BF, GW, ML, NE, TG, NG, CD, KE et ZA. Pays, indicatif, longueur nationale et E.164 doivent correspondre exactement; le numéro national commence par 1–9 et ne contient que des chiffres. Les journaux de consentement ne stockent ni numéro ni empreinte dérivée.
+Le catalogue fermé comprend CA, CM, SN, CI, BJ, BF, GW, ML, NE, TG, NG, CD, KE et ZA. Pays, indicatif, motif national et E.164 doivent correspondre exactement. Chaque pays a son propre motif fermé : la Côte d’Ivoire accepte les préfixes mobiles `01`, `05` et `07` sur dix chiffres et le Bénin exige `01` devant l’ancien numéro à huit chiffres. Ces zéros font partie du numéro national significatif et sont conservés après `+225` ou `+229`. Aucun indicatif ou chiffre n’est ajouté, retiré ou déduit. Les journaux de consentement ne stockent ni numéro ni empreinte dérivée.
 
 ## Refus serveur
 
