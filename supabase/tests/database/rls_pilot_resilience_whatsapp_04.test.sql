@@ -1,12 +1,15 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(49);
+select plan(66);
 
 -- Contrat, privilèges et garde-fous structurels.
 select has_column('public','tenant_communication_preferences','whatsapp_status','état WhatsApp explicite');
 select has_column('public','tenant_communication_preferences','country_code','pays structuré');
 select has_column('public','tenant_communication_preferences','national_number','numéro national structuré');
-select has_table('public','tenant_whatsapp_consent_events','historique de consentement');
+select has_table('public','tenant_whatsapp_consent_events','historique locataire sans numéro');
+select has_table('public','user_communication_preferences','préférences personnelles Owner/partenaire');
+select has_table('public','partner_application_communication_preferences','préférences de candidature partenaire');
+select has_table('public','personal_whatsapp_consent_events','historique personnel sans numéro');
 select has_function('public','save_tenant_whatsapp_preferences_v2',array['uuid','text','text','text','text','boolean','text','boolean','boolean','text','text'],'sauvegarde v2 présente');
 select has_function('public','prepare_manual_whatsapp_handoff',array['uuid'],'handoff manuel présent');
 select has_function('public','set_my_tenant_whatsapp_status',array['uuid','text','text'],'confirmation portail présente');
@@ -35,13 +38,18 @@ select ok(not has_function_privilege('anon','public.save_tenant_whatsapp_prefere
 select ok(has_function_privilege('authenticated','public.save_tenant_whatsapp_preferences_v2(uuid,text,text,text,text,boolean,text,boolean,boolean,text,text)','execute'),'authenticated passe par RPC gardée');
 select ok(position('receipt.share' in pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure))>0,'capability document exigée');
 select ok(position('tenant.manage' in pg_get_functiondef('public.save_tenant_whatsapp_preferences_v2(uuid,text,text,text,text,boolean,text,boolean,boolean,text,text)'::regprocedure))>0,'capability locataire exigée');
-select ok(position('organization_id=doc.organization_id' in replace(pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure),' ',''))>0,'Organization du document imposée');
+select ok(position('organization_id=d.organization_id' in replace(pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure),' ',''))>0,'Organization du document imposée');
 select ok(position('whatsapp_open_requested' in pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure))>0,'ouverture seule auditée');
-select trigger_is('public','tenant_whatsapp_consent_events','tenant_whatsapp_consent_events_immutable','private','prevent_tenant_whatsapp_event_mutation','historique append-only');
+select trigger_is('public','tenant_whatsapp_consent_events','tenant_whatsapp_consent_events_immutable','private','prevent_whatsapp_event_mutation','historique append-only');
 select ok(not has_function_privilege('anon','public.set_my_tenant_whatsapp_status(uuid,text,text)','execute'),'anon ne confirme pas');
 select ok(has_function_privilege('authenticated','public.set_my_tenant_whatsapp_status(uuid,text,text)','execute'),'portail authentifié passe par RPC');
 select ok(position('has_active_tenant_portal_access' in pg_get_functiondef('public.set_my_tenant_whatsapp_status(uuid,text,text)'::regprocedure))>0,'accès portail actif exigé');
-select ok(position('tenant_verified' in pg_get_functiondef('public.set_my_tenant_whatsapp_status(uuid,text,text)'::regprocedure))>0 and position('disabled' in pg_get_functiondef('public.set_my_tenant_whatsapp_status(uuid,text,text)'::regprocedure))>0,'confirmation et retrait audités');
+select ok(position('tenant_confirmed' in pg_get_functiondef('public.set_my_tenant_whatsapp_status(uuid,text,text)'::regprocedure))>0 and position('disabled' in pg_get_functiondef('public.set_my_tenant_whatsapp_status(uuid,text,text)'::regprocedure))>0,'confirmation portail distincte de verified et retrait audités');
+select ok(position('pg_advisory_xact_lock' in pg_get_functiondef('public.save_tenant_whatsapp_preferences_v2(uuid,text,text,text,text,boolean,text,boolean,boolean,text,text)'::regprocedure))>0,'première sauvegarde sérialisée avant upsert');
+select ok(position('tenant_marketing_consent_requires_tenant_action' in pg_get_functiondef('public.save_tenant_whatsapp_preferences_v2(uuid,text,text,text,text,boolean,text,boolean,boolean,text,text)'::regprocedure))>0,'le bailleur ne peut pas consentir au marketing');
+select ok(position('coalesce(d.review_status' in pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure))=0,'aucun statut review NULL n’est approuvé implicitement');
+select ok(position('review_status is distinct from ''approved''' in pg_get_functiondef('public.prepare_manual_whatsapp_handoff(uuid)'::regprocedure))>0,'seul approved autorise le handoff');
+select ok(null is distinct from 'approved' and 'pending' is distinct from 'approved' and 'rejected' is distinct from 'approved' and 'refused' is distinct from 'approved','NULL, pending, rejected et refused sont tous non approuvés');
 
 -- Petite fixture contrôlée, multi-Organization et entièrement rollbackée.
 insert into auth.users (id,aud,role,email,email_confirmed_at,created_at,updated_at) values
@@ -76,23 +84,30 @@ reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000003',true);
-select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','000000001','+237000000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'42501','forbidden','sans membership ni capability, la sauvegarde est refusée');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'42501','forbidden','sans membership ni capability, la sauvegarde est refusée');
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000002',true);
-select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','000000001','+237000000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'42501','forbidden','Owner d’une autre Organization refusé');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'42501','forbidden','Owner d’une autre Organization refusé');
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000001',true);
 select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a',null,null,null,null,false,'in_app',false,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_preferences','les paramètres structurés NULL sont refusés');
-select lives_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','000000001','+237000000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'Owner autorisé enregistre une déclaration et un consentement service');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','1','699000001','+1699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','indicatif incohérent refusé');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','069900000','+237069900000',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','préfixe national zéro refusé');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','69900AB01','+23769900AB01',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','caractères non numériques refusés');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','69900001','+23769900001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','longueur nationale incorrecte refusée');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','XX','999','699000001','+999699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','pays non supporté refusé');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000002',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','E164 incohérent refusé');
+select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'whatsapp',true,true,'owner_form','wa04-v1')$$,'42501','tenant_marketing_consent_requires_tenant_action','le bailleur ne peut pas consentir au marketing');
+select lives_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'Owner autorisé enregistre une déclaration et un consentement service');
 reset role;
 
 select is((select whatsapp_status from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'declared','une saisie Owner ne devient jamais verified');
 select ok((select whatsapp_marketing_consented_at is null from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'marketing reste désactivé par défaut');
-select ok((select phone_fingerprint ~ '^[a-f0-9]{64}$' from public.tenant_whatsapp_consent_events where tenant_id='a4300000-0000-4000-8000-00000000000a' order by id desc limit 1),'historique conserve seulement une empreinte du numéro');
+select ok(not exists(select 1 from information_schema.columns where table_schema='public' and table_name in ('tenant_whatsapp_consent_events','personal_whatsapp_consent_events') and column_name in ('phone_e164','phone_fingerprint','national_number')),'aucun numéro ni fingerprint n’entre dans le journal');
 select throws_ok($$update public.tenant_whatsapp_consent_events set action='disabled' where tenant_id='a4300000-0000-4000-8000-00000000000a'$$,'55000','whatsapp_consent_history_is_immutable','le registre refuse réellement toute modification');
 
 set local role authenticated;
@@ -103,7 +118,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000001',true);
 select throws_ok($$select public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000c')$$,'22023','document_not_approved','document non approuvé refusé');
-select is(public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000a')->>'phoneE164','+237000000001','le destinataire est résolu côté serveur');
+select is(public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000a')->>'phoneE164','+237699000001','le destinataire est résolu côté serveur');
 select is(public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000a')->>'language','fr','la langue sûre du locataire est conservée');
 reset role;
 
@@ -113,8 +128,10 @@ select is((select count(*) from public.whatsapp_outbox where organization_id='a4
 update public.tenant_communication_preferences set whatsapp_status='verified' where tenant_id='a4300000-0000-4000-8000-00000000000a';
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000001',true);
-select is(public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','000000001','+237000000001',true,'whatsapp',true,false,'owner_form','wa04-v1')->>'whatsappStatus','verified','une sauvegarde identique conserve et restitue verified');
-select lives_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','000000001','+237000000001',true,'in_app',false,false,'owner_form','wa04-v1')$$,'le consentement service peut être retiré sans effacer l’historique');
+select is(public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')->>'whatsappStatus','verified','une sauvegarde identique conserve et restitue verified');
+select is(public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000002','+237699000002',true,'whatsapp',true,false,'owner_form','wa04-v1')->>'whatsappStatus','declared','un changement de numéro perd tout statut confirmé ou verified');
+select ok((select whatsapp_marketing_consented_at is null from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'le changement ne restaure aucun consentement marketing');
+select lives_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'in_app',false,false,'owner_form','wa04-v1')$$,'le consentement service peut être retiré sans effacer l’historique');
 select throws_ok($$select public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000a')$$,'22023','whatsapp_not_available','un consentement retiré bloque le handoff');
 reset role;
 
@@ -126,9 +143,9 @@ insert into public.tenant_portal_sessions(id,organization_id,access_id,tenant_id
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000004',true);
 select set_config('request.jwt.claims','{"sub":"a4100000-0000-4000-8000-000000000004","role":"authenticated","session_id":"session-wa04-tenant-a"}',true);
-select lives_ok($$select public.set_my_tenant_whatsapp_status('a4500000-0000-4000-8000-00000000000a','confirm','wa04-v1')$$,'le locataire confirme depuis une session portail active');
+select lives_ok($$select public.set_my_tenant_whatsapp_status('a4500000-0000-4000-8000-00000000000a','confirm_service','wa04-v1')$$,'le locataire confirme le service depuis une session portail active');
 reset role;
-select is((select whatsapp_status from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'verified','la confirmation du locataire produit verified');
+select is((select whatsapp_status from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'tenant_confirmed','la confirmation du locataire ne produit jamais verified');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000004',true);
@@ -136,7 +153,7 @@ select set_config('request.jwt.claims','{"sub":"a4100000-0000-4000-8000-00000000
 select lives_ok($$select public.set_my_tenant_whatsapp_status('a4500000-0000-4000-8000-00000000000a','disable','wa04-v1')$$,'le locataire retire son consentement depuis le portail');
 reset role;
 select ok((select whatsapp_status='disabled' and whatsapp_transactional_revoked_at is not null from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'le retrait désactive WhatsApp et date la révocation');
-select is((select count(*) from public.tenant_whatsapp_consent_events where tenant_id='a4300000-0000-4000-8000-00000000000a' and action in ('tenant_verified','disabled')),2::bigint,'confirmation et retrait restent dans le registre append-only');
+select is((select count(*) from public.tenant_whatsapp_consent_events where tenant_id='a4300000-0000-4000-8000-00000000000a' and action in ('tenant_confirmed','disabled')),2::bigint,'confirmation et retrait restent dans le registre append-only');
 
 select * from finish();
 rollback;

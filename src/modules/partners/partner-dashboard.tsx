@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PersonalWhatsAppPreferencesForm, type PersonalWhatsAppPreferences } from "@/modules/communications/personal-whatsapp-preferences";
 
 type PartnerCode = { code: string; status: string; campaign: string | null };
 type PartnerDashboardData = {
@@ -8,7 +9,7 @@ type PartnerDashboardData = {
   codes: PartnerCode[]; rewards: Record<string, number>;
 };
 
-export function PartnerDashboardView({ data, commercialSiteUrl }: { data: PartnerDashboardData; commercialSiteUrl: string | null }) {
+export function PartnerDashboardView({ data, commercialSiteUrl, communicationPreferences }: { data: PartnerDashboardData; commercialSiteUrl: string | null; communicationPreferences: PersonalWhatsAppPreferences }) {
   const [copied, setCopied] = useState<string | null>(null);
   async function copy(value: string, key: string) {
     await navigator.clipboard.writeText(value);
@@ -34,5 +35,6 @@ export function PartnerDashboardView({ data, commercialSiteUrl }: { data: Partne
         {(["pending","approved","paid","cancelled"] as const).map((status) => <div className="admin-counter" key={status}><span className="admin-counter__value">{data.rewards[status] ?? 0}</span><span className="admin-counter__label">{status}</span></div>)}</div>
     </section>
     <p className="auth-footnote">Aucune donnée de loyer, locataire, contrat ou paiement privé n’est exposée. / No private rent, tenant, contract or payment data is exposed.</p>
+    <section aria-labelledby="partner-communications"><h2 id="partner-communications">Communications personnelles / Personal communications</h2><PersonalWhatsAppPreferencesForm initial={communicationPreferences}/></section>
   </section></main>;
 }

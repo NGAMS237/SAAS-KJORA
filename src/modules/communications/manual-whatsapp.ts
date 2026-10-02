@@ -1,19 +1,16 @@
-export const WHATSAPP_STATES = ["unknown", "declared", "verified", "disabled"] as const;
+import { phoneDefaultsForCountry, SUPPORTED_PHONE_COUNTRIES } from "../../core/currency/metadata.ts";
+
+export const WHATSAPP_STATES = ["unknown", "declared", "tenant_confirmed", "verified", "disabled"] as const;
 export type WhatsAppState = (typeof WHATSAPP_STATES)[number];
 
-export const SUPPORTED_CALLING_CODES: Record<string, string> = {
-  CA: "1", CM: "237", CD: "243", CI: "225", KE: "254", NG: "234", SN: "221", ZA: "27",
-};
+export const SUPPORTED_CALLING_CODES: Record<string, string> = Object.fromEntries(
+  SUPPORTED_PHONE_COUNTRIES.map((entry) => [entry.countryCode, entry.callingCode]),
+);
 
 export function normalizePhoneE164(countryCode: string, nationalNumber: string): string | null {
-  const callingCode = SUPPORTED_CALLING_CODES[countryCode.trim().toUpperCase()];
-  if (!callingCode) return null;
-  let digits = nationalNumber.replace(/[^0-9]/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.startsWith(callingCode)) digits = digits.slice(callingCode.length);
-  digits = digits.replace(/^0+/, "");
-  const candidate = `+${callingCode}${digits}`;
-  return /^\+[1-9][0-9]{7,14}$/.test(candidate) ? candidate : null;
+  const country = phoneDefaultsForCountry(countryCode.trim().toUpperCase());
+  if (!country || !new RegExp(`^[1-9][0-9]{${country.nationalLength - 1}}$`).test(nationalNumber)) return null;
+  return `+${country.callingCode}${nationalNumber}`;
 }
 
 export type ManualWhatsAppContext = {
@@ -26,6 +23,19 @@ const DOCUMENT_LABELS: Record<ManualWhatsAppContext["documentType"], [string, st
   due_notice: ["avis d’échéance", "due notice"], payment_receipt: ["reçu de paiement", "payment receipt"],
   rent_receipt: ["quittance de loyer", "rent receipt"], account_statement: ["état de compte", "account statement"],
 };
+
+const DOCUMENT_TYPES = new Set(Object.keys(DOCUMENT_LABELS));
+
+export function normalizeManualWhatsAppContext(value: unknown): ManualWhatsAppContext | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.phoneE164 !== "string" || !/^\+[1-9][0-9]{7,14}$/.test(raw.phoneE164)) return null;
+  if (typeof raw.documentType !== "string" || !DOCUMENT_TYPES.has(raw.documentType)) return null;
+  const displayName = typeof raw.displayName === "string" && raw.displayName.trim() ? raw.displayName.trim().slice(0, 120) : "KJORA";
+  const language: "fr" | "en" = raw.language === "en" ? "en" : "fr";
+  const period = (item: unknown) => typeof item === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item) ? item : null;
+  return { phoneE164: raw.phoneE164, displayName, language, documentType: raw.documentType as ManualWhatsAppContext["documentType"], periodStart: period(raw.periodStart), periodEnd: period(raw.periodEnd) };
+}
 
 export function buildManualWhatsAppMessage(context: ManualWhatsAppContext): string {
   const english = context.language === "en";

@@ -15,11 +15,13 @@ valeur. Aucun lien privé permanent n'est créé dans ce lot.
 
 ## Extension pilote manuelle — lot 04
 
-La migration additive `20261002120000_pilot_resilience_whatsapp_manual_04.sql` étend la préférence locataire existante; elle ne crée pas une seconde file. Elle distingue strictement le numéro enregistré, les états `unknown`, `declared`, `verified`, `disabled`, les consentements WhatsApp de service et marketing, l'ouverture manuelle, l'envoi API officiel, la livraison et la lecture fournisseur.
+La migration additive `20261002120000_pilot_resilience_whatsapp_manual_04.sql` étend la préférence locataire existante; elle ne crée pas une seconde file. Elle distingue strictement `unknown`, `declared`, `tenant_confirmed`, `verified` et `disabled`. Un clic portail ne peut produire que `tenant_confirmed`; `verified` reste réservé à une future preuve OTP ou fournisseur.
 
-« Ouvrir WhatsApp » exige un document `ready` approuvé, `receipt.share`, une Organization active, un numéro `declared` ou `verified` et un consentement de service non retiré. Le navigateur fournit seulement l'identifiant du document. La RPC journalise `whatsapp_open_requested` avec une empreinte, jamais `sent`, `delivered` ou `read`. Le PDF privé doit être téléchargé et joint manuellement.
+« Ouvrir WhatsApp » exige explicitement `status = ready` et `review_status = approved`, `receipt.share`, une Organization active, un numéro admissible et un consentement service non retiré. `NULL`, pending, rejected, refused ou tout autre état ne sont jamais assimilés à approved. Le navigateur fournit seulement l'identifiant du document. La RPC journalise l'ouverture sans numéro ni empreinte, jamais `sent`, `delivered` ou `read`. La réponse portant `phoneE164` et l'URL `wa.me` est `private, no-store`.
 
-Un changement de numéro annule l'état `verified`. L'historique append-only conserve une empreinte SHA-256, pas le numéro en clair; aucune unicité globale n'est imposée. Les profils Owner et partenaire conservent leurs sources historiques : leur collecte WhatsApp structurée attend la validation du texte de consentement et de la responsabilité de saisie.
+La validation s'appuie sur un catalogue fermé de 14 pays partagé avec l'application. Un changement de numéro annule `tenant_confirmed` et `verified` et ne restaure aucun consentement révoqué. Les premières sauvegardes concurrentes sont sérialisées par verrou transactionnel. Les historiques append-only ne conservent ni numéro ni empreinte; aucune unicité globale n'est imposée.
+
+Les préférences personnelles Owner/partenaire sont séparées du dossier locataire et ne donnent aucun rôle. La candidature partenaire possède sa propre préférence. Le bailleur peut enregistrer une déclaration et le consentement de service du locataire, mais toute tentative de créer son consentement marketing est refusée. Le marketing locataire n'est accepté que par action directe du portail.
 
 ### Future Meta Cloud API — toujours désactivée
 

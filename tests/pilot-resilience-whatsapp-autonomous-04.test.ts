@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { buildManualWhatsAppMessage, buildWhatsAppUrl, normalizePhoneE164 } from "../src/modules/communications/manual-whatsapp.ts";
+import { buildManualWhatsAppMessage, buildWhatsAppUrl, normalizeManualWhatsAppContext, normalizePhoneE164 } from "../src/modules/communications/manual-whatsapp.ts";
+import { SUPPORTED_PHONE_COUNTRIES } from "../src/core/currency/metadata.ts";
 import { safeNextPath } from "../src/core/auth/safe-next-path.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -24,11 +25,19 @@ test("la PWA refuse explicitement toutes les surfaces privées et les documents"
 });
 
 test("la normalisation produit des E.164 supportés sans unicité ni identité implicite", () => {
-  assert.equal(normalizePhoneE164("CM", "06 99 00 11 22"), "+237699001122");
-  assert.equal(normalizePhoneE164("CA", "+1 514 555 0100"), "+15145550100");
-  assert.equal(normalizePhoneE164("CI", "07-08-09-10-11"), "+225708091011");
+  assert.equal(SUPPORTED_PHONE_COUNTRIES.length, 14);
+  for (const code of ["CA","CM","SN","CI","BJ","BF","GW","ML","NE","TG","NG","CD","KE","ZA"]) assert.ok(SUPPORTED_PHONE_COUNTRIES.some((entry)=>entry.countryCode===code));
+  assert.equal(normalizePhoneE164("CM", "699001122"), "+237699001122");
+  assert.equal(normalizePhoneE164("CA", "5145550100"), "+15145550100");
+  assert.equal(normalizePhoneE164("CI", "7080910112"), "+2257080910112");
   assert.equal(normalizePhoneE164("XX", "699001122"), null);
-  assert.equal(normalizePhoneE164("CM", "12"), null);
+  for (const invalid of ["069900112", "69900112", "6990011220", "699 001 122", "+237699001122", "69900A122"]) assert.equal(normalizePhoneE164("CM", invalid), null);
+});
+
+test("le contexte serveur du handoff est fermé, bilingue et tolère un nom vide", () => {
+  assert.equal(normalizeManualWhatsAppContext({phoneE164:"+237699001122",displayName:"",language:"xx",documentType:"rent_receipt",periodStart:"2026-10-01",periodEnd:null})?.displayName,"KJORA");
+  assert.equal(normalizeManualWhatsAppContext({phoneE164:"+237699001122",displayName:"A",language:"en",documentType:"unknown",periodStart:null,periodEnd:null}),null);
+  assert.equal(normalizeManualWhatsAppContext({phoneE164:"bad",displayName:"A",language:"en",documentType:"due_notice",periodStart:null,periodEnd:null}),null);
 });
 
 test("le handoff manuel est bilingue, encodé et ne promet aucun envoi", () => {
@@ -44,6 +53,8 @@ test("la route résout le numéro côté serveur à partir du seul document", ()
   const route = read("../src/app/api/communications/whatsapp/manual/route.ts");
   assert.match(route, /documentId/); assert.doesNotMatch(route, /body\.(phone|organization|role)/);
   assert.match(route, /prepare_manual_whatsapp_handoff/); assert.doesNotMatch(route, /status\s*[:=]\s*["'](?:sent|delivered|read)["']/);
+  assert.match(route, /Cache-Control["']\s*:\s*["']private, no-store/);
+  assert.match(route, /normalizeManualWhatsAppContext/);
 });
 
 test("le locataire peut confirmer ou retirer WhatsApp uniquement via son accès portail actif", () => {
@@ -51,22 +62,43 @@ test("le locataire peut confirmer ou retirer WhatsApp uniquement via son accès 
   const route = read("../src/app/api/tenant-portal/whatsapp/route.ts");
   const view = read("../src/tenant-portal/whatsapp-preferences.tsx");
   assert.match(sql, /set_my_tenant_whatsapp_status/); assert.match(sql, /has_active_tenant_portal_access/);
-  assert.match(sql, /p_action not in \('confirm','disable'\)/); assert.match(sql, /service_consent_source='tenant_portal'/);
-  assert.match(route, /\["confirm", "disable"\]/); assert.doesNotMatch(route, /phone|organizationId|role/);
-  assert.match(view, /Confirm WhatsApp/); assert.match(view, /Withdraw consent/); assert.match(view, /Marketing remains disabled/);
+  assert.match(sql, /p_action not in \('confirm_service','disable','consent_marketing','revoke_marketing'\)/); assert.match(sql, /'tenant_confirmed'/);
+  assert.match(route, /confirm_service/); assert.match(route, /consent_marketing/); assert.doesNotMatch(route, /organizationId|role/);
+  assert.match(route, /private, no-store/); assert.match(view, /Confirm for service/); assert.match(view, /Accept optional marketing/); assert.doesNotMatch(view, /Confirm WhatsApp/);
 });
 
 test("la migration est additive, consent-aware, append-only et garde le fournisseur disabled", () => {
   const sql = read("../supabase/migrations/20261002120000_pilot_resilience_whatsapp_manual_04.sql");
-  for (const state of ["unknown", "declared", "verified", "disabled"]) assert.match(sql, new RegExp(`'${state}'`));
+  for (const state of ["unknown", "declared", "tenant_confirmed", "verified", "disabled"]) assert.match(sql, new RegExp(`'${state}'`));
   for (const value of ["service_consent_source", "service_consent_version", "marketing_consent_source", "marketing_consent_version", "number_changed", "whatsapp_open_requested"]) assert.match(sql, new RegExp(value));
-  assert.match(sql, /before update or delete/); assert.match(sql, /receipt\.share/); assert.match(sql, /status <> 'ready'/);
-  for (const parameter of ["p_country_code", "p_calling_code", "p_national_number", "p_phone_e164"]) assert.match(sql, new RegExp(`${parameter} is null`));
+  assert.match(sql, /before update or delete/); assert.match(sql, /receipt\.share/); assert.match(sql, /status is distinct from 'ready'/);
+  assert.match(sql, /review_status is distinct from 'approved'/); assert.doesNotMatch(sql, /coalesce\([^\n]*review_status[^\n]*approved/);
+  for (const parameter of ["p_country_code", "p_calling_code", "p_national_number", "p_phone_e164"]) assert.match(sql, new RegExp(parameter));
   for (const parameter of ["p_whatsapp_declared", "p_service_consent", "p_marketing_consent"]) assert.match(sql, new RegExp(`${parameter} is null`));
-  assert.match(sql, /previous\.whatsapp_status = 'verified'/); assert.match(sql, /whatsapp_status=next_status/);
+  assert.match(sql, /old\.whatsapp_status in \('tenant_confirmed','verified'\)/); assert.match(sql, /whatsapp_status=next_status/);
+  assert.match(sql, /tenant_marketing_consent_requires_tenant_action/); assert.match(sql, /pg_advisory_xact_lock/);
+  assert.match(sql, /supported_phone_countries/); assert.match(sql, /national_length/);
   assert.match(sql, /set search_path=''/); assert.match(sql, /revoke all .* from public,anon/);
-  assert.doesNotMatch(sql, /unique\s*\([^)]*phone|provider\s*=\s*'meta'|status\s*=\s*'sent'/i);
+  assert.doesNotMatch(sql, /phone_fingerprint|unique\s*\([^)]*phone|provider\s*=\s*'meta'|status\s*=\s*'sent'/i);
   assert.match(read("../src/modules/communications/whatsapp-provider.ts"), /enabled: false/);
+});
+
+test("Owner et partenaire disposent d’une source personnelle, distincte des autorisations", () => {
+  const sql=read("../supabase/migrations/20261002120000_pilot_resilience_whatsapp_manual_04.sql");
+  for(const value of ["user_communication_preferences","partner_application_communication_preferences","save_my_whatsapp_preferences","submit_partner_application_v2"])assert.match(sql,new RegExp(value));
+  assert.match(read("../src/app/(internal)/app/profil/page.tsx"),/PersonalWhatsAppPreferencesForm/);
+  assert.match(read("../src/modules/partners/partner-dashboard.tsx"),/PersonalWhatsAppPreferencesForm/);
+  assert.match(read("../src/modules/partners/application-form.tsx"),/marketingConsent/);
+  assert.match(read("../src/app/api/profile/whatsapp/route.ts"),/private, no-store/);
+  assert.match(read("../src/modules/tenancy/views.tsx"),/TenantWhatsAppPreferencesForm/);
+  assert.match(read("../src/app/api/tenancy/whatsapp/route.ts"),/marketingConsent!==false/);
+});
+
+test("le journal ne contient aucun numéro ou fingerprint et la PWA ne met pas les réponses privées en cache", () => {
+  const sql=read("../supabase/migrations/20261002120000_pilot_resilience_whatsapp_manual_04.sql");
+  const eventBlocks=[...sql.matchAll(/create table public\.(?:tenant|personal)_whatsapp_consent_events \(([\s\S]*?)\n\);/g)].map((match)=>match[1]);
+  assert.equal(eventBlocks.length,2);for(const block of eventBlocks)assert.doesNotMatch(block,/phone_e164|phone_fingerprint|national_number/);
+  const sw=read("../public/sw.js");assert.match(sw,/private\|no-store/);assert.match(sw,/\/api\//);
 });
 
 test("la migration de mois local déjà appliquée reste strictement inchangée", () => {
