@@ -1,14 +1,17 @@
 export const OPERATIONS_SYSTEM_KEYS = [
+  "commercial_site",
   "owner_app",
   "tenant_portal",
   "partners",
   "africa_billing",
   "stripe_test",
   "resend",
-  "whatsapp",
+  "whatsapp_manual",
+  "whatsapp_api",
   "automations",
   "pwa",
   "migrations",
+  "support",
 ] as const;
 
 export type OperationsSystemKey = (typeof OPERATIONS_SYSTEM_KEYS)[number];
@@ -83,6 +86,9 @@ export function resolveOperationsReadiness(env: EnvSource, signals: {
   if (env.CRON_SECRET?.trim() && env.CRON_SECRET.trim().length < 16) cronMissing.push("CRON_SECRET");
 
   return {
+    commercial_site: env.KJORA_COMMERCIAL_SITE_URL?.trim()
+      ? configured("attention_required", { testableNow: true, externalConfigurationRequired: true })
+      : configured("configuration_missing", { missing: ["KJORA_COMMERCIAL_SITE_URL"], externalConfigurationRequired: true }),
     owner_app: configured("operational", { testableNow: true }),
     tenant_portal: configured("operational", { testableNow: true }),
     partners: configured("operational", { testableNow: true }),
@@ -102,11 +108,13 @@ export function resolveOperationsReadiness(env: EnvSource, signals: {
           testableNow: true,
           externalConfigurationRequired: !signals.resendProviderEvidence,
         }),
-    whatsapp: configured("configured_disabled", { externalConfigurationRequired: true }),
+    whatsapp_manual: configured("attention_required", { testableNow: true }),
+    whatsapp_api: configured("configured_disabled", { externalConfigurationRequired: true }),
     automations: cronMissing.length
       ? configured("configuration_missing", { missing: [...new Set(cronMissing)], externalConfigurationRequired: true })
       : configured(signals.automationRunObserved ? "operational" : "attention_required", { testableNow: true }),
     pwa: configured("operational", { testableNow: true }),
     migrations: configured("attention_required", { externalConfigurationRequired: true }),
+    support: configured("attention_required", { externalConfigurationRequired: true }),
   };
 }

@@ -19,6 +19,7 @@ import type { FinancialDocumentSummary } from "@/modules/documents/model";
 import { FinancialDocumentsPanel } from "@/modules/documents/views";
 import { TenantPortalAccessManagement } from "@/tenant-portal/access-management";
 import type { PortalAccessStatus } from "@/tenant-portal/model";
+import { TenantWhatsAppPreferencesForm } from "@/modules/tenancy/tenant-whatsapp-preferences";
 import {
   calendarEntryProration,
   calendarEntryProrationDetail,
@@ -288,6 +289,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
           </> : <p>{t("Aucun bail actif n’est relié à ce dossier.", "No active lease is linked to this record.")}</p>}
         </Card>
       </div>
+      {canManage ? <Card><div className="section-heading"><div><p className="eyebrow">WhatsApp</p><h2>{t("Préférences du locataire","Tenant preferences")}</h2></div></div><TenantWhatsAppPreferencesForm tenantId={tenant.id}/></Card> : null}
 
       <Card id="historique" className="tenant-history-card">
         <div className="section-heading"><div><p className="eyebrow">{t("Historique", "History")}</p><h2>{t("Locations", "Leases")}</h2></div><History size={21} /></div>

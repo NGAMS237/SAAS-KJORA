@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Bell, BellRing, CheckCheck, Download, ExternalLink, FileCheck2, FileClock, FileText, Mail, Send, TriangleAlert, X } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Card, EmptyState } from "@/core/ui/ui";
+import { ManualWhatsAppButton } from "@/modules/communications/manual-whatsapp-button";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
 import type { MonthEndPreview } from "@/modules/documents/month-end";
 import { markAllNotificationsReadAction, setNotificationReadAction } from "@/modules/notifications/actions";
@@ -242,6 +243,7 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
         <button className="button button--secondary" disabled={busy} onClick={() => void review("defer")} type="button">{t("Différer", "Defer")}</button>
       </> : null}
       {canShare && reviewStatus === "approved" ? <button className="button button--secondary" disabled={busy || document.status === "invalidated"} onClick={onSendClick} type="button"><Send size={15} />{busy ? t("Envoi…", "Sending…") : t("Envoyer par email", "Send by email")}</button> : null}
+      {canShare && reviewStatus === "approved" ? <ManualWhatsAppButton disabled={busy || document.status !== "ready"} documentId={document.id} /> : null}
     </div>
     {modal === "missing_email" ? <EmailMissingModal onClose={() => setModal(null)} tenantId={document.tenantId} /> : null}
     {modal === "unavailable" ? <EmailUnavailableModal downloadHref={downloadHref} onClose={() => setModal(null)} /> : null}

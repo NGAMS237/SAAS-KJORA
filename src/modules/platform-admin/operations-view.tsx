@@ -69,10 +69,13 @@ export type OperationsConfig = {
 };
 
 const SYSTEM_LINKS: Partial<Record<OperationsSystemKey, string>> = {
+  commercial_site: "/",
   owner_app: "/app", tenant_portal: "/portal", partners: "/administration/partenaires",
   africa_billing: "/administration/finances", stripe_test: "/app/billing",
-  resend: "/app/parametres/communications", whatsapp: "/app/parametres/communications",
+  resend: "/app/parametres/communications", whatsapp_manual: "/app/parametres/communications",
+  whatsapp_api: "/administration/operations#ops-whatsapp-heading",
   automations: "/administration/operations#ops-actions-heading", pwa: "/hors-ligne/",
+  support: "/aide",
 };
 
 const STATUSES = [
@@ -153,16 +156,19 @@ export function OperationsView({ overview, runs, reviews, events, whatsapp, conf
     delivery_review: t("Décision de revue", "Review decision"),
   };
   const systemLabels: Record<OperationsSystemKey, string> = {
+    commercial_site: t("Site commercial", "Commercial site"),
     owner_app: t("Application propriétaire", "Owner application"),
     tenant_portal: t("Portail locataire", "Tenant portal"),
     partners: t("Programme partenaires", "Partner program"),
     africa_billing: t("Facturation Afrique", "Africa billing"),
     stripe_test: "Stripe Test",
     resend: "Resend",
-    whatsapp: "WhatsApp",
+    whatsapp_manual: t("WhatsApp manuel", "Manual WhatsApp"),
+    whatsapp_api: t("Future API WhatsApp", "Future WhatsApp API"),
     automations: t("Automatisations", "Automations"),
     pwa: "PWA",
     migrations: t("Migrations", "Migrations"),
+    support: "Support",
   };
   const statusLabels: Record<OperationsSystemStatus, string> = {
     operational: t("opérationnel", "operational"),

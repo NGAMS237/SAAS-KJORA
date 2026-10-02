@@ -66,3 +66,14 @@ Pendant ce pilote, garder le provider désactivé et les secrets absents. Aucun 
 ## Historique Supabase
 
 `20261001090000_pilot_month_end_africa_preview.sql` est considéré aligné sur KJORA Dev et ne doit pas être modifié. Les écarts historiques antérieurs sont inventoriés seulement; aucun `db pull`, `db push`, `migration repair` ou `db reset` n'est autorisé par ce runbook.
+
+## Validation supervisée du lot 04
+
+1. Rejouer toutes les migrations sur une base jetable puis appliquer `20261002120000_pilot_resilience_whatsapp_manual_04.sql`; lancer toute la suite pgTAP.
+2. Prouver les refus anon, cross-Organization, capability absente, consentement absent/retiré et document non approuvé. Seul l'événement append-only d'ouverture peut être ajouté.
+3. Inspecter Cache Storage hors ligne : aucune page privée, API, PDF, contrat ou document.
+4. Avec des fixtures, cliquer « Ouvrir WhatsApp », examiner `wa.me`, fermer sans envoyer; vérifier qu'aucun statut `sent/delivered/read` n'existe.
+5. Changer le numéro et prouver la perte de `verified` et l'abandon de l'ancien destinataire.
+6. Ne définir aucune variable Meta : l'adapter officiel reste `disabled`.
+
+Rollback Preview seulement : révoquer les nouvelles RPC, supprimer trigger/table d'événements puis colonnes additives après conservation des preuves. Jamais sur Dev/Production sans mandat séparé.

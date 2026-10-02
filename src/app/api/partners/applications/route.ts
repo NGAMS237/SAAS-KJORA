@@ -3,6 +3,8 @@ import { createHash, createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
 import { requireSupabasePublicConfig } from "@/lib/supabase/config";
 import { isPartnerType, PARTNER_TERMS_VERSION } from "@/modules/partners/program";
+import { phoneDefaultsForCountry } from "@/core/currency/metadata";
+import { normalizePhoneE164 } from "@/modules/communications/manual-whatsapp";
 
 export const runtime = "nodejs";
 
@@ -24,15 +26,20 @@ export async function POST(request: Request) {
     if (body.termsAccepted !== true || body.termsVersion !== PARTNER_TERMS_VERSION || !isPartnerType(body.partnerType)) {
       return privateResponse({error:"terms_or_partner_type_invalid"},{status:400});
     }
+    const phoneCountry=typeof body.countryCode==="string"?phoneDefaultsForCountry(body.countryCode):null;
+    if(!phoneCountry||body.callingCode!==phoneCountry.callingCode||typeof body.nationalNumber!=="string"||body.phoneE164!==normalizePhoneE164(phoneCountry.countryCode,body.nationalNumber)
+      ||typeof body.whatsappDeclared!=="boolean"||typeof body.serviceConsent!=="boolean"||typeof body.marketingConsent!=="boolean"||!["email","whatsapp"].includes(String(body.preferredChannel)))return privateResponse({error:"invalid_communication_preferences"},{status:400});
     const token=crypto.randomUUID()+crypto.randomUUID();
     const ip=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const {url,publishableKey}=requireSupabasePublicConfig();
     const supabase=createClient(url,publishableKey,{auth:{persistSession:false,autoRefreshToken:false}});
-    const {data,error}=await supabase.rpc("submit_partner_application",{
+    const {data,error}=await supabase.rpc("submit_partner_application_v2",{
       p_name:String(body.name??""),p_email:String(body.email??""),p_partner_type:String(body.partnerType??""),
       p_locale:String(body.locale??"fr"),p_motivation:String(body.motivation??""),p_terms_version:PARTNER_TERMS_VERSION,
       p_status_token_hash:digest(token),
       p_submitter_fingerprint:createHmac("sha256",salt).update(`${ip}:${String(body.email??"").toLowerCase()}`).digest("hex"),
+      p_country_code:phoneCountry.countryCode,p_calling_code:phoneCountry.callingCode,p_national_number:body.nationalNumber,p_phone_e164:body.phoneE164,
+      p_whatsapp_declared:body.whatsappDeclared,p_preferred_channel:body.preferredChannel,p_service_consent:body.serviceConsent,p_marketing_consent:body.marketingConsent,p_consent_version:"partner-application-v1",
     });
     if(error) return privateResponse({error:error.code==="P0001"?"rate_limited":"invalid_application"},{status:error.code==="P0001"?429:400});
     return privateResponse({applicationId:data.applicationId,status:data.status,statusToken:token},{status:201});
