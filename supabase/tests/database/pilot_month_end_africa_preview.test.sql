@@ -38,6 +38,12 @@ insert into public.units (id, organization_id, property_id, label, type, created
 insert into public.tenants (id, organization_id, full_name, email, created_by) values
   ('f5000000-0000-4000-8000-00000000000a', 'f2000000-0000-4000-8000-00000000000a', 'Locataire A', 'tenant-a-month-end@kjora.test', 'f1000000-0000-4000-8000-000000000001'),
   ('f5000000-0000-4000-8000-00000000000b', 'f2000000-0000-4000-8000-00000000000b', 'Locataire B', 'tenant-b-month-end@kjora.test', 'f1000000-0000-4000-8000-000000000002');
+-- This test exercises the read-only preview, not lease activation. Disable only
+-- the lifecycle trigger while creating the controlled leases so current_date
+-- cannot add unrelated dues. DDL is transactional and the final rollback
+-- restores the trigger state even if an assertion fails.
+alter table public.leases disable trigger leases_sync_financial_lifecycle;
+
 insert into public.leases (
   id, organization_id, property_id, unit_id, tenant_id, status, start_date,
   base_rent_xaf, recurring_charges_xaf, security_deposit_xaf, billing_frequency,
@@ -46,13 +52,7 @@ insert into public.leases (
   ('f6000000-0000-4000-8000-00000000000a', 'f2000000-0000-4000-8000-00000000000a', 'f3000000-0000-4000-8000-00000000000a', 'f4000000-0000-4000-8000-00000000000a', 'f5000000-0000-4000-8000-00000000000a', 'active', '2026-01-01', 40000, 2000, 0, 'monthly', 5, 5, 'f1000000-0000-4000-8000-000000000001'),
   ('f6000000-0000-4000-8000-00000000000b', 'f2000000-0000-4000-8000-00000000000b', 'f3000000-0000-4000-8000-00000000000b', 'f4000000-0000-4000-8000-00000000000b', 'f5000000-0000-4000-8000-00000000000b', 'active', '2026-01-01', 50000, 0, 0, 'monthly', 5, 5, 'f1000000-0000-4000-8000-000000000002');
 
--- Creating an active lease can generate a due according to the database clock.
--- Remove that unrelated side effect so this preview fixture stays deterministic.
-delete from public.dues
-where organization_id in (
-  'f2000000-0000-4000-8000-00000000000a',
-  'f2000000-0000-4000-8000-00000000000b'
-);
+alter table public.leases enable trigger leases_sync_financial_lifecycle;
 
 insert into public.dues (
   id, organization_id, lease_id, tenant_id, kind, generation_key, reference,
