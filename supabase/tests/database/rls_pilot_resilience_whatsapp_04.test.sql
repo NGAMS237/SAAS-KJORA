@@ -117,7 +117,7 @@ reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000001',true);
-select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a',null,null,null,null,false,'in_app',false,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_preferences','les paramètres structurés NULL sont refusés');
+select throws_ok($select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a',null,null,null,null,false,'in_app',false,false,'owner_form','wa04-v1')$,'22023','invalid_whatsapp_phone','les paramètres structurés NULL sont refusés par la validation du téléphone');
 select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','1','699000001','+1699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','indicatif incohérent refusé');
 select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','069900000','+237069900000',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','préfixe national zéro refusé');
 select throws_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','69900AB01','+23769900AB01',true,'whatsapp',true,false,'owner_form','wa04-v1')$$,'22023','invalid_whatsapp_phone','caractères non numériques refusés');
@@ -153,10 +153,10 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','a4100000-0000-4000-8000-000000000001',true);
 select is(public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'whatsapp',true,false,'owner_form','wa04-v1')->>'whatsappStatus','verified','une sauvegarde identique conserve et restitue verified');
 select is(public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000002','+237699000002',true,'whatsapp',true,false,'owner_form','wa04-v1')->>'whatsappStatus','declared','un changement de numéro perd tout statut confirmé ou verified');
-select ok((select whatsapp_marketing_consented_at is null from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'le changement ne restaure aucun consentement marketing');
-select lives_ok($$select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'in_app',false,false,'owner_form','wa04-v1')$$,'le consentement service peut être retiré sans effacer l’historique');
-select throws_ok($$select public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000a')$$,'22023','whatsapp_not_available','un consentement retiré bloque le handoff');
+select lives_ok($select public.save_tenant_whatsapp_preferences_v2('a4300000-0000-4000-8000-00000000000a','CM','237','699000001','+237699000001',true,'in_app',false,false,'owner_form','wa04-v1')$,'le consentement service peut être retiré sans effacer l’historique');
+select throws_ok($select public.prepare_manual_whatsapp_handoff('a4400000-0000-4000-8000-00000000000a')$,'22023','whatsapp_not_available','un consentement retiré bloque le handoff');
 reset role;
+select ok((select whatsapp_marketing_consented_at is null from public.tenant_communication_preferences where tenant_id='a4300000-0000-4000-8000-00000000000a'),'le changement ne restaure aucun consentement marketing');
 
 insert into public.tenant_portal_accesses(id,organization_id,tenant_id,user_id,status,invited_email,preferred_language,invited_by,accepted_at) values
  ('a4500000-0000-4000-8000-00000000000a','a4200000-0000-4000-8000-00000000000a','a4300000-0000-4000-8000-00000000000a','a4100000-0000-4000-8000-000000000004','active','tenant-wa04@kjora.test','fr','a4100000-0000-4000-8000-000000000001',now());
