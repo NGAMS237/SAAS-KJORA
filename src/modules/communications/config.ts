@@ -54,7 +54,13 @@ export function resolveTransactionalEmailStatus(env: EnvSource): TransactionalEm
 }
 
 export function isProductionDeployment(env: EnvSource): boolean {
-  return env[COMMUNICATIONS_ENV.vercelEnv]?.trim() === "production";
+  const vercelEnv = env[COMMUNICATIONS_ENV.vercelEnv]?.trim();
+  if (vercelEnv) return vercelEnv === "production";
+  // A self-hosted `next start` process (including Hostinger) has no
+  // VERCEL_ENV. In that case NODE_ENV=production must remain fail-closed:
+  // the simulated delivery action is a development/Preview tool, never a
+  // production affordance.
+  return env.NODE_ENV?.trim() === "production";
 }
 
 /** Génération automatique des factures SaaS en écriture réelle (sinon dry-run). */

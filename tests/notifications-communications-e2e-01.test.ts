@@ -596,6 +596,9 @@ test("configuration : booléens et NOMS de variables, jamais de valeur secrète"
   assert.equal(senderAddress("<script>"), null);
   assert.equal(isProductionDeployment({ VERCEL_ENV: "production" }), true);
   assert.equal(isProductionDeployment({ VERCEL_ENV: "preview" }), false);
+  assert.equal(isProductionDeployment({ NODE_ENV: "production" }), true);
+  assert.equal(isProductionDeployment({ NODE_ENV: "development" }), false);
+  assert.equal(isProductionDeployment({ VERCEL_ENV: "preview", NODE_ENV: "production" }), false);
   assert.equal(isSaasAutoInvoicingEnabled({}), false);
   assert.equal(expectedCronAuthorization({ CRON_SECRET: "short" }), null);
   assert.equal(expectedCronAuthorization({ CRON_SECRET: "a-long-enough-cron-secret" }), "Bearer a-long-enough-cron-secret");

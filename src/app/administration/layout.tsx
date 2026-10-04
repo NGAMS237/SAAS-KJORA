@@ -41,14 +41,16 @@ export default async function AdministrationLayout({ children }: { children: Rea
     notFound();
   }
 
-  // ADMIN-01.1 : `VERCEL_ENV` est fourni automatiquement par la plateforme
-  // Vercel ("production" | "preview" | "development") — aucune variable
-  // nouvelle à créer, aucune déduction depuis le nom d'hôte. Lu côté serveur
-  // uniquement ; jamais transmis tel quel si absent (repli explicite "dev"
-  // pour tout environnement hors Vercel, jamais confondu avec Production).
-  const vercelEnv = process.env.VERCEL_ENV === "production" || process.env.VERCEL_ENV === "preview"
-    ? process.env.VERCEL_ENV
-    : "development";
+  // Vercel fournit VERCEL_ENV. Un serveur Node autonome (Hostinger) ne le
+  // fournit pas : `next start` s'exécute alors avec NODE_ENV=production.
+  // VERCEL_ENV garde la priorité afin qu'une Preview Vercel (dont NODE_ENV
+  // vaut aussi production) demeure correctement étiquetée Preview.
+  const vercelEnv = process.env.VERCEL_ENV === "preview"
+    ? "preview"
+    : process.env.VERCEL_ENV === "production"
+      || (!process.env.VERCEL_ENV && process.env.NODE_ENV === "production")
+      ? "production"
+      : "development";
 
   return (
     <AdminShell environment={vercelEnv} userEmail={decision.userEmail} commercialSiteUrl={resolveCommercialSiteUrl()}>
