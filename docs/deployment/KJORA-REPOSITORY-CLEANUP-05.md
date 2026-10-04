@@ -20,7 +20,7 @@ Aucun fichier. Aucun doublon ou artefact suivi ne disposait d'une preuve suffisa
 - Les fondations Stripe Test, fournisseurs Afrique et WhatsApp : elles sont importées ou documentent des interfaces futures. Aucun adaptateur Afrique ou Meta n'est activé.
 - `public/sw.js` : cache limité aux ressources publiques; API, espaces privés et documents sont exclus.
 - Les fontes `next/font/google` : elles sont intégrées au build. Leur téléchargement exige une sortie HTTPS pendant `npm run build`; ce point est une précondition Hostinger documentée, pas un motif de suppression.
-- Le domaine commercial historique `kjora.kjemostudios.com` : il vise le site commercial séparé et ne remplace pas le domaine applicatif `kjorapp.com`.
+- `kjorapp.com` est le domaine principal du produit KJORA : le même déploiement y dessert le site public et l'application. `kjora.kjemostudios.com` n'est plus le site commercial KJORA de référence.
 - Le fallback `SUPABASE_SERVICE_ROLE_KEY` : alias historique encore lu côté serveur. Il est classé obsolète; le nouveau déploiement doit employer `SUPABASE_SECRET_KEY` uniquement.
 
 ## Décision différée

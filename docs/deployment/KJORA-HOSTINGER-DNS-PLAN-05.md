@@ -6,7 +6,7 @@ Ce document ne constitue pas une autorisation de modifier le DNS.
 
 | Nom | Usage | Action future supervisée |
 |---|---|---|
-| `kjorapp.com` | application Next.js KJORA | Rattacher au projet Node.js Hostinger avec la valeur A/AAAA ou CNAME fournie par hPanel. |
+| `kjorapp.com` | site public et application Next.js KJORA, même produit et même déploiement | Rattacher au projet Node.js Hostinger avec la valeur A/AAAA ou CNAME fournie par hPanel. |
 | `www.kjorapp.com` | alias public | Rediriger en HTTPS 301 vers `https://kjorapp.com`, en conservant chemin et paramètres. |
 | `mail.kjorapp.com` | expédition transactionnelle Resend | Conserver les enregistrements SPF/DKIM/DMARC existants; ne pas le rattacher à l'application. |
 

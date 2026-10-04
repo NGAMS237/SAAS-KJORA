@@ -53,7 +53,7 @@ Le code refuse les clés live. Les URL Checkout et portail sont construites depu
 
 | Variable | Côté client/serveur | Secrète | Obligatoire au build | Obligatoire au runtime | Valeur attendue | Fournisseur | État pilote |
 |---|---|---:|---:|---:|---|---|---|
-| `BILLING_KILL_SWITCH_ALL` | serveur | non | non | non | `1` pour couper tous les providers; absent sinon | KJORA | aucun provider Afrique enregistré |
+| `BILLING_KILL_SWITCH_ALL` | serveur | non | non | oui | `1` au premier déploiement pour couper tous les providers | KJORA | fermé |
 | `FLUTTERWAVE_SANDBOX_SECRET_KEY` | serveur | oui | non | non | clé sandbox future | Flutterwave | aucun adaptateur |
 | `FLUTTERWAVE_SANDBOX_WEBHOOK_SECRET` | serveur | oui | non | non | secret sandbox futur | Flutterwave | aucun adaptateur |
 | `BILLING_KILL_SWITCH_FLUTTERWAVE` | serveur | non | non | non | `1` si une future intégration doit être coupée | KJORA | facultatif |
@@ -92,7 +92,7 @@ Les trois placeholders Meta restent vides et ne peuvent activer le provider. Le 
 | Variable | Côté client/serveur | Secrète | Obligatoire au build | Obligatoire au runtime | Valeur attendue | Fournisseur | État pilote |
 |---|---|---:|---:|---:|---|---|---|
 | `KJORA_PARTNERS_HASH_SALT` | serveur | oui | non | pour les candidatures | sel aléatoire fort | KJORA | à saisir manuellement avant test partenaire |
-| `KJORA_COMMERCIAL_SITE_URL` | serveur | non | non | non | URL HTTPS du site commercial | KJORA | lien Admin facultatif |
+| `KJORA_COMMERCIAL_SITE_URL` | serveur | non | non | non | `https://kjorapp.com`, site public et application servis par le même déploiement | KJORA | lien Admin préparé |
 | `NEXT_PUBLIC_KJORA_CONTACT_EMAIL` | public | non | oui | non | adresse destinée à être publique ou vide | KJORA | facultatif |
 | `KJORA_BILLING_LEGAL_NAME` | serveur | non | non | conditionnel | dénomination officielle validée | KJORA | décision juridique requise |
 | `KJORA_BILLING_LEGAL_ADDRESS` | serveur | non | non | non | adresse officielle validée | KJORA | facultatif |
@@ -114,11 +114,13 @@ Si le nom légal est absent, les PDF restent explicitement provisoires; aucune i
 
 ```text
 BILLING_PROVIDER_STRIPE_TEST_ENABLED=0
+BILLING_KILL_SWITCH_ALL=1
 BILLING_KILL_SWITCH_STRIPE=1
 KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED=false
 KJORA_SAAS_AUTO_INVOICING_ENABLED=false
 KJORA_WHATSAPP_PROVIDER=disabled
 KJORA_APP_ORIGIN=https://kjorapp.com
+KJORA_COMMERCIAL_SITE_URL=https://kjorapp.com
 ```
 
 Les champs secrets restent vides dans Git. Blaise les saisit uniquement dans le gestionnaire de variables Hostinger, jamais dans un chat, un ticket, un rapport ou un fichier versionné.

@@ -110,14 +110,14 @@ test("la route de webhook traite un provider coupé exactement comme un provider
   assert.match(killedBlock, /status:\s*503/);
 });
 
-test(".env.example ferme Stripe au premier déploiement et ne contient aucune valeur sensible de coupe-circuit", () => {
+test(".env.example ferme tous les providers et Stripe au premier déploiement sans valeur sensible", () => {
   const lines = ENV_EXAMPLE.split("\n").filter((l) => l.includes("BILLING_KILL_SWITCH"));
   assert.ok(lines.length >= 2, "au moins le coupe-circuit global et un coupe-circuit par provider doivent être documentés");
   for (const line of lines) {
     if (line.trim().startsWith("#")) continue;
     const [name, value = ""] = line.trim().split("=", 2);
-    if (name === "BILLING_KILL_SWITCH_STRIPE") {
-      assert.equal(value, "1", "Stripe Test doit rester explicitement coupé sur Hostinger");
+    if (name === "BILLING_KILL_SWITCH_ALL" || name === "BILLING_KILL_SWITCH_STRIPE") {
+      assert.equal(value, "1", `${name} doit rester explicitement actif sur Hostinger`);
     } else {
       assert.equal(value, "", `valeur inattendue dans .env.example : ${line}`);
     }

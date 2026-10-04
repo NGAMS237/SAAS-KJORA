@@ -32,8 +32,11 @@ test("VERCEL_ENV garde la priorité afin qu'une Preview ne devienne pas Producti
 
 test("Stripe Test reste désactivé et coupé dans l'exemple Hostinger", () => {
   assert.match(envExample, /^BILLING_PROVIDER_STRIPE_TEST_ENABLED=0$/m);
+  assert.match(envExample, /^BILLING_KILL_SWITCH_ALL=1$/m);
   assert.match(envExample, /^BILLING_KILL_SWITCH_STRIPE=1$/m);
   assert.match(envExample, /^KJORA_APP_ORIGIN=https:\/\/kjorapp\.com$/m);
+  assert.match(envExample, /^KJORA_COMMERCIAL_SITE_URL=https:\/\/kjorapp\.com$/m);
+  assert.doesNotMatch(envExample, /kjora\.kjemostudios\.com/);
 });
 
 test("Resend financier, facturation automatique et Meta restent désactivés", () => {

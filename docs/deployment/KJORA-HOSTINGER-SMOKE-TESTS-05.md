@@ -77,7 +77,7 @@ Après une autorisation spécifique seulement : un destinataire de développemen
 Au smoke test initial, vérifier uniquement :
 
 - `BILLING_PROVIDER_STRIPE_TEST_ENABLED=0`;
-- `BILLING_KILL_SWITCH_STRIPE=1`;
+- `BILLING_KILL_SWITCH_ALL=1` et `BILLING_KILL_SWITCH_STRIPE=1`;
 - aucune session Checkout et aucun appel webhook;
 - `/app/billing` reste lisible et n'accorde aucun plan payant.
 

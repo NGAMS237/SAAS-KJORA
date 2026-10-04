@@ -62,13 +62,13 @@ Restent obligatoires : replay complet et pgTAP isolés, matrice authentifiée de
 
 ## Gate 4 — Hostinger et `kjorapp.com`
 
-Le lot HOSTINGER-DEPLOYMENT-READINESS-05 prépare une cible Node.js 22 auto-hébergée avec les commandes Next.js standard. L'inventaire des variables, le plan DNS sans mutation, le runbook de déploiement/rollback et la matrice de smoke tests sont disponibles dans `docs/deployment/`.
+Le lot HOSTINGER-DEPLOYMENT-READINESS-05 prépare une cible Node.js 22 auto-hébergée avec les commandes Next.js standard. `kjorapp.com` est le domaine principal du produit; le site public et l'application sont servis par ce même déploiement. L'inventaire des variables, le plan DNS sans mutation, le runbook de déploiement/rollback et la matrice de smoke tests sont disponibles dans `docs/deployment/`.
 
 Conditions avant déploiement :
 
 - revue et fusion explicite du patch dans `main` après CI verte ;
 - saisie manuelle des deux variables publiques Supabase et des seuls secrets autorisés dans Hostinger ;
-- Stripe Test coupé, Resend financier fermé, Meta désactivé et aucun cron ;
+- coupe-circuit global actif, Stripe Test coupé, Resend financier fermé, Meta désactivé et aucun cron ;
 - autorisation distincte pour DNS, URL Supabase Auth et toute migration KJORA Dev ;
 - smoke tests publics et authentifiés, puis décision humaine.
 

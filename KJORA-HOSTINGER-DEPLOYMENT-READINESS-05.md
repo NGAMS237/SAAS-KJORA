@@ -26,6 +26,7 @@ Correctif fonctionnel minimal : hors Vercel, `NODE_ENV=production` est désormai
 
 ## Configuration fournisseur au premier déploiement
 
+- Tous les providers : `BILLING_KILL_SWITCH_ALL=1` au premier déploiement supervisé.
 - Stripe Test : `BILLING_PROVIDER_STRIPE_TEST_ENABLED=0` et `BILLING_KILL_SWITCH_STRIPE=1`.
 - Stripe : seules les clés `sk_test_` sont acceptées; six Price IDs restent serveur; origine préparée `https://kjorapp.com`; aucun appel effectué.
 - Resend : expéditeur public préparé sur `mail.kjorapp.com`; `KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED=false`; aucune clé et aucun envoi.
@@ -45,7 +46,7 @@ Aucun fichier n'a été supprimé : aucune preuve ne justifiait une suppression 
 - Node : `22.x` déclaré; validation réelle avec `v22.22.0`.
 - Installation/build/start : `npm ci`, `npm run build`, `npm start`.
 - Répertoire racine : `./`.
-- Domaine préparé : `kjorapp.com`; aucune modification DNS.
+- Domaine principal préparé : `kjorapp.com`, avec site public et application servis par le même produit/déploiement; aucune modification DNS.
 - Reverse proxy : Hostinger doit terminer TLS et conserver HTTPS/cookies sécurisés.
 - Webhooks Stripe/Resend : corps brut lu avant vérification; configuration absente → échec contrôlé.
 - PWA : API, espaces privés, documents et PDF exclus du cache.
@@ -88,6 +89,19 @@ Aucun fichier n'a été supprimé : aucune preuve ne justifiait une suppression 
 | pgTAP | NON EXÉCUTÉ — même limite; aucun PASS revendiqué |
 
 Le démarrage sans configuration Supabase confirme le fail-closed : les pages dépendantes de Supabase indiquent une configuration absente et `/app` redirige vers la connexion. Les deux variables publiques Supabase doivent être fournies au build Hostinger avant un smoke test complet.
+
+### Validation du correctif v2 — domaine unifié et coupe-circuit global
+
+- `kjorapp.com` est désormais l'unique domaine principal documenté pour le site public et l'application, servis par le même déploiement.
+- `.env.example` fixe `KJORA_COMMERCIAL_SITE_URL=https://kjorapp.com` et `BILLING_KILL_SWITCH_ALL=1`.
+- Les 18 fichiers du lot ont été contrôlés; 12 nécessitaient une harmonisation v2. Les six autres ne contenaient aucune mention contradictoire.
+- `npm test` : PASS — 958/958, 0 échec.
+- `npm run typecheck` : PASS.
+- `npm run lint` : PASS.
+- `npx next build --webpack` : PASS — Next.js 16.3.4, 81/81 pages générées.
+- `git diff --check` : PASS.
+- anti-secrets : PASS — 0 motif plausible dans les 18 fichiers du lot; 0 fichier interdit suivi.
+- migrations : inchangées — 0 fichier sous `supabase/migrations` dans le diff.
 
 ## Commits locaux
 

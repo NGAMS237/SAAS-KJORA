@@ -38,7 +38,7 @@ La liste normative est `KJORA-HOSTINGER-ENV-MATRIX-05.md`.
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `KJORA_APP_ORIGIN=https://kjorapp.com`
-- `KJORA_COMMERCIAL_SITE_URL` si le lien commercial Admin est souhaité
+- `KJORA_COMMERCIAL_SITE_URL=https://kjorapp.com` pour le site public servi par le même déploiement
 - `NEXT_PUBLIC_KJORA_CONTACT_EMAIL` seulement si l'adresse doit être publique
 
 Les deux variables `NEXT_PUBLIC_SUPABASE_*` doivent exister avant le build.
@@ -55,6 +55,7 @@ Ne jamais copier une valeur secrète dans le chat, Git, un rapport, une capture 
 
 ```text
 BILLING_PROVIDER_STRIPE_TEST_ENABLED=0
+BILLING_KILL_SWITCH_ALL=1
 BILLING_KILL_SWITCH_STRIPE=1
 KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED=false
 KJORA_SAAS_AUTO_INVOICING_ENABLED=false
@@ -82,7 +83,7 @@ Clés Live de paiement, activation email, automatisations, Meta Cloud API et ide
 Après autorisation DNS seulement :
 
 1. Appliquer le plan `KJORA-HOSTINGER-DNS-PLAN-05.md`.
-2. Rattacher `kjorapp.com`, attendre le certificat SSL Hostinger puis forcer HTTPS.
+2. Rattacher `kjorapp.com`, domaine principal du site public et de l'application sur ce même déploiement, attendre le certificat SSL Hostinger puis forcer HTTPS.
 3. Configurer `www.kjorapp.com` en redirection permanente vers l'apex.
 4. Conserver tous les enregistrements de `mail.kjorapp.com` et de messagerie.
 5. Ajouter ensuite les trois URL Auth Supabase exactes documentées dans le plan DNS.
