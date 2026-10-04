@@ -44,8 +44,10 @@ const SERVER = readFileSync(
 // 1. En-tête — badge d'environnement jamais déduit du hostname
 // ---------------------------------------------------------------------------
 
-test("le badge d'environnement vient de VERCEL_ENV, jamais du hostname", () => {
+test("le badge d'environnement privilégie VERCEL_ENV puis NODE_ENV, jamais le hostname", () => {
   assert.ok(LAYOUT.includes("process.env.VERCEL_ENV"));
+  assert.ok(LAYOUT.includes("process.env.NODE_ENV === \"production\""));
+  assert.ok(LAYOUT.includes("!process.env.VERCEL_ENV"));
   assert.ok(!/hostname|window\.location/i.test(LAYOUT), "déduction depuis le hostname détectée");
 });
 
