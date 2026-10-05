@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { PortalShell } from "@/tenant-portal/portal-shell";
@@ -5,6 +6,7 @@ import { getPortalNotifications, loadPortalContext } from "@/tenant-portal/serve
 import { PinLockProvider } from "@/core/security/pin-lock-provider";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { robots: { index: false, follow: false, nocache: true } };
 
 export default async function TenantPortalLayout({ children }: { children: ReactNode }) {
   const context = await loadPortalContext();

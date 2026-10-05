@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { InternalShell } from "@/core/shell/internal-shell";
@@ -10,6 +11,8 @@ import { dashboardPeriod } from "@/modules/operations/model";
 import { resolveUserContext, destinationFor } from "@/core/routing/context-resolver";
 import { listMyRestrictedOrganizations } from "@/core/organization/restricted-organizations";
 import { RestrictedOrganizationsBanner } from "@/core/organization/restricted-organizations-banner";
+
+export const metadata: Metadata = { robots: { index: false, follow: false, nocache: true } };
 
 export default async function InternalLayout({ children }: { children: ReactNode }) {
   const context = await loadOrganizationContext();
