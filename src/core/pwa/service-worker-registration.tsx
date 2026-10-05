@@ -7,18 +7,21 @@ export function ServiceWorkerRegistration(){
   const {language}=usePreferences();
   const english=language==="EN";
   const [updateReady,setUpdateReady]=useState(false);
-  const [connectivity,dispatchConnectivity]=useReducer(reduceConnectivity,"checking");
+  const [connectivity, dispatchConnectivity] = useReducer(reduceConnectivity, "checking");
   const [restored,setRestored]=useState(false);
-  const verifyConnectivity=useCallback(async()=>{
-    dispatchConnectivity({type:"check_started"});
-    if(!navigator.onLine){dispatchConnectivity({type:"browser_offline"});return false}
-    const reachable=await probePublicConnectivity();
-    dispatchConnectivity({type:reachable?"check_succeeded":"check_failed"});
+  const verifyConnectivity = useCallback(async () => {
+    dispatchConnectivity({ type: "check_started" });
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      dispatchConnectivity({ type: "browser_offline" });
+      return false;
+    }
+    const reachable = await probePublicConnectivity();
+    dispatchConnectivity({ type: reachable ? "check_succeeded" : "check_failed" });
     return reachable;
-  },[]);
+  }, []);
   useEffect(()=>{
     let active=true;
-    const markOffline=()=>{dispatchConnectivity({type:"browser_offline"});setRestored(false)};
+    const markOffline=()=>{dispatchConnectivity({ type: "browser_offline" });setRestored(false)};
     const markOnline=()=>{void verifyConnectivity().then((reachable)=>{if(active&&reachable){setRestored(true);window.setTimeout(()=>setRestored(false),5000)}})};
     window.addEventListener("offline",markOffline);
     window.addEventListener("online",markOnline);
