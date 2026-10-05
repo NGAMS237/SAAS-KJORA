@@ -261,7 +261,7 @@ test("les mesures de sécurité annoncées correspondent à l'implémentation", 
 
 test("le footer contient les liens légaux et d'aide", () => {
   for (const href of ["/aide", "/contact", "/securite", "/confidentialite", "/mentions-legales"]) {
-    assert.ok(footer.includes(`href="${href}"`), `lien manquant dans le footer : ${href}`);
+    assert.ok(footer.includes(`href={\`${href}?locale=\${locale}\`}`), `lien manquant dans le footer : ${href}`);
   }
 });
 

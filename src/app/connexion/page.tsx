@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/core/auth/login-form";
@@ -6,6 +7,8 @@ import { safeNextPath } from "@/core/auth/safe-next-path";
 import { appendSiteAppIntent, parseSiteAppIntent, planLabel, type SiteAppSearchParams } from "@/core/onboarding/plan-intent";
 import { PublicFooter } from "@/core/ui/public-footer";
 import { destinationFor, resolveUserContext } from "@/core/routing/context-resolver";
+
+export const metadata: Metadata = { robots: { index: false, follow: false, nocache: true } };
 
 // ALIGN-02: plan_requested comes from the marketing site CTA.
 // It is non-trustworthy — validated here only for UX messaging.
@@ -76,12 +79,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             ? t("Commencez gratuitement.", "Start for free.")
             : planRequested
               ? t(`Démarrez avec Kjora ${planLabel(planRequested)}.`, `Get started with Kjora ${planLabel(planRequested, "en")}.`)
-              : t("Retrouvez votre espace locatif.", "Access your rental workspace.")}
+              : t("Retrouvez votre espace KJORA.", "Access your KJORA workspace.")}
         </h1>
         {planIntro ? (
           <p className="auth-intro auth-intro--plan">{planIntro}</p>
         ) : (
-          <p className="auth-intro">{t("Recevez un lien sécurisé par email. Le code reste disponible comme alternative.", "Receive a secure link by email. You can also use the one-time code.")}</p>
+          <p className="auth-intro">{t("Recevez un lien sécurisé par email pour accéder à votre espace. Le code reste disponible comme alternative.", "Receive a secure email link to continue. You can also use the one-time code.")}</p>
         )}
         {callbackMessage || pinMessage ? (
           <p className="form-feedback form-feedback--error" role="alert">

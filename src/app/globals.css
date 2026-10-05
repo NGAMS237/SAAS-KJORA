@@ -2115,6 +2115,10 @@ a.portfolio-metric:hover {
   color: var(--kjora-gold);
 }
 
+.wordmark.wordmark--auth {
+  color: var(--text-primary);
+}
+
 .wordmark--mobile {
   color: var(--text);
   font-size: 1.58rem;
@@ -5488,6 +5492,112 @@ a.admin-control-card:focus-visible { border-color: var(--brand-gold); }
 }
 .connectivity-banner button { background: #fff; border: 0; border-radius: 6px; color: #5d210e; cursor: pointer; min-height: 36px; padding: 6px 12px; }
 .connectivity-banner--online { background: #17633d; }
+
+/* PUBLIC-ENTRY-PWA-FIX-06 — vitrine unifiée sur kjorapp.com */
+.public-home {
+  background: var(--background);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+.public-home a:focus-visible,
+.public-home button:focus-visible,
+.public-home summary:focus-visible,
+.connectivity-banner button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.public-nav {
+  align-items: center;
+  background: rgb(255 253 248 / .96);
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: auto 1fr auto;
+  padding: 16px max(20px, calc((100vw - 1180px) / 2));
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.public-wordmark {
+  color: var(--brand-ink);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 850;
+  letter-spacing: -.05em;
+  text-decoration: none;
+}
+.public-wordmark span { color: var(--brand-gold); }
+.public-nav nav,
+.public-nav__actions,
+.public-hero__actions,
+.public-inline-links { align-items: center; display: flex; flex-wrap: wrap; gap: 16px; }
+.public-nav nav { justify-content: center; }
+.public-nav nav a,
+.public-language { color: var(--text-secondary); font-size: .88rem; font-weight: 700; text-decoration: none; }
+.public-language { border: 1px solid var(--border-strong); border-radius: 999px; padding: 8px 10px; }
+.public-hero,
+.public-section,
+.public-home > .public-footer { margin-inline: auto; max-width: 1180px; }
+.public-hero {
+  align-items: center;
+  display: grid;
+  gap: clamp(32px, 7vw, 88px);
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .7fr);
+  min-height: min(760px, calc(100vh - 76px));
+  padding: clamp(64px, 10vw, 120px) 24px;
+}
+.public-hero h1 { font-family: var(--font-display); font-size: clamp(2.7rem, 7vw, 5.7rem); letter-spacing: -.065em; line-height: .96; margin: 14px 0 24px; max-width: 900px; }
+.public-lead { color: var(--text-secondary); font-size: clamp(1.05rem, 2vw, 1.28rem); line-height: 1.65; max-width: 690px; }
+.public-hero__actions { margin-top: 32px; }
+.public-proof { background: var(--brand-ink); border-radius: var(--shape-signature-left); box-shadow: var(--shadow-card); color: var(--kjora-ivory); display: grid; gap: 24px; list-style: none; margin: 0; padding: 42px 34px; }
+.public-proof li { align-items: center; display: flex; font-weight: 720; gap: 12px; }
+.public-proof span { align-items: center; background: var(--brand-gold); border-radius: 50%; color: var(--brand-ink); display: inline-flex; height: 30px; justify-content: center; width: 30px; }
+.public-section { padding: clamp(58px, 8vw, 96px) 24px; scroll-margin-top: 90px; }
+.public-section > h2,
+.public-security h2,
+.public-offer h2 { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3.3rem); letter-spacing: -.045em; margin: 0 0 32px; }
+.public-section--tint { background: var(--surface-muted); border-radius: var(--shape-signature-right); }
+.public-grid { display: grid; gap: 20px; }
+.public-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.public-card { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); padding: 28px; }
+.public-card h3 { font-size: 1.2rem; margin: 18px 0 10px; }
+.public-card p,
+.public-security p,
+.public-offer p,
+.public-faq p { color: var(--text-secondary); line-height: 1.65; }
+.public-step { align-items: center; background: var(--brand-gold-soft); border-radius: 50%; color: var(--brand-ink); display: inline-flex; font-weight: 850; height: 42px; justify-content: center; width: 42px; }
+.public-security,
+.public-offer { align-items: center; background: var(--brand-ink); border-radius: var(--shape-signature-left); color: var(--kjora-ivory); display: flex; gap: 32px; justify-content: space-between; margin-block: 40px; padding: clamp(32px, 6vw, 58px); }
+.public-security h2,
+.public-offer h2 { margin-bottom: 16px; }
+.public-security p,
+.public-offer p { color: rgb(246 242 233 / .78); max-width: 760px; }
+.public-security .button--secondary { color: var(--kjora-ivory); }
+.public-faq { display: grid; gap: 12px; }
+.public-faq details { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px 20px; }
+.public-faq summary { cursor: pointer; font-weight: 760; }
+.public-inline-links { margin-top: 26px; }
+.public-inline-links a { color: var(--brand-blue); font-weight: 750; }
+.public-home > .public-footer { padding-inline: 24px; }
+@media (max-width: 840px) {
+  .public-nav { grid-template-columns: 1fr auto; }
+  .public-nav nav { display: none; }
+  .public-hero { grid-template-columns: 1fr; min-height: auto; padding-top: 72px; }
+  .public-grid--three { grid-template-columns: 1fr; }
+  .public-security,
+  .public-offer { align-items: flex-start; flex-direction: column; margin-inline: 16px; }
+}
+@media (max-width: 520px) {
+  .public-nav { gap: 12px; padding: 12px 16px; }
+  .public-nav__actions { gap: 8px; }
+  .public-nav__actions .button { min-height: 44px; padding-inline: 12px; }
+  .public-hero { padding-inline: 18px; }
+  .public-hero h1 { font-size: clamp(2.45rem, 14vw, 4rem); }
+  .public-hero__actions,
+  .public-hero__actions .button { align-items: stretch; width: 100%; }
+  .public-hero__actions .button { justify-content: center; }
+  .public-section { padding-inline: 18px; }
+}
 
 .loading-mark {
   animation: kjora-pulse 1.2s ease-in-out infinite;

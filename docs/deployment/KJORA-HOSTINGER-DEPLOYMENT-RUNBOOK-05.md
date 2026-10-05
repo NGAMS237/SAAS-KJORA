@@ -153,3 +153,18 @@ migration testée
 ```
 
 Une fusion dans `main` n'autorise jamais automatiquement une migration ou une activation fournisseur.
+
+## Parcours public unifié — contrôle post-déploiement du lot 06
+
+`https://kjorapp.com/` doit servir la vitrine publique KJORA, sans résolution de session ni redirection automatique. Les CTA construisent uniquement des destinations internes validées vers `/connexion`; l'Organization, le rôle et le plan effectif restent résolus côté serveur après authentification.
+
+Après un déploiement supervisé :
+
+1. vérifier que `/` répond `200` en FR et avec `?locale=en` ;
+2. suivre « Se connecter » puis « Commencer gratuitement » jusqu'à `/connexion`, sans redirection externe ;
+3. simuler `offline`, confirmer le bandeau et l'absence de contenu privé, puis rétablir le réseau ;
+4. utiliser « Réessayer » et vérifier dans le navigateur une requête `HEAD` same-origin vers `/robots.txt`, sans cookie ;
+5. contrôler `/robots.txt` et `/sitemap.xml`, puis confirmer que `/app`, `/portal` et `/administration` restent exclus de l'indexation ;
+6. conserver `BILLING_KILL_SWITCH_ALL=1`, Stripe Test coupé, Resend financier `false` et WhatsApp `disabled`.
+
+Le test de connectivité ne contacte ni Supabase ni une API privée : toute réponse HTTP de la ressource publique confirme le réseau; seule une panne de transport déclenche l'état hors ligne.

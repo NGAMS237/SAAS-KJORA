@@ -73,3 +73,11 @@ Conditions avant déploiement :
 - smoke tests publics et authentifiés, puis décision humaine.
 
 Le déploiement Hostinger, le DNS, la migration WhatsApp et les tests fournisseurs ne sont pas exécutés par ce lot. `READY FOR PRODUCTION` demeure NON.
+
+## Gate 5 — Entrée publique et résilience PWA
+
+Le lot PUBLIC-ENTRY-PWA-FIX-06 remplace la redirection de la racine par une vitrine FR/EN dans le même déploiement `kjorapp.com`. La connexion demeure sur `/connexion`, les CTA gratuits réutilisent l'intention Découverte existante et aucune URL ne peut attribuer un entitlement.
+
+Le statut réseau est vérifié après hydratation par une ressource publique same-origin sans cookie. Les événements `online`/`offline` et le bouton « Réessayer » pilotent le même état; une erreur Supabase ou API métier n'est pas interprétée comme une panne Internet. API, pages authentifiées, documents, contrats et PDF restent hors cache.
+
+Sortie du gate : validations locales vertes, revue du patch, fusion distincte, déploiement Hostinger supervisé puis matrice navigateur sur `kjorapp.com`. Avant ces étapes, `READY FOR PRODUCTION` reste NON.

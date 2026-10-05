@@ -149,7 +149,7 @@ test("Découverte remains free and needs no payment", () => {
 
 test("the newly added commercial journey exposes complete English copy", () => {
   for (const [source, phrase] of [
-    [connectionPage, "Access your rental workspace"],
+    [connectionPage, "Access your KJORA workspace"],
     [loginForm, "Send my access link"],
     [organizationForm, "Create my workspace"],
     [organizationForm, "KJORA billing country"],

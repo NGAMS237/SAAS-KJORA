@@ -1,6 +1,6 @@
-const CACHE_NAME = "kjora-public-v3";
+const CACHE_NAME = "kjora-public-v4";
 const PRECACHE = ["/icon.svg", "/manifest.webmanifest", "/hors-ligne/"];
-const PUBLIC_PAGES = new Set(["/hors-ligne/", "/partenaires", "/partenaires/"]);
+const PUBLIC_PAGES = new Set(["/", "/aide", "/aide/", "/contact", "/contact/", "/securite", "/securite/", "/confidentialite", "/confidentialite/", "/mentions-legales", "/mentions-legales/", "/hors-ligne/", "/partenaires", "/partenaires/"]);
 const NEVER_CACHE_PREFIXES = [
   "/api/", "/app/", "/administration/", "/portal/", "/partenaire/", "/auth/",
   "/connexion/", "/onboarding/", "/invitation/", "/verrouillage/", "/organisation-suspendue/",

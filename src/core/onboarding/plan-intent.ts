@@ -158,7 +158,7 @@ export function destinationAfterOnboarding(intent: SiteAppIntent): string {
     : "/app";
 }
 
-export const SUR_MESURE_CONTACT_URL = "https://kjora.kjemostudios.com/contact";
+export const SUR_MESURE_CONTACT_URL = "https://kjorapp.com/contact";
 
 export function buildSurMesureContactUrl(intent: SiteAppIntent): string {
   const url = new URL(SUR_MESURE_CONTACT_URL);
