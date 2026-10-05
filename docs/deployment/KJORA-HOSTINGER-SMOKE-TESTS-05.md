@@ -78,6 +78,19 @@ Au smoke test initial, vérifier uniquement :
 
 - `BILLING_PROVIDER_STRIPE_TEST_ENABLED=0`;
 - `BILLING_KILL_SWITCH_ALL=1` et `BILLING_KILL_SWITCH_STRIPE=1`;
+
+## PUBLIC-ENTRY-PWA-FIX-06
+
+- [ ] `/` répond `200` et affiche la vitrine, sans redirection vers `/connexion`.
+- [ ] `/?locale=en` affiche les CTA et contenus du parcours public en anglais.
+- [ ] « Se connecter » mène à `/connexion?...&next=%2Fapp` sur la même origine.
+- [ ] « Commencer gratuitement » conserve `plan=decouverte`, `billing_cycle=monthly` et `source=site` sans activer de droit.
+- [ ] Les liens Aide, Contact, Sécurité, Confidentialité et Mentions légales répondent.
+- [ ] En ligne, aucun bandeau hors ligne n'est visible.
+- [ ] En simulation offline, le bandeau est annoncé et aucune page/API privée n'est servie par le cache.
+- [ ] Au retour en ligne ou après « Réessayer », le bandeau disparaît sans boucle de rechargement.
+- [ ] Mobile 390 px, tablette 768 px et desktop 1440 px conservent titre, CTA, focus et navigation utilisables.
+- [ ] `/robots.txt` référence `https://kjorapp.com/sitemap.xml`; les routes privées restent interdites.
 - aucune session Checkout et aucun appel webhook;
 - `/app/billing` reste lisible et n'accorde aucun plan payant.
 
