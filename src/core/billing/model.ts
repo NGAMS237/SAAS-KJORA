@@ -94,7 +94,7 @@ export function isBillingCycle(value: unknown): value is BillingCycle {
 }
 
 /** Devises réellement validées. EUR et USD ne sont PAS canonisés : ne pas les inventer. */
-export const BILLING_CURRENCIES = ["XAF", "CAD"] as const;
+export const BILLING_CURRENCIES = ["XAF", "XOF", "CAD"] as const;
 export type BillingCurrency = (typeof BILLING_CURRENCIES)[number];
 
 export function isBillingCurrency(value: unknown): value is BillingCurrency {
@@ -102,7 +102,7 @@ export function isBillingCurrency(value: unknown): value is BillingCurrency {
 }
 
 /** Nombre de décimales de la devise : XAF n'en a pas, CAD en a deux. */
-export const CURRENCY_DECIMALS: Record<BillingCurrency, number> = { XAF: 0, CAD: 2 };
+export const CURRENCY_DECIMALS: Record<BillingCurrency, number> = { XAF: 0, XOF: 0, CAD: 2 };
 
 /** Un montant est stocké en unité mineure : XAF entier, CAD centimes. */
 export function toMinorUnits(amount: number, currency: BillingCurrency): number {
@@ -129,6 +129,15 @@ export type PriceEntry = { monthly: number | null; annual: number | null };
 
 export const PRICE_CATALOG: Record<BillingCurrency, Record<PlanSlug, PriceEntry>> = {
   XAF: {
+    decouverte: { monthly: 0, annual: 0 },
+    essentiel: { monthly: 5_900, annual: 59_000 },
+    avance: { monthly: 12_900, annual: 129_000 },
+    patrimoine: { monthly: 24_900, annual: 249_000 },
+    sur_mesure: { monthly: null, annual: null },
+  },
+  // Prix nominaux identiques à XAF, mais devise ISO distincte : aucune
+  // conversion ni agrégation XAF/XOF n'est autorisée.
+  XOF: {
     decouverte: { monthly: 0, annual: 0 },
     essentiel: { monthly: 5_900, annual: 59_000 },
     avance: { monthly: 12_900, annual: 129_000 },

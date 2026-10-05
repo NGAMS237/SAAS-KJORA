@@ -21,6 +21,7 @@ import {
   isBillingBlocked,
   isReceiptAvailable,
   type BillingCycle,
+  type BillingCurrency,
   type InvoiceStatus,
   type SubscriptionStatus,
 } from "@/core/billing/model";
@@ -54,7 +55,7 @@ type Quote = {
   chargeMinor?: number;
   daysRemaining?: number;
   effectiveOn?: string;
-  currency?: "XAF" | "CAD";
+  currency?: BillingCurrency;
   blockers?: Array<{ libelle?: string; quota?: string; actuel: number; limite: number }>;
 };
 
@@ -110,12 +111,14 @@ export function BillingView({
   invoices,
   affordance,
   requestedIntent,
+  rentalMarket,
 }: {
   overview: BillingOverview;
   invoices: BillingInvoice[];
   /** Décidé côté serveur. Le client n'apprend jamais quel provider est retenu. */
   affordance: BillingCheckoutAffordance;
   requestedIntent?: SiteAppIntent;
+  rentalMarket?: { country: string; currency: string } | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -129,7 +132,8 @@ export function BillingView({
     requestedIntent?.billingCycle ?? sub.billingCycle,
   );
   const [requestedBillingCountry, setRequestedBillingCountry] = useState<BillingCountry | "">(
-    requestedIntent?.billingCountry ?? "",
+    requestedIntent?.billingCountry
+      ?? (rentalMarket?.country === "CI" ? "CI" : rentalMarket?.country === "CM" ? "CM" : ""),
   );
   const showRequestedIntent = Boolean(requestedPlan && needsIntentPreservation(requestedPlan));
   const locale = requestedIntent?.locale ?? "fr";
@@ -214,6 +218,13 @@ export function BillingView({
         description={t("Votre plan, votre consommation et vos factures. Sans rapport avec les loyers que vous encaissez.", "Your plan, usage and invoices. This is separate from the rent you collect.")}
       />
 
+      {rentalMarket?.country === "CI" && sub.currency !== "XOF" ? (
+        <p className="form-feedback form-feedback--error" role="alert">{t(
+          "Cette Organization ivoirienne conserve une ancienne configuration d’abonnement. Son historique n’a pas été réécrit : une revue supervisée est requise avant tout forfait payant.",
+          "This Ivorian Organization keeps a legacy subscription configuration. Its history was not rewritten: supervised review is required before any paid plan.",
+        )}</p>
+      ) : null}
+
       {showRequestedIntent && requestedPlan ? (
         <Card className="billing-state">
           <p className="eyebrow">{t("Votre sélection", "Your selection")}</p>
@@ -246,10 +257,17 @@ export function BillingView({
                 <option value="">{t("Choisir", "Choose")}</option>
                 <option value="CA">Canada · CAD</option>
                 <option value="CM">{t("Cameroun", "Cameroon")} · XAF</option>
+                <option value="CI">{t("Côte d’Ivoire", "Ivory Coast")} · XOF</option>
               </select>
             </label>
           </div>
           {requestedBillingCountry ? <p><strong>{t("Devise d’abonnement", "Subscription currency")}: {subscriptionCurrencyForBillingCountry(requestedBillingCountry)}</strong></p> : null}
+          {rentalMarket && requestedBillingCountry && rentalMarket.country !== requestedBillingCountry ? (
+            <p className="form-feedback" role="status">{t(
+              `Marché locatif : ${rentalMarket.country}/${rentalMarket.currency}. Abonnement KJORA : ${requestedBillingCountry}/${subscriptionCurrencyForBillingCountry(requestedBillingCountry)}. Ces devises restent séparées.`,
+              `Rental market: ${rentalMarket.country}/${rentalMarket.currency}. KJORA subscription: ${requestedBillingCountry}/${subscriptionCurrencyForBillingCountry(requestedBillingCountry)}. These currencies remain separate.`,
+            )}</p>
+          ) : null}
           <p><small>{t(
             "La confirmation enregistre seulement une demande de montée en gamme. Aucun paiement ni Checkout Stripe n’est lancé dans ce parcours.",
             "Confirming records an upgrade request only. No payment or Stripe Checkout is started in this flow.",
@@ -355,12 +373,19 @@ export function BillingView({
               <option value="">{t("Choisir avant de préparer un changement", "Choose before preparing a change")}</option>
               <option value="CA">Canada · CAD</option>
               <option value="CM">{t("Cameroun", "Cameroon")} · XAF</option>
+              <option value="CI">{t("Côte d’Ivoire", "Ivory Coast")} · XOF</option>
             </select>
             <small>{t(
               "Ce pays détermine la devise de l’abonnement KJORA et ne modifie jamais la devise des loyers.",
               "This country determines the KJORA subscription currency and never changes the rental currency.",
             )}</small>
           </label>
+          {!requestedBillingCountry && rentalMarket && !["CA", "CM", "CI"].includes(rentalMarket.country) ? (
+            <p className="form-feedback" role="status">{t(
+              "Découverte reste gratuit. Aucun tarif payant local n’est encore publié pour ce pays : nous n’affichons pas de faux prix XAF.",
+              "Discovery remains free. No local paid price is published for this country yet, so we do not show a misleading XAF price.",
+            )}</p>
+          ) : null}
           <div className="billing-plan-grid">
             {PLAN_ORDER.filter((p) => p !== overview.effectivePlan).map((p) => {
               const prix = priceFor(p, sub.billingCycle, selectedSubscriptionCurrency);

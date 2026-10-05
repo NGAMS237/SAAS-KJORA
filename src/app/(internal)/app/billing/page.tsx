@@ -24,10 +24,15 @@ export default async function BillingPage({
   const params = await searchParams;
   const incomingIntent = parseSiteAppIntent(params);
   await persistIncomingSiteAppIntent(incomingIntent);
-  const [overview, invoices, state] = await Promise.all([
+  const [overview, invoices, state, rentalProfileResult] = await Promise.all([
     getBillingOverview(authorization.organizationId),
     listBillingInvoices(authorization.organizationId),
     loadOnboardingState(supabase),
+    supabase
+      .from("organization_profiles")
+      .select("country_code, currency_code")
+      .eq("organization_id", authorization.organizationId)
+      .maybeSingle(),
   ]);
 
   if (!overview) notFound();
@@ -51,5 +56,13 @@ export default async function BillingPage({
     amountMinor: priceFor(affordancePlan, affordanceCycle, affordanceCurrency) ?? 0,
   });
 
-  return <BillingView affordance={affordance} invoices={invoices} overview={overview} requestedIntent={requestedIntent} />;
+  const rentalProfile = rentalProfileResult.data;
+
+  return <BillingView
+    affordance={affordance}
+    invoices={invoices}
+    overview={overview}
+    requestedIntent={requestedIntent}
+    rentalMarket={rentalProfile ? { country: rentalProfile.country_code, currency: rentalProfile.currency_code } : null}
+  />;
 }

@@ -362,14 +362,15 @@ test("les 8 états d'abonnement sont définis et toutes les transitions catalogu
   assert.equal(canTransition("cancelled", "active"), false);
 });
 
-test("les prix canoniques XAF et CAD sont exacts, sans EUR ni USD inventés", () => {
-  assert.deepEqual([...BILLING_CURRENCIES], ["XAF", "CAD"]);
+test("les prix canoniques XAF, XOF et CAD sont exacts, sans EUR ni USD inventés", () => {
+  assert.deepEqual([...BILLING_CURRENCIES], ["XAF", "XOF", "CAD"]);
   assert.equal(PRICE_CATALOG.XAF.essentiel.monthly, 5_900);
   assert.equal(PRICE_CATALOG.XAF.avance.monthly, 12_900);
   assert.equal(PRICE_CATALOG.XAF.patrimoine.monthly, 24_900);
   assert.equal(PRICE_CATALOG.XAF.essentiel.annual, 59_000);
   assert.equal(PRICE_CATALOG.XAF.avance.annual, 129_000);
   assert.equal(PRICE_CATALOG.XAF.patrimoine.annual, 249_000);
+  assert.deepEqual(PRICE_CATALOG.XOF, PRICE_CATALOG.XAF);
   // CAD en centimes
   assert.equal(PRICE_CATALOG.CAD.essentiel.monthly, 1_499);
   assert.equal(PRICE_CATALOG.CAD.patrimoine.monthly, 6_199);
@@ -390,6 +391,7 @@ test("l'annuel applique bien 12 mois pour le prix de 10", () => {
 
 test("les montants sont formatés selon les décimales de la devise", () => {
   assert.equal(CURRENCY_DECIMALS.XAF, 0);
+  assert.equal(CURRENCY_DECIMALS.XOF, 0);
   assert.equal(CURRENCY_DECIMALS.CAD, 2);
   assert.equal(toMinorUnits(14.99, "CAD"), 1499);
   assert.equal(toMinorUnits(5900, "XAF"), 5900);

@@ -19,7 +19,7 @@ export type SiteAppLocale = (typeof SITE_APP_LOCALES)[number];
 export const SITE_APP_SOURCES = ["site"] as const;
 export type SiteAppSource = (typeof SITE_APP_SOURCES)[number];
 
-export const BILLING_COUNTRIES = ["CA", "CM"] as const;
+export const BILLING_COUNTRIES = ["CA", "CM", "CI"] as const;
 export type BillingCountry = (typeof BILLING_COUNTRIES)[number];
 
 export function isBillingCountry(value: unknown): value is BillingCountry {
@@ -117,7 +117,14 @@ export function mergeSiteAppIntent(
 export function subscriptionCurrencyForBillingCountry(
   country: BillingCountry,
 ): BillingCurrency {
-  return country === "CA" ? "CAD" : "XAF";
+  if (country === "CA") return "CAD";
+  if (country === "CI") return "XOF";
+  return "XAF";
+}
+
+/** A rental market suggests a billing market only when KJORA has a reviewed price. */
+export function billingCountryForRentalMarket(country: string): BillingCountry | null {
+  return isBillingCountry(country) ? country : null;
 }
 
 export function appendSiteAppIntent(path: string, intent: SiteAppIntent): string {

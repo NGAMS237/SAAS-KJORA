@@ -50,8 +50,8 @@ test("Cameroon rental operations remain independent of the KJORA subscription's 
   // (backward-compatible), and the rental currency is never derived from
   // the separate KJORA subscription billing country (a Canadian
   // subscription must never leak CAD into the rental currency).
-  assert.match(organizationForm, /useState<string>\("CM"\)/, "le pays locatif par défaut doit rester le Cameroun");
-  assert.match(organizationForm, /useState<string>\("XAF"\)/, "la devise locative par défaut doit rester XAF");
+  assert.match(organizationForm, /resumedDefaults\?\.countryCode \?\? "CM"/, "le pays locatif par défaut doit rester le Cameroun");
+  assert.match(organizationForm, /resumedDefaults\?\.currency \?\? "XAF"/, "la devise locative par défaut doit rester XAF");
   assert.doesNotMatch(
     organizationForm,
     /setCurrency\([^)]*selectedBillingCountry/,

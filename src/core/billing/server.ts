@@ -14,6 +14,7 @@ import {
   isBillingCycle,
   isBillingCurrency,
   isInvoiceStatus,
+  type BillingCurrency,
   type BillingCycle,
 } from "@/core/billing/model";
 import { isPlanSlug, type PlanSlug } from "@/core/entitlements/model";
@@ -171,7 +172,7 @@ export async function getBillingInvoiceForDownload(
 export function checkoutAffordance(args: {
   plan: PlanSlug;
   cycle: BillingCycle;
-  currency: "XAF" | "CAD";
+  currency: BillingCurrency;
   amountMinor: number;
   methodHint?: unknown;
 }): BillingCheckoutAffordance {
