@@ -78,7 +78,12 @@ grant execute on function public.replace_site_app_intent(text,text,text,text,tex
 create or replace function public.prepare_plan_change_for_market(
  target_organization_id uuid,target_plan text,target_cycle text,target_billing_country text
 ) returns jsonb language plpgsql security definer set search_path='' as $$
-declare sub public.organization_subscriptions;target_currency text;result jsonb;
+declare
+ sub public.organization_subscriptions;
+ target_currency text;
+ result jsonb;
+ market_change_requested boolean;
+ subscription_pristine boolean;
 begin
  if (select auth.uid()) is null or not private.has_capability(target_organization_id,'billing.manage') then
   raise exception 'forbidden' using errcode='42501';
@@ -95,11 +100,56 @@ begin
  if sub.organization_id is null then
   insert into public.organization_subscriptions(organization_id,billing_country,currency)
   values(target_organization_id,target_billing_country,target_currency) returning * into sub;
- elsif sub.status<>'free' and (sub.billing_country<>target_billing_country or sub.currency<>target_currency) then
-  return jsonb_build_object('outcome','billing_country_change_requires_support','billingCountry',sub.billing_country,'currency',sub.currency);
- elsif sub.status='free' then
-  update public.organization_subscriptions set billing_country=target_billing_country,currency=target_currency
-   where organization_id=target_organization_id;
+ else
+  market_change_requested := sub.billing_country is distinct from target_billing_country
+    or sub.currency is distinct from target_currency;
+
+  if market_change_requested then
+   subscription_pristine := sub.status='free'
+    and sub.plan='decouverte'
+    and sub.provider is null
+    and sub.provider_customer_ref is null
+    and sub.provider_subscription_ref is null
+    and sub.current_period_start is null
+    and sub.current_period_end is null
+    and sub.renewal_date is null
+    and sub.last_failure_on is null
+    and sub.grace_started_on is null
+    and sub.grace_ends_on is null
+    and sub.blocked_at is null
+    and sub.cancellation_requested_at is null
+    and sub.cancellation_effective_on is null
+    and sub.cancelled_at is null
+    and sub.scheduled_plan is null
+    and sub.scheduled_cycle is null
+    and sub.scheduled_effective_on is null
+    and sub.pending_plan is null
+    and sub.pending_cycle is null
+    and sub.pending_amount_minor is null
+    and sub.pending_requested_at is null
+    and sub.payment_method_brand is null
+    and sub.payment_method_last4 is null
+    and sub.payment_method_expires_on is null
+    and not exists(select 1 from public.billing_invoices i where i.organization_id=target_organization_id)
+    and not exists(select 1 from public.billing_payment_attempts a where a.organization_id=target_organization_id)
+    and not exists(select 1 from public.billing_events e where e.organization_id=target_organization_id)
+    and not exists(select 1 from public.billing_provider_intents pi where pi.organization_id=target_organization_id)
+    and not exists(select 1 from public.billing_webhook_events we where we.organization_id=target_organization_id)
+    and not exists(select 1 from public.commercial_interventions ci where ci.organization_id=target_organization_id)
+    and not exists(select 1 from public.billing_reminder_log rl where rl.organization_id=target_organization_id);
+
+   if not subscription_pristine then
+    return jsonb_build_object(
+     'outcome','billing_country_change_requires_support',
+     'billingCountry',sub.billing_country,
+     'currency',sub.currency
+    );
+   end if;
+
+   update public.organization_subscriptions
+      set billing_country=target_billing_country,currency=target_currency
+    where organization_id=target_organization_id;
+  end if;
  end if;
  result:=public.request_plan_change(target_organization_id,target_plan,target_cycle);
  update public.onboarding_states set intent_status='prepared'

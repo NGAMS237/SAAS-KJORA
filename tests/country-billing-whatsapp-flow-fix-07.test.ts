@@ -13,6 +13,7 @@ import { PRICE_CATALOG, priceFor } from "../src/core/billing/model.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 const migration = read("../supabase/migrations/20261005205909_country_billing_whatsapp_flow_fix_07.sql");
+const pgTap = read("../supabase/tests/database/country_billing_whatsapp_flow_fix_07.test.sql");
 const onboarding = read("../src/core/organization/organization-onboarding-form.tsx");
 const onboardingPage = read("../src/app/onboarding/organization/page.tsx");
 const billingView = read("../src/core/billing/billing-view.tsx");
@@ -48,9 +49,16 @@ test("08 — XAF and XOF are neither converted nor added", () => {
   assert.throws(() => sumSameCurrency([{ amount: 1, currency: "XAF" }, { amount: 1, currency: "XOF" }]), /currency_mismatch/);
 });
 test("09 — organizations with billing history are not auto-rewritten", () => {
+  assert.match(migration, /sub\.status='free'/);
+  assert.match(migration, /sub\.plan='decouverte'/);
+  assert.match(migration, /sub\.provider_customer_ref is null/);
   assert.match(migration, /not exists\(select 1 from public\.billing_invoices/);
   assert.match(migration, /not exists\(select 1 from public\.billing_payment_attempts/);
   assert.match(migration, /not exists\(select 1 from public\.billing_events/);
+  assert.match(migration, /not exists\(select 1 from public\.billing_provider_intents/);
+  assert.match(migration, /not exists\(select 1 from public\.billing_webhook_events/);
+  assert.match(migration, /not exists\(select 1 from public\.commercial_interventions/);
+  assert.match(migration, /not exists\(select 1 from public\.billing_reminder_log/);
 });
 test("10 — optional Owner WhatsApp is present during onboarding", () => assert.match(onboarding, /PersonalWhatsAppPreferencesForm/));
 test("11 — Owner WhatsApp can be skipped", () => assert.match(onboarding, /Continuer ou ignorer WhatsApp|Continue or skip WhatsApp/));
@@ -103,4 +111,30 @@ test("26 — no real provider is called by this lot", () => {
 test("27 — CI catalog values stay nominal and distinct", () => {
   assert.equal(priceFor("essentiel", "monthly", "XOF"), 5_900);
   assert.equal(priceFor("essentiel", "annual", "XOF"), 59_000);
+});
+test("28 — market changes are blocked before the normal plan workflow when history exists", () => {
+  const marketGuard = migration.indexOf("if market_change_requested then");
+  const supportGuard = migration.indexOf("if not subscription_pristine then");
+  const planWorkflow = migration.indexOf("result:=public.request_plan_change");
+  assert.ok(marketGuard >= 0);
+  assert.ok(supportGuard > marketGuard);
+  assert.ok(planWorkflow > supportGuard);
+  assert.match(migration, /'billingCountry',sub\.billing_country[\s\S]*'currency',sub\.currency/);
+});
+test("29 — identical markets bypass only the market rewrite guard", () => {
+  assert.match(migration, /market_change_requested := sub\.billing_country is distinct from target_billing_country/);
+  assert.match(migration, /if market_change_requested then[\s\S]*end if;[\s\S]*result:=public\.request_plan_change/);
+});
+test("30 — pgTAP history guard plan matches its behavioral assertion count", () => {
+  assert.match(pgTap, /select plan\(55\);/);
+  assert.equal(pgTap.match(/^select (?:is|ok|throws_ok|lives_ok)\(/gm)?.length, 55);
+  for (const scenario of [
+    "historical invoice blocks market repair",
+    "historical payment attempt blocks market repair",
+    "historical billing event blocks market repair",
+    "provider reference blocks free subscription market repair",
+    "paid subscription blocks market repair",
+    "identical market continues through normal workflow",
+    "cross-Organization billing is refused",
+  ]) assert.match(pgTap, new RegExp(scenario));
 });
