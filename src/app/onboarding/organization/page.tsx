@@ -16,6 +16,7 @@ import {
 } from "@/core/onboarding/plan-intent";
 import { siteAppIntentFromOnboardingState } from "@/core/onboarding/onboarding-state";
 import { persistIncomingSiteAppIntent } from "@/core/onboarding/server";
+import type { PersonalWhatsAppPreferences } from "@/modules/communications/personal-whatsapp-preferences";
 
 // =============================================================================
 // ALIGN-02 — Onboarding nouveau propriétaire
@@ -47,6 +48,16 @@ export default async function OrganizationOnboardingPage({
 
   const supabase = await createSupabaseServerClient();
   const state = await loadOnboardingState(supabase);
+  const [{ data: communicationPreferences }, { data: resumedProfile }] = await Promise.all([
+    supabase.rpc("get_my_whatsapp_preferences"),
+    state.organizationId
+      ? supabase
+        .from("organization_profiles")
+        .select("country_code")
+        .eq("organization_id", state.organizationId)
+        .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
   const storedIntent = state.intentStatus === "active"
     ? siteAppIntentFromOnboardingState(state)
     : null;
@@ -98,6 +109,8 @@ export default async function OrganizationOnboardingPage({
           source={intent.source}
           isNewCommercialIntent={hasNewCommercialIntent}
           isNewOrgRequest={isNewOrgRequest}
+          initialWhatsAppPreferences={(communicationPreferences ?? {}) as PersonalWhatsAppPreferences}
+          resumedRentalCountry={resumedProfile?.country_code ?? null}
         />
       </section>
     </main>

@@ -19,6 +19,7 @@ import { ORGANIZATION_TIMEZONES } from "@/core/organization/settings";
 import { SUPPORTED_COUNTRIES, RENTAL_CURRENCIES, defaultsForCountry } from "@/core/currency/metadata";
 import { trackEvent } from "@/core/analytics/events";
 import {
+  billingCountryForRentalMarket,
   destinationAfterOnboarding,
   subscriptionCurrencyForBillingCountry,
   needsIntentPreservation,
@@ -27,6 +28,10 @@ import {
   type SiteAppSource,
   type BillingCountry,
 } from "@/core/onboarding/plan-intent";
+import {
+  PersonalWhatsAppPreferencesForm,
+  type PersonalWhatsAppPreferences,
+} from "@/modules/communications/personal-whatsapp-preferences";
 import type { BillingCycle } from "@/core/billing/model";
 import {
   RENT_COLLECTION_LABELS,
@@ -68,6 +73,8 @@ export function OrganizationOnboardingForm({
   source = null,
   isNewCommercialIntent = false,
   isNewOrgRequest = false,
+  initialWhatsAppPreferences = {},
+  resumedRentalCountry = null,
 }: {
   initialState: OnboardingState;
   planRequested?: PlanSlug | null;
@@ -77,6 +84,8 @@ export function OrganizationOnboardingForm({
   source?: SiteAppSource | null;
   isNewCommercialIntent?: boolean;
   isNewOrgRequest?: boolean;
+  initialWhatsAppPreferences?: PersonalWhatsAppPreferences;
+  resumedRentalCountry?: string | null;
 }) {
   const router = useRouter();
 
@@ -98,10 +107,11 @@ export function OrganizationOnboardingForm({
   // des PROPOSITIONS modifiables, jamais un couplage imposé côté base : la
   // devise reste librement changeable ensuite depuis Paramètres tant
   // qu'aucune opération financière n'existe.
-  const [country, setCountry] = useState<string>("CM");
-  const [currency, setCurrency] = useState<string>("XAF");
+  const resumedDefaults = resumedRentalCountry ? defaultsForCountry(resumedRentalCountry) : null;
+  const [country, setCountry] = useState<string>(resumedDefaults?.countryCode ?? "CM");
+  const [currency, setCurrency] = useState<string>(resumedDefaults?.currency ?? "XAF");
   const [language, setLanguage] = useState<"fr" | "en">(locale);
-  const [timezone, setTimezone] = useState("Africa/Douala");
+  const [timezone, setTimezone] = useState(resumedDefaults?.timezone ?? "Africa/Douala");
   const [rentMethod, setRentMethod] = useState<RentCollectionMethod | "">(
     initialState.rentCollectionMethod ?? "",
   );
@@ -113,7 +123,10 @@ export function OrganizationOnboardingForm({
     billingCycle ?? initialState.billingCycleIntent ?? "",
   );
   const [selectedBillingCountry, setSelectedBillingCountry] = useState<BillingCountry | "">(
-    billingCountry ?? (isNewCommercialIntent ? "" : initialState.billingCountryIntent ?? ""),
+    billingCountry
+      ?? (isNewCommercialIntent ? "" : initialState.billingCountryIntent)
+      ?? billingCountryForRentalMarket(resumedDefaults?.countryCode ?? "CM")
+      ?? "",
   );
 
   const [busy, setBusy] = useState(false);
@@ -174,6 +187,7 @@ export function OrganizationOnboardingForm({
       setTimezone(defaults.timezone);
       setLanguage(defaults.language);
     }
+    setSelectedBillingCountry(billingCountryForRentalMarket(nextCountry) ?? "");
   }
 
   const guard = useCallback(async (fn: () => Promise<void>) => {
@@ -193,14 +207,14 @@ export function OrganizationOnboardingForm({
   async function submitOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await guard(async () => {
-      if (!selectedCycle || !selectedBillingCountry) {
+      if (!selectedCycle || (!selectedBillingCountry && effectiveIntent !== "decouverte")) {
         setError(t(
           "Choisissez le cycle et le pays de facturation de l’abonnement.",
           "Choose the subscription billing cycle and country.",
         ));
         return;
       }
-      if (!await replaceIntent()) {
+      if (selectedBillingCountry && !await replaceIntent()) {
         setError(t(
           "Impossible d’enregistrer votre choix d’abonnement. Réessayez.",
           "Unable to save your subscription selection. Try again.",
@@ -432,18 +446,28 @@ export function OrganizationOnboardingForm({
               <option value="">{t("Choisir", "Choose")}</option>
               <option value="CA">Canada · CAD</option>
               <option value="CM">{t("Cameroun", "Cameroon")} · XAF</option>
+              <option value="CI">{t("Côte d’Ivoire", "Ivory Coast")} · XOF</option>
             </select>
             <small>{t("Ce choix concerne uniquement l’abonnement KJORA.", "This choice applies only to the KJORA subscription.")}</small>
           </label>
         </div>
         <div className="fixed-configuration">
-          <span><small>{t("Marché immobilier", "Rental market")}</small><strong>{t(defaultsForCountry(country)?.label.fr ?? country, defaultsForCountry(country)?.label.en ?? country)}</strong></span>
+          <span><small>{t("Pays du marché locatif", "Rental market country")}</small><strong>{t(defaultsForCountry(country)?.label.fr ?? country, defaultsForCountry(country)?.label.en ?? country)}</strong></span>
+          <span><small>{t("Devise des loyers", "Rental currency")}</small><strong>{currency}</strong></span>
           <span><small>{t("Devise d’abonnement", "Subscription currency")}</small><strong>{selectedBillingCountry ? subscriptionCurrencyForBillingCountry(selectedBillingCountry) : "—"}</strong></span>
         </div>
+        <p className="auth-intro">{t(
+          "La devise des loyers concerne vos locations. La devise d’abonnement concerne votre forfait KJORA. Elles ne sont jamais converties ou mélangées automatiquement.",
+          "Rental currency applies to your properties. Subscription currency applies to your KJORA plan. They are never converted or mixed automatically.",
+        )}</p>
+        {!selectedBillingCountry && effectiveIntent === "decouverte" ? <p className="form-feedback" role="status">{t(
+          "Découverte reste disponible gratuitement. Aucun tarif payant local n’est publié pour ce pays et aucun faux prix XAF ne sera affiché.",
+          "Discovery remains available for free. No local paid price is published for this country, and no misleading XAF price will be shown.",
+        )}</p> : null}
         {error && error !== "quota" ? (
           <p className="form-feedback form-feedback--error" role="alert">{error}</p>
         ) : null}
-        <button className="button button--primary" disabled={busy || name.trim().length < 2 || !selectedCycle || !selectedBillingCountry} type="submit">
+        <button className="button button--primary" disabled={busy || name.trim().length < 2 || !selectedCycle || (!selectedBillingCountry && effectiveIntent !== "decouverte")} type="submit">
           {busy ? t("Création…", "Creating…") : t("Créer mon espace", "Create my workspace")}
         </button>
       </form>
@@ -453,7 +477,16 @@ export function OrganizationOnboardingForm({
   // ─── Étape moyen d'encaissement ────────────────────────────────────────────
   if (step === "rent_method") {
     return (
-      <form className="form-stack" onSubmit={submitRentMethod}>
+      <div className="form-stack">
+        <section aria-labelledby="owner-whatsapp-title">
+          <h2 id="owner-whatsapp-title">{t("WhatsApp propriétaire (facultatif)", "Owner WhatsApp (optional)")}</h2>
+          <PersonalWhatsAppPreferencesForm
+            initial={{ ...initialWhatsAppPreferences, countryCode: initialWhatsAppPreferences.countryCode ?? country }}
+            language={language}
+            compact
+          />
+        </section>
+        <form className="form-stack" onSubmit={submitRentMethod}>
         <label className="field">
           <span>{t("Comment recevez-vous actuellement vos loyers ?", "How do you currently collect rent?")}</span>
           <select name="rent_method" value={rentMethod}
@@ -466,8 +499,9 @@ export function OrganizationOnboardingForm({
           <small>{t("Simple préférence de configuration. Aucun compte n’est connecté et aucun encaissement n’est automatisé.", "This is only a setup preference. No account is connected and no collection is automated.")}</small>
         </label>
         {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
-        <button className="button button--primary" disabled={busy} type="submit">{t("Continuer", "Continue")}</button>
-      </form>
+          <button className="button button--primary" disabled={busy} type="submit">{busy ? t("Enregistrement…", "Saving…") : t("Continuer ou ignorer WhatsApp", "Continue or skip WhatsApp")}</button>
+        </form>
+      </div>
     );
   }
 
