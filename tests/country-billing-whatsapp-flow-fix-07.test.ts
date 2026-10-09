@@ -138,3 +138,36 @@ test("30 — pgTAP history guard plan matches its behavioral assertion count", (
     "cross-Organization billing is refused",
   ]) assert.match(pgTap, new RegExp(scenario));
 });
+test("31 — the initial CI backfill is tested independently from the RPC", () => {
+  const backfill = migration.match(/-- Correct only a pristine free CI subscription[\s\S]*?(update public\.organization_subscriptions[\s\S]*?);\r?\n\r?\ncomment on column/)?.[1];
+  assert.ok(backfill, "initial CI backfill UPDATE must remain identifiable");
+  assert.match(backfill, /from public\.organization_profiles p/);
+  assert.match(backfill, /p\.country_code='CI'/);
+  assert.doesNotMatch(backfill, /create or replace function|subscription_pristine/);
+});
+test("32 — initial backfill and RPC require the same pristine subscription fields", () => {
+  const backfill = migration.match(/-- Correct only a pristine free CI subscription[\s\S]*?(update public\.organization_subscriptions[\s\S]*?);\r?\n\r?\ncomment on column/)?.[1] ?? "";
+  const rpcGuard = migration.match(/subscription_pristine :=([\s\S]*?);\r?\n\r?\n   if not subscription_pristine/)?.[1] ?? "";
+  assert.match(backfill, /s\.status='free'/);
+  assert.match(backfill, /s\.plan='decouverte'/);
+  const backfillNulls = [...backfill.matchAll(/and s\.([a-z0-9_]+) is null/g)].map((match) => match[1]).sort();
+  const rpcNulls = [...rpcGuard.matchAll(/and sub\.([a-z0-9_]+) is null/g)].map((match) => match[1]).sort();
+  assert.deepEqual(backfillNulls, rpcNulls);
+  assert.equal(backfillNulls.length, 23);
+});
+test("33 — every v2 financial-history guard is also present in the initial backfill", () => {
+  const backfill = migration.match(/-- Correct only a pristine free CI subscription[\s\S]*?(update public\.organization_subscriptions[\s\S]*?);\r?\n\r?\ncomment on column/)?.[1] ?? "";
+  const rpcGuard = migration.match(/subscription_pristine :=([\s\S]*?);\r?\n\r?\n   if not subscription_pristine/)?.[1] ?? "";
+  const guardedTables = (source: string) => [...source.matchAll(/not exists\(select 1 from public\.([a-z_]+)/g)].map((match) => match[1]).sort();
+  assert.deepEqual(guardedTables(backfill), guardedTables(rpcGuard));
+  assert.deepEqual(guardedTables(backfill), [
+    "billing_events",
+    "billing_invoices",
+    "billing_payment_attempts",
+    "billing_provider_intents",
+    "billing_reminder_log",
+    "billing_webhook_events",
+    "commercial_interventions",
+  ]);
+  assert.doesNotMatch(backfill, /\sor\s/i);
+});

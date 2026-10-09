@@ -45,10 +45,36 @@ update public.organization_subscriptions s
  where p.organization_id=s.organization_id
    and p.country_code='CI'
    and s.status='free' and s.plan='decouverte'
-   and s.provider is null and s.provider_subscription_ref is null
+   and s.provider is null
+   and s.provider_customer_ref is null
+   and s.provider_subscription_ref is null
+   and s.current_period_start is null
+   and s.current_period_end is null
+   and s.renewal_date is null
+   and s.last_failure_on is null
+   and s.grace_started_on is null
+   and s.grace_ends_on is null
+   and s.blocked_at is null
+   and s.cancellation_requested_at is null
+   and s.cancellation_effective_on is null
+   and s.cancelled_at is null
+   and s.scheduled_plan is null
+   and s.scheduled_cycle is null
+   and s.scheduled_effective_on is null
+   and s.pending_plan is null
+   and s.pending_cycle is null
+   and s.pending_amount_minor is null
+   and s.pending_requested_at is null
+   and s.payment_method_brand is null
+   and s.payment_method_last4 is null
+   and s.payment_method_expires_on is null
    and not exists(select 1 from public.billing_invoices i where i.organization_id=s.organization_id)
    and not exists(select 1 from public.billing_payment_attempts a where a.organization_id=s.organization_id)
-   and not exists(select 1 from public.billing_events e where e.organization_id=s.organization_id);
+   and not exists(select 1 from public.billing_events e where e.organization_id=s.organization_id)
+   and not exists(select 1 from public.billing_provider_intents pi where pi.organization_id=s.organization_id)
+   and not exists(select 1 from public.billing_webhook_events we where we.organization_id=s.organization_id)
+   and not exists(select 1 from public.commercial_interventions ci where ci.organization_id=s.organization_id)
+   and not exists(select 1 from public.billing_reminder_log rl where rl.organization_id=s.organization_id);
 
 comment on column public.organization_subscriptions.billing_country is
  'SaaS billing country: CA/CAD, CM/XAF or CI/XOF. Independent from rental currency.';
