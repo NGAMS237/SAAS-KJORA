@@ -61,7 +61,8 @@ insert into public.memberships(organization_id,user_id,role,status) values
 
 insert into public.organization_plans(organization_id,plan)
 select id,'decouverte' from public.organizations where id between
- 'b7200000-0000-4000-8000-000000000001' and 'b7200000-0000-4000-8000-000000000012';
+ 'b7200000-0000-4000-8000-000000000001' and 'b7200000-0000-4000-8000-000000000012'
+on conflict (organization_id) do update set plan=excluded.plan;
 
 insert into public.organization_subscriptions(organization_id,status,plan,billing_country,currency) values
  ('b7200000-0000-4000-8000-000000000001','free','decouverte','CM','XAF'),

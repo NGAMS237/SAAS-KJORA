@@ -252,3 +252,10 @@ test("37 — ephemeral SQL reapplies Canada then FLOW-07 in chronological order"
   assert.ok(heldCanada >= 0 && heldFlow07 > heldCanada);
   assert.ok(applyCanada > heldFlow07 && applyFlow07 > applyCanada);
 });
+
+test("38 — pgTAP plan fixtures tolerate the canonical organization auto-plan trigger", () => {
+  assert.match(
+    pgTap,
+    /insert into public\.organization_plans\(organization_id,plan\)[\s\S]*on conflict \(organization_id\) do update set plan=excluded\.plan;/,
+  );
+});
