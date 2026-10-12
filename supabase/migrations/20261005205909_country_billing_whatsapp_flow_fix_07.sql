@@ -4,16 +4,59 @@ begin;
 -- Additive repair only. Rental currency remains in organization_profiles;
 -- SaaS billing currency remains in organization_subscriptions. No conversion.
 
+-- The SITE-APP-FLOW ephemeral rebuild deliberately holds back the original
+-- Canada intent migration. Bootstrap every column FLOW-07 consumes so this
+-- migration remains independently replayable on a fresh database. Existing
+-- values are preserved; only missing/null state receives the historical safe
+-- defaults used by the held-back migration.
 alter table public.onboarding_states
+  add column if not exists billing_cycle_intent text,
+  add column if not exists billing_country_intent text,
+  add column if not exists locale_intent text,
+  add column if not exists source_intent text,
+  add column if not exists intent_status text not null default 'active';
+
+update public.onboarding_states
+   set intent_status = 'active'
+ where intent_status is null;
+
+alter table public.onboarding_states
+  alter column intent_status set default 'active',
+  alter column intent_status set not null,
+  drop constraint if exists onboarding_states_billing_cycle_intent_check,
+  add constraint onboarding_states_billing_cycle_intent_check
+    check (billing_cycle_intent is null or billing_cycle_intent in ('monthly','annual')),
   drop constraint if exists onboarding_states_billing_country_intent_check,
   add constraint onboarding_states_billing_country_intent_check
-    check (billing_country_intent is null or billing_country_intent in ('CA','CM','CI'));
+    check (billing_country_intent is null or billing_country_intent in ('CA','CM','CI')),
+  drop constraint if exists onboarding_states_locale_intent_check,
+  add constraint onboarding_states_locale_intent_check
+    check (locale_intent is null or locale_intent in ('fr','en')),
+  drop constraint if exists onboarding_states_source_intent_check,
+  add constraint onboarding_states_source_intent_check
+    check (source_intent is null or source_intent='site'),
+  drop constraint if exists onboarding_states_intent_status_check,
+  add constraint onboarding_states_intent_status_check
+    check (intent_status in ('active','prepared'));
 
 alter table public.billing_prices
   drop constraint if exists billing_prices_currency_check,
   add constraint billing_prices_currency_check check (currency in ('XAF','XOF','CAD'));
 
 alter table public.organization_subscriptions
+  add column if not exists billing_country text;
+
+update public.organization_subscriptions
+   set billing_country = case currency
+     when 'CAD' then 'CA'
+     when 'XOF' then 'CI'
+     else 'CM'
+   end
+ where billing_country is null;
+
+alter table public.organization_subscriptions
+  alter column billing_country set default 'CM',
+  alter column billing_country set not null,
   drop constraint if exists organization_subscriptions_currency_check,
   add constraint organization_subscriptions_currency_check check (currency in ('XAF','XOF','CAD')),
   drop constraint if exists organization_subscriptions_billing_country_check,

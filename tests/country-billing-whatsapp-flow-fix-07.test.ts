@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { defaultsForCountry, sumSameCurrency } from "../src/core/currency/metadata.ts";
@@ -14,6 +14,15 @@ import { PRICE_CATALOG, priceFor } from "../src/core/billing/model.ts";
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 const migration = read("../supabase/migrations/20261005205909_country_billing_whatsapp_flow_fix_07.sql");
 const pgTap = read("../supabase/tests/database/country_billing_whatsapp_flow_fix_07.test.sql");
+const ephemeralWorkflow = read("../.github/workflows/site-app-flow-ephemeral-sql.yml");
+const migrationsDirectory = new URL("../supabase/migrations/", import.meta.url);
+const priorSchemaWithoutHeldCanadaMigration = readdirSync(migrationsDirectory)
+  .filter((name) => name.endsWith(".sql"))
+  .filter((name) => name < "20261005205909_country_billing_whatsapp_flow_fix_07.sql")
+  .filter((name) => name !== "20260911210927_site_app_flow_canada_intent.sql")
+  .sort()
+  .map((name) => readFileSync(new URL(name, migrationsDirectory), "utf8"))
+  .join("\n");
 const onboarding = read("../src/core/organization/organization-onboarding-form.tsx");
 const onboardingPage = read("../src/app/onboarding/organization/page.tsx");
 const billingView = read("../src/core/billing/billing-view.tsx");
@@ -126,8 +135,8 @@ test("29 — identical markets bypass only the market rewrite guard", () => {
   assert.match(migration, /if market_change_requested then[\s\S]*end if;[\s\S]*result:=public\.request_plan_change/);
 });
 test("30 — pgTAP history guard plan matches its behavioral assertion count", () => {
-  assert.match(pgTap, /select plan\(55\);/);
-  assert.equal(pgTap.match(/^select (?:is|ok|throws_ok|lives_ok)\(/gm)?.length, 55);
+  assert.match(pgTap, /select plan\(63\);/);
+  assert.equal(pgTap.match(/^select (?:is|ok|throws_ok|lives_ok)\(/gm)?.length, 63);
   for (const scenario of [
     "historical invoice blocks market repair",
     "historical payment attempt blocks market repair",
@@ -170,4 +179,76 @@ test("33 — every v2 financial-history guard is also present in the initial bac
     "commercial_interventions",
   ]);
   assert.doesNotMatch(backfill, /\sor\s/i);
+});
+
+test("34 — FLOW-07 bootstraps every held-back onboarding column before constraints and RPCs", () => {
+  const firstConstraint = migration.indexOf("drop constraint if exists onboarding_states_billing_cycle_intent_check");
+  const firstRpc = migration.indexOf("create or replace function public.replace_site_app_intent");
+  assert.ok(firstConstraint > 0 && firstRpc > firstConstraint);
+  for (const column of [
+    "billing_cycle_intent",
+    "billing_country_intent",
+    "locale_intent",
+    "source_intent",
+    "intent_status",
+  ]) {
+    const addition = migration.indexOf(`add column if not exists ${column} text`);
+    assert.ok(addition >= 0 && addition < firstConstraint, `${column} must exist before its constraints and RPCs`);
+  }
+  for (const constraint of [
+    "onboarding_states_billing_cycle_intent_check",
+    "onboarding_states_billing_country_intent_check",
+    "onboarding_states_locale_intent_check",
+    "onboarding_states_source_intent_check",
+    "onboarding_states_intent_status_check",
+  ]) assert.match(migration, new RegExp(`add constraint ${constraint}`));
+});
+
+test("35 — subscription billing country is added, backfilled, and closed before use", () => {
+  const addColumn = migration.indexOf("add column if not exists billing_country text");
+  const backfill = migration.indexOf("set billing_country = case currency");
+  const setNotNull = migration.indexOf("alter column billing_country set not null");
+  const constraint = migration.indexOf("add constraint organization_subscriptions_billing_country_check");
+  const firstFunction = migration.indexOf("create or replace function public.replace_site_app_intent");
+  assert.ok(addColumn >= 0 && addColumn < backfill);
+  assert.ok(backfill < setNotNull && setNotNull < constraint && constraint < firstFunction);
+  assert.match(migration, /when 'CAD' then 'CA'[\s\S]*when 'XOF' then 'CI'[\s\S]*else 'CM'/);
+  assert.match(migration, /where billing_country is null/);
+});
+
+test("36 — every relation consumed by FLOW-07 exists before the held-back Canada migration", () => {
+  const requiredRelations = [
+    "billing_events",
+    "billing_invoices",
+    "billing_payment_attempts",
+    "billing_prices",
+    "billing_provider_intents",
+    "billing_reminder_log",
+    "billing_webhook_events",
+    "commercial_interventions",
+    "onboarding_states",
+    "organization_profiles",
+    "organization_subscriptions",
+    "organizations",
+    "tenant_communication_preferences",
+    "tenants",
+  ];
+  for (const relation of requiredRelations) {
+    assert.match(
+      priorSchemaWithoutHeldCanadaMigration,
+      new RegExp(`create table(?: if not exists)? public\\.${relation}\\s*\\(`, "i"),
+      `${relation} must exist before FLOW-07`,
+    );
+  }
+  assert.match(priorSchemaWithoutHeldCanadaMigration, /create or replace function public\.request_plan_change\(/i);
+  assert.match(priorSchemaWithoutHeldCanadaMigration, /create or replace function private\.has_capability\(/i);
+});
+
+test("37 — ephemeral SQL reapplies Canada then FLOW-07 in chronological order", () => {
+  const heldCanada = ephemeralWorkflow.indexOf("mv supabase/migrations/20260911210927_site_app_flow_canada_intent.sql");
+  const heldFlow07 = ephemeralWorkflow.indexOf("mv supabase/migrations/20261005205909_country_billing_whatsapp_flow_fix_07.sql");
+  const applyCanada = ephemeralWorkflow.indexOf('psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/site-app-flow.sql"');
+  const applyFlow07 = ephemeralWorkflow.indexOf('psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/country-billing-whatsapp-flow-fix-07.sql"');
+  assert.ok(heldCanada >= 0 && heldFlow07 > heldCanada);
+  assert.ok(applyCanada > heldFlow07 && applyFlow07 > applyCanada);
 });
