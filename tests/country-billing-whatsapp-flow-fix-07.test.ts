@@ -14,6 +14,7 @@ import { PRICE_CATALOG, priceFor } from "../src/core/billing/model.ts";
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 const migration = read("../supabase/migrations/20261005205909_country_billing_whatsapp_flow_fix_07.sql");
 const pgTap = read("../supabase/tests/database/country_billing_whatsapp_flow_fix_07.test.sql");
+const historicalBillingPgTap = read("../supabase/tests/database/rls_align_03_billing.test.sql");
 const ephemeralWorkflow = read("../.github/workflows/site-app-flow-ephemeral-sql.yml");
 const migrationsDirectory = new URL("../supabase/migrations/", import.meta.url);
 const priorSchemaWithoutHeldCanadaMigration = readdirSync(migrationsDirectory)
@@ -258,4 +259,8 @@ test("38 — pgTAP plan fixtures tolerate the canonical organization auto-plan t
     pgTap,
     /insert into public\.organization_plans\(organization_id,plan\)[\s\S]*on conflict \(organization_id\) do update set plan=excluded\.plan;/,
   );
+});
+
+test("39 — the historical billing regression recognizes XOF as canonical", () => {
+  assert.match(historicalBillingPgTap, /currency not in \('XAF','XOF','CAD'\)/);
 });

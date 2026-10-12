@@ -82,7 +82,7 @@ select is((select amount_minor from public.billing_prices
 select ok((select amount_minor is null from public.billing_prices
   where plan='sur_mesure' and cycle='monthly' and currency='XAF'),
   'Sur mesure sans prix catalogue');
-select is((select count(*)::int from public.billing_prices where currency not in ('XAF','CAD')),
+select is((select count(*)::int from public.billing_prices where currency not in ('XAF','XOF','CAD')),
   0, 'aucune devise non canonisée (ni EUR ni USD)');
 
 -- ---------------------------------------------------------------------------
