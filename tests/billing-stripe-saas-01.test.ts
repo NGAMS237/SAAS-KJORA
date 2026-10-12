@@ -7,6 +7,7 @@ const migration = read("../supabase/migrations/20260928201745_billing_stripe_saa
 const adapter = read("../src/core/billing/adapters/stripe-test-adapter.ts");
 const config = read("../src/core/billing/provider-config.ts");
 const prices = read("../src/core/billing/stripe-price-map.ts");
+const priceContract = read("../src/core/billing/stripe-price-contract.ts");
 const webhook = read("../src/app/api/billing/webhooks/[provider]/route.ts");
 const env = read("../.env.example");
 
@@ -19,10 +20,11 @@ test("Stripe Test reste désactivé par défaut et refuse les clés live", () =>
 
 test("le mapping Price ID est fermé par plan, cycle et CAD", () => {
   for (const plan of ["ESSENTIEL", "AVANCE", "PATRIMOINE"]) {
-    assert.match(prices, new RegExp(`STRIPE_TEST_PRICE_${plan}_MONTHLY_CAD`));
-    assert.match(prices, new RegExp(`STRIPE_TEST_PRICE_${plan}_ANNUAL_CAD`));
+    assert.match(priceContract, new RegExp(`STRIPE_TEST_PRICE_${plan}_MONTHLY_CAD`));
+    assert.match(priceContract, new RegExp(`STRIPE_TEST_PRICE_${plan}_ANNUAL_CAD`));
   }
-  assert.match(prices, /value\?\.startsWith\("price_"\)/);
+  assert.match(priceContract, /priceId\.startsWith\("price_"\)/);
+  assert.match(prices, /readStripeTestPriceMapping/);
 });
 
 test("Checkout et Portal passent uniquement par le SDK serveur", () => {
