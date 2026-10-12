@@ -1,6 +1,15 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(55);
+select plan(63);
+
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='onboarding_states' and column_name='billing_cycle_intent'),'billing_cycle_intent exists on a fresh replay');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='onboarding_states' and column_name='billing_country_intent'),'billing_country_intent exists on a fresh replay');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='onboarding_states' and column_name='locale_intent'),'locale_intent exists on a fresh replay');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='onboarding_states' and column_name='source_intent'),'source_intent exists on a fresh replay');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='onboarding_states' and column_name='intent_status'),'intent_status exists on a fresh replay');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='organization_subscriptions' and column_name='billing_country'),'subscription billing_country exists on a fresh replay');
+select ok((select count(*)=5 from pg_constraint where conrelid='public.onboarding_states'::regclass and conname in('onboarding_states_billing_cycle_intent_check','onboarding_states_billing_country_intent_check','onboarding_states_locale_intent_check','onboarding_states_source_intent_check','onboarding_states_intent_status_check')),'all held-back onboarding checks are restored');
+select ok((select count(*)=3 from pg_constraint where conrelid='public.organization_subscriptions'::regclass and conname in('organization_subscriptions_currency_check','organization_subscriptions_billing_country_check','organization_subscriptions_billing_market_currency_check')),'subscription market constraints are complete');
 
 select is((select amount_minor from public.billing_prices where plan='essentiel' and cycle='monthly' and currency='XOF'),5900::bigint,'CI monthly price is stored in XOF');
 select is((select amount_minor from public.billing_prices where plan='essentiel' and cycle='annual' and currency='XOF'),59000::bigint,'XOF annual price follows the reviewed nominal catalog');
@@ -52,7 +61,8 @@ insert into public.memberships(organization_id,user_id,role,status) values
 
 insert into public.organization_plans(organization_id,plan)
 select id,'decouverte' from public.organizations where id between
- 'b7200000-0000-4000-8000-000000000001' and 'b7200000-0000-4000-8000-000000000012';
+ 'b7200000-0000-4000-8000-000000000001' and 'b7200000-0000-4000-8000-000000000012'
+on conflict (organization_id) do update set plan=excluded.plan;
 
 insert into public.organization_subscriptions(organization_id,status,plan,billing_country,currency) values
  ('b7200000-0000-4000-8000-000000000001','free','decouverte','CM','XAF'),

@@ -32,8 +32,10 @@ jobs:
           npx next build --webpack
           git diff --check
 
-      - name: Hold back the migration under test
-        run: mv supabase/migrations/20260911210927_site_app_flow_canada_intent.sql "$RUNNER_TEMP/site-app-flow.sql"
+      - name: Hold back the migrations under test
+        run: |
+          mv supabase/migrations/20260911210927_site_app_flow_canada_intent.sql "$RUNNER_TEMP/site-app-flow.sql"
+          mv supabase/migrations/20261005205909_country_billing_whatsapp_flow_fix_07.sql "$RUNNER_TEMP/country-billing-whatsapp-flow-fix-07.sql"
 
       - name: Start a clean local Supabase stack
         run: npx --yes supabase@2.117.0 start
@@ -41,8 +43,10 @@ jobs:
       - name: Create pre-migration fixtures
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/ci/site-app-flow-pre-migration.sql
 
-      - name: Apply only the Canada intent migration
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/site-app-flow.sql"
+      - name: Apply the Canada intent migrations in chronological order
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/site-app-flow.sql"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/country-billing-whatsapp-flow-fix-07.sql"
 
       - name: Run Canada SQL and access-control tests
         run: npx --yes supabase@2.117.0 test db supabase/tests/database/site_app_flow_canada_intent.test.sql
