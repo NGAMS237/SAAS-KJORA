@@ -1,86 +1,97 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { buildConnexionUrl, type SiteAppLocale } from "@/core/onboarding/plan-intent";
 import { PublicFooter } from "@/core/ui/public-footer";
+import styles from "./public-home.module.css";
 
-export const metadata: Metadata = {
-  title: "KJORA — Gestion locative simple et sécurisée",
-  description: "Gérez vos biens, locations, paiements et documents dans un espace locatif clair, bilingue et sécurisé.",
-  alternates: { canonical: "https://kjorapp.com", languages: { fr: "https://kjorapp.com/?locale=fr", en: "https://kjorapp.com/?locale=en" } },
-  robots: { index: true, follow: true },
-};
+type SearchParams = Promise<{ locale?: string | string[] }>;
 
 const copy = {
   fr: {
-    nav: ["Fonctionnement", "Bénéfices", "Sécurité", "Offres"], signIn: "Se connecter", start: "Commencer gratuitement",
-    eyebrow: "Gestion locative, sans détour", title: "Gardez vos biens, vos loyers et vos documents sous contrôle.",
-    lead: "KJORA aide les propriétaires et gestionnaires locatifs à suivre l’essentiel dans un espace clair, mobile et sécurisé.",
-    proof: ["Biens et logements organisés", "Locations et échéances suivies", "Paiements et documents centralisés"],
-    howTitle: "Une gestion plus simple, étape par étape", how: [
-      ["1", "Créez votre espace", "Commencez avec le forfait Découverte, sans carte bancaire."],
-      ["2", "Ajoutez votre patrimoine", "Structurez vos biens, logements, locataires et locations."],
-      ["3", "Suivez ce qui compte", "Visualisez les échéances, paiements, documents et actions utiles."],
-    ],
-    benefitsTitle: "Pensé pour gérer ici ou à distance", benefits: [
-      ["Vue claire", "Retrouvez l’information utile sans multiplier les fichiers et messages."],
-      ["Travail en équipe", "Invitez des collaborateurs avec des responsabilités limitées et explicites."],
-      ["Mobile d’abord", "Consultez et agissez depuis un téléphone, une tablette ou un ordinateur."],
-    ],
-    securityTitle: "Vos données privées restent privées", security: "Les accès sont contrôlés côté serveur et séparés par Organization. Les pages publiques peuvent être disponibles hors ligne, mais aucune donnée privée, opération financière ou action contractuelle n’est enregistrée silencieusement sans connexion.",
-    offersTitle: "Commencez avec Découverte", offers: "Le forfait gratuit permet d’explorer KJORA sans carte. Les autres forfaits sont présentés dans l’espace de souscription avant toute activation.",
-    faqTitle: "Questions fréquentes", faq: [
-      ["Puis-je commencer gratuitement ?", "Oui. Découverte reste accessible sans carte bancaire."],
-      ["KJORA remplace-t-il mon compte bancaire ?", "Non. KJORA organise la gestion locative; il ne devient pas votre banque."],
-      ["Mes collaborateurs voient-ils tout ?", "Non. Les accès dépendent de leur rôle et de l’Organization sélectionnée."],
-    ], help: "Consulter l’aide", contact: "Nous contacter",
+    meta: ["KJORA — Gestion locative en Afrique et à distance", "Loyers, avis, quittances, locataires et suivi financier réunis dans un espace sécurisé pour les propriétaires en Afrique et dans la diaspora."],
+    nav: ["Fonctionnalités", "En Afrique", "À distance", "Offres", "FAQ"], menu: "Menu", signIn: "Se connecter", start: "Commencer gratuitement",
+    hero: ["Votre gestion locative, réunie au même endroit", "Gérez vos locations, simplement. Où que vous soyez.", "Loyers, avis, quittances, locataires et suivi financier réunis dans un espace sécurisé, conçu pour les propriétaires en Afrique et dans la diaspora."],
+    proof: [["Un seul espace", "Biens, locations, échéances et documents restent organisés."], ["Une vision nette", "Les paiements enregistrés et les soldes utiles restent lisibles."], ["Des accès maîtrisés", "Chaque Organization et chaque rôle restent séparés côté serveur."]],
+    problem: ["Moins de dispersion. Plus de clarté.", "La gestion locative ne devrait pas vivre entre des cahiers, des messages et des fichiers isolés.", "KJORA rassemble le suivi quotidien sans se faire passer pour une banque, une agence ou un service d’encaissement automatique."],
+    problems: [["Suivre", "Repérez les loyers attendus, les paiements enregistrés et les situations à vérifier."], ["Documenter", "Conservez les avis, quittances, contrats disponibles et pièces utiles au bon dossier."], ["Collaborer", "Travaillez avec des personnes autorisées sans partager un compte ni ouvrir toutes les données."]],
+    featuresHead: ["L’essentiel, sans surcharge", "Un espace pensé pour le quotidien locatif"],
+    features: [["Patrimoine structuré", "Organisez biens, logements et statuts dans une vue cohérente."], ["Locataires et locations", "Reliez chaque locataire à la bonne location et à ses informations utiles."], ["Loyers et suivi financier", "Enregistrez les paiements reçus et suivez échéances, allocations et soldes."], ["Avis et quittances", "Générez et retrouvez les documents produits à partir des opérations enregistrées."], ["Portail locataire", "Donnez au locataire un accès séparé aux informations et documents qui le concernent."], ["Historique utile", "Gardez une trace des actions importantes selon votre offre et vos droits."]],
+    africa: ["Conçu pour la réalité du terrain", "Le quotidien locatif, plus simple à suivre", "Centralisez les informations utiles, les avis et les documents, puis gardez la main sur chaque action. Lorsqu’il est disponible dans votre espace, le partage WhatsApp reste manuel : KJORA ouvre un message préparé, mais ne l’envoie pas et ne prétend jamais confirmer sa livraison.", "Propriétaire et gestionnaire consultant des informations locatives sur un téléphone"],
+    africaPoints: ["Informations locatives regroupées", "Documents reliés au bon dossier", "Communication volontaire et contrôlée"],
+    diaspora: ["Depuis le Canada ou ailleurs", "Gardez une vision claire de vos biens à distance", "Consultez l’état de vos locations, les paiements enregistrés et les documents depuis votre navigateur. Invitez les bonnes personnes sur place avec des responsabilités explicites, sans leur céder votre compte.", "Propriétaire consultant à distance son tableau de bord immobilier"],
+    diasporaPoints: ["Une vue accessible sur ordinateur, tablette et mobile", "Des documents et historiques réunis", "Des rôles distincts pour mieux collaborer"],
+    howHead: ["Démarrer simplement", "Votre espace KJORA en trois étapes"],
+    how: [["01", "Créez votre accès", "Utilisez votre adresse email et commencez avec Découverte, sans carte bancaire."], ["02", "Créez votre Organization", "Définissez votre espace, votre pays locatif et la devise de suivi adaptée."], ["03", "Ajoutez votre premier bien", "Structurez logements, locataires et locations, puis suivez ce qui compte."]],
+    clarityHead: ["Des mots précis pour des flux différents", "KJORA distingue votre gestion locative de sa propre facturation"],
+    clarity: [["Gestion des loyers", "KJORA suit les échéances et les paiements que vous enregistrez. L’argent reste entre le locataire et le propriétaire selon leur moyen de paiement."], ["Avis et quittances", "Les documents reflètent les informations et paiements enregistrés dans KJORA; ils ne constituent pas un encaissement par KJORA."], ["Abonnement KJORA", "Votre Organization peut souscrire un forfait SaaS KJORA. Ce paiement est entièrement séparé des loyers de vos locataires."], ["Encaissement des loyers", "KJORA n’encaisse pas aujourd’hui automatiquement les loyers. Le suivi manuel fonctionne; une option d’encaissement électronique reste future."]],
+    plansHead: ["Des offres qui grandissent avec votre patrimoine", "Commencez gratuitement, choisissez ensuite selon vos besoins", "Prix mensuels canoniques. Le pays de facturation est confirmé dans l’application avant toute préparation d’abonnement. Aucun paiement n’est déclenché depuis cette page."],
+    plans: [["decouverte", "Découverte", "Gratuit", "0 CAD", "1 bien · 3 logements actifs · propriétaire seul"], ["essentiel", "Essentiel", "5 900 XAF", "14,99 CAD", "3 biens · 10 logements actifs · 1 collaborateur"], ["avance", "Avancé", "12 900 XAF", "31,99 CAD", "10 biens · 30 logements actifs · 3 collaborateurs"], ["patrimoine", "Patrimoine", "24 900 XAF", "61,99 CAD", "30 biens · 100 logements actifs · 10 collaborateurs"]],
+    priceSuffix: "/ mois", cadLabel: "ou au Canada", planCta: "Choisir ce plan", freeCta: "Créer mon espace gratuit", custom: "Plus de 100 logements, agence ou groupe ? Découvrez l’accompagnement sur mesure.", customCta: "Nous contacter",
+    security: ["Sécurité et confidentialité", "Vos données restent séparées, vos accès restent contrôlés", "KJORA contrôle les accès côté serveur, isole les données par Organization et ne met pas en cache les pages privées ni les API. Les rôles limitent ce que chaque personne peut consulter ou modifier.", "Voir nos mesures de sécurité"],
+    partner: ["Programme partenaires pilote", "Vous accompagnez des propriétaires ?", "Le programme public existe pour les profils commerciaux et créateurs intéressés. Chaque candidature est examinée manuellement; aucune commission ni rémunération n’est promise automatiquement.", "Découvrir le programme"],
+    faqHead: ["Questions fréquentes", "Des réponses simples avant de commencer"],
+    faq: [["Puis-je vraiment commencer gratuitement ?", "Oui. Découverte permet de créer une Organization, un bien et jusqu’à trois logements actifs, sans carte bancaire."], ["KJORA reçoit-il les loyers de mes locataires ?", "Non. Vous enregistrez dans KJORA les paiements reçus par vos moyens habituels. L’encaissement électronique par KJORA n’est pas actif."], ["Puis-je gérer depuis l’étranger ?", "Oui. KJORA fonctionne dans le navigateur et vous permet de consulter vos informations autorisées où que vous soyez connecté."], ["KJORA envoie-t-il mes messages WhatsApp ?", "Non. Le parcours disponible est manuel : KJORA peut préparer l’ouverture de WhatsApp, puis vous décidez vous-même d’envoyer. Aucune livraison n’est revendiquée."], ["Mes collaborateurs voient-ils toutes mes données ?", "Non. Leur accès dépend du rôle accordé et de l’Organization active."], ["L’abonnement KJORA et les loyers sont-ils liés ?", "Non. L’abonnement paie le logiciel KJORA; les loyers restent un flux séparé entre locataire et propriétaire."]],
+    final: ["Votre gestion peut être plus sereine", "Commencez avec votre premier bien. KJORA vous aide à garder le fil."], help: "Consulter l’aide",
   },
   en: {
-    nav: ["How it works", "Benefits", "Security", "Plans"], signIn: "Sign in", start: "Get started free",
-    eyebrow: "Rental management, made clear", title: "Keep your properties, rent and documents under control.",
-    lead: "KJORA helps property owners and rental managers follow what matters in a clear, mobile and secure workspace.",
-    proof: ["Properties and units organized", "Leases and dues tracked", "Payments and documents centralized"],
-    howTitle: "A simpler workflow, step by step", how: [
-      ["1", "Create your workspace", "Start with the Discovery plan, with no payment card."],
-      ["2", "Add your portfolio", "Organize properties, units, tenants and leases."],
-      ["3", "Track what matters", "Review dues, payments, documents and useful actions."],
-    ],
-    benefitsTitle: "Built for local or remote management", benefits: [
-      ["Clear overview", "Find useful information without multiplying files and messages."],
-      ["Team access", "Invite collaborators with limited, explicit responsibilities."],
-      ["Mobile first", "Review and act from a phone, tablet or computer."],
-    ],
-    securityTitle: "Your private data stays private", security: "Access is checked on the server and separated by Organization. Public pages may remain available offline, but no private data, financial operation or contractual action is silently recorded without a connection.",
-    offersTitle: "Start with Discovery", offers: "The free plan lets you explore KJORA without a card. Other plans are presented in the subscription area before any activation.",
-    faqTitle: "Frequently asked questions", faq: [
-      ["Can I start for free?", "Yes. Discovery remains available without a payment card."],
-      ["Does KJORA replace my bank account?", "No. KJORA organizes rental management; it does not become your bank."],
-      ["Can collaborators see everything?", "No. Access depends on their role and the selected Organization."],
-    ], help: "View help", contact: "Contact us",
+    meta: ["KJORA — Rental management across Africa and beyond", "Keep rent, notices, receipts, tenants and financial tracking together in a secure workspace built for owners in Africa and abroad."],
+    nav: ["Features", "In Africa", "Remote", "Plans", "FAQ"], menu: "Menu", signIn: "Sign in", start: "Get started free",
+    hero: ["Your rental operations, together in one place", "Manage your rentals with ease. Wherever you are.", "Bring rent, notices, receipts, tenants and financial tracking into one secure workspace built for property owners in Africa and abroad."],
+    proof: [["One workspace", "Keep properties, leases, dues and documents organized."], ["A clear picture", "See recorded payments and useful balances without the clutter."], ["Controlled access", "Organizations and roles remain separated on the server."]],
+    problem: ["Less fragmentation. More clarity.", "Rental management should not live across notebooks, messages and disconnected files.", "KJORA brings everyday tracking together without pretending to be a bank, an agency or an automatic rent collection service."],
+    problems: [["Track", "Spot expected rent, recorded payments and situations that need attention."], ["Document", "Keep notices, receipts, available agreements and useful records with the right file."], ["Collaborate", "Work with authorized people without sharing an account or opening every piece of data."]],
+    featuresHead: ["Everything essential, without the noise", "A workspace built for day-to-day rental management"],
+    features: [["Structured portfolio", "Organize properties, units and statuses in one coherent view."], ["Tenants and leases", "Connect each tenant to the right lease and the information that matters."], ["Rent and financial tracking", "Record received payments and follow dues, allocations and balances."], ["Notices and receipts", "Create and find documents based on operations recorded in KJORA."], ["Tenant portal", "Give tenants separate access to the information and documents that concern them."], ["Useful history", "Keep a trace of important actions according to your plan and permissions."]],
+    africa: ["Designed for on-the-ground realities", "A simpler way to handle everyday rental work", "Keep useful information, notices and documents together, while staying in control of every action. When available in your workspace, WhatsApp sharing remains manual: KJORA can open a prepared message, but never sends it or claims delivery.", "Property owner and manager reviewing rental information on a phone"],
+    africaPoints: ["Rental information in one place", "Documents linked to the right record", "Intentional, controlled communication"],
+    diaspora: ["From Canada or anywhere else", "Keep a clear view of your properties from afar", "Review lease status, recorded payments and documents from your browser. Invite the right people on the ground with explicit responsibilities instead of handing over your account.", "Property owner reviewing a remote real estate dashboard"],
+    diasporaPoints: ["A view that works on desktop, tablet and mobile", "Documents and history brought together", "Distinct roles for safer collaboration"],
+    howHead: ["An easy start", "Set up your KJORA workspace in three steps"],
+    how: [["01", "Create your access", "Use your email and start on Discovery with no payment card."], ["02", "Create your Organization", "Set up your workspace, rental country and appropriate tracking currency."], ["03", "Add your first property", "Organize units, tenants and leases, then follow what matters."]],
+    clarityHead: ["Clear words for separate money flows", "KJORA keeps rental management separate from its own billing"],
+    clarity: [["Rent management", "KJORA tracks dues and the payments you record. Money continues to move between tenant and owner through their chosen payment method."], ["Notices and receipts", "Documents reflect information and payments recorded in KJORA; they do not mean KJORA collected the rent."], ["KJORA subscription", "Your Organization can subscribe to a KJORA SaaS plan. This payment is entirely separate from tenant rent."], ["Rent collection", "KJORA does not automatically collect rent today. Manual tracking works now; electronic collection remains a future option."]],
+    plansHead: ["Plans that grow with your portfolio", "Start free, then choose what fits your needs", "Canonical monthly prices. Your billing country is confirmed inside the app before any subscription is prepared. This page never starts a payment."],
+    plans: [["decouverte", "Discovery", "Free", "CAD 0", "1 property · 3 active units · owner only"], ["essentiel", "Essential", "XAF 5,900", "CAD 14.99", "3 properties · 10 active units · 1 collaborator"], ["avance", "Advanced", "XAF 12,900", "CAD 31.99", "10 properties · 30 active units · 3 collaborators"], ["patrimoine", "Patrimony", "XAF 24,900", "CAD 61.99", "30 properties · 100 active units · 10 collaborators"]],
+    priceSuffix: "/ month", cadLabel: "or in Canada", planCta: "Choose this plan", freeCta: "Create my free workspace", custom: "More than 100 units, an agency or a group? Explore a custom engagement.", customCta: "Contact us",
+    security: ["Security and privacy", "Your data stays separated and access stays controlled", "KJORA checks access on the server, isolates data by Organization and never caches private pages or APIs. Roles limit what each person can view or change.", "See our security measures"],
+    partner: ["Partner pilot program", "Do you support property owners?", "The public program is open to interested sales and creator profiles. Every application is reviewed manually; no commission or compensation is automatically promised.", "Explore the program"],
+    faqHead: ["Frequently asked questions", "Straight answers before you begin"],
+    faq: [["Can I really start for free?", "Yes. Discovery lets you create one Organization, one property and up to three active units with no payment card."], ["Does KJORA receive rent from my tenants?", "No. You record payments received through your usual methods. Electronic rent collection by KJORA is not active."], ["Can I manage from another country?", "Yes. KJORA works in the browser, so you can review authorized information wherever you have a connection."], ["Does KJORA send my WhatsApp messages?", "No. The available flow is manual: KJORA may prepare WhatsApp for you, then you decide whether to send. Delivery is never claimed."], ["Can collaborators see all my data?", "No. Their access depends on the role you grant and the active Organization."], ["Are the KJORA subscription and rent payments connected?", "No. The subscription pays for the KJORA software; rent remains a separate flow between tenant and owner."]],
+    final: ["Rental management can feel calmer", "Start with your first property. KJORA helps you keep track."], help: "View help",
   },
 } as const;
 
-export default async function RootPage({ searchParams }: { searchParams: Promise<{ locale?: string | string[] }> }) {
-  const params = await searchParams;
-  const rawLocale = Array.isArray(params.locale) ? params.locale[0] : params.locale;
-  const locale: SiteAppLocale = rawLocale === "en" ? "en" : "fr";
-  const c = copy[locale];
+function localeFrom(raw: string | string[] | undefined): SiteAppLocale { return (Array.isArray(raw) ? raw[0] : raw) === "en" ? "en" : "fr"; }
+function local(path: string, locale: SiteAppLocale) { return `${path}?locale=${locale}`; }
+function Eyebrow({ children }: { children: ReactNode }) { return <p className={styles.eyebrow}>{children}</p>; }
+
+export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const locale = localeFrom((await searchParams).locale); const [title, description] = copy[locale].meta;
+  return { title, description, alternates: { canonical: `https://kjorapp.com/?locale=${locale}`, languages: { fr: "https://kjorapp.com/?locale=fr", en: "https://kjorapp.com/?locale=en" } }, openGraph: { title, description, locale: locale === "fr" ? "fr_CA" : "en_CA", type: "website" }, robots: { index: true, follow: true } };
+}
+
+export default async function RootPage({ searchParams }: { searchParams: SearchParams }) {
+  const locale = localeFrom((await searchParams).locale); const c = copy[locale]; const other = locale === "fr" ? "en" : "fr";
   const signIn = buildConnexionUrl({ plan: null, billingCycle: null, billingCountry: null, locale, source: null });
   const start = buildConnexionUrl({ plan: "decouverte", billingCycle: "monthly", billingCountry: null, locale, source: "site" });
-  const otherLocale = locale === "fr" ? "en" : "fr";
-  const anchors = ["fonctionnement", "benefices", "securite", "offres"];
-
-  return <main className="public-home" data-locale={locale} lang={locale}>
-    <header className="public-nav">
-      <Link className="public-wordmark" href={`/?locale=${locale}`} aria-label={locale === "fr" ? "KJORA — accueil" : "KJORA — home"}>Kjora<span>.</span></Link>
-      <nav aria-label={locale === "fr" ? "Navigation principale" : "Main navigation"}>{c.nav.map((label, index) => <Link key={label} href={`#${anchors[index]}`}>{label}</Link>)}</nav>
-      <div className="public-nav__actions"><Link className="public-language" href={`/?locale=${otherLocale}`} lang={otherLocale}>{otherLocale.toUpperCase()}</Link><Link className="button button--secondary" href={signIn}>{c.signIn}</Link></div>
-    </header>
-    <section className="public-hero"><div><p className="eyebrow">{c.eyebrow}</p><h1>{c.title}</h1><p className="public-lead">{c.lead}</p><div className="public-hero__actions"><Link className="button button--primary" href={start}>{c.start}</Link><Link className="button button--secondary" href="#fonctionnement">{c.nav[0]}</Link></div></div><ul className="public-proof" aria-label={locale === "fr" ? "Bénéfices principaux" : "Key benefits"}>{c.proof.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul></section>
-    <section className="public-section" id="fonctionnement"><h2>{c.howTitle}</h2><div className="public-grid public-grid--three">{c.how.map(([step,title,text])=><article className="public-card" key={step}><span className="public-step">{step}</span><h3>{title}</h3><p>{text}</p></article>)}</div></section>
-    <section className="public-section public-section--tint" id="benefices"><h2>{c.benefitsTitle}</h2><div className="public-grid public-grid--three">{c.benefits.map(([title,text])=><article className="public-card" key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></section>
-    <section className="public-section public-security" id="securite"><div><p className="eyebrow">KJORA</p><h2>{c.securityTitle}</h2><p>{c.security}</p></div><Link className="button button--secondary" href={`/securite?locale=${locale}`}>{c.nav[2]}</Link></section>
-    <section className="public-section public-offer" id="offres"><div><h2>{c.offersTitle}</h2><p>{c.offers}</p></div><Link className="button button--primary" href={start}>{c.start}</Link></section>
-    <section className="public-section" id="faq"><h2>{c.faqTitle}</h2><div className="public-faq">{c.faq.map(([question,answer])=><details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div><div className="public-inline-links"><Link href={`/aide?locale=${locale}`}>{c.help}</Link><Link href={`/contact?locale=${locale}`}>{c.contact}</Link></div></section>
-    <PublicFooter locale={locale} />
+  const planHref = (plan: "decouverte" | "essentiel" | "avance" | "patrimoine") => buildConnexionUrl({ plan, billingCycle: "monthly", billingCountry: null, locale, source: "site" });
+  const anchors = ["#fonctionnalites", "#afrique", "#diaspora", "#offres", "#faq"] as const;
+  return <main className={styles.home} data-experience="public-home" data-locale={locale} lang={locale}>
+    <header className={styles.navigation}><Link className={styles.wordmark} href={`/?locale=${locale}`} aria-label={locale === "fr" ? "KJORA — accueil" : "KJORA — home"}>Kjora<span>.</span></Link><nav className={styles.desktopNav} aria-label={locale === "fr" ? "Navigation principale" : "Main navigation"}>{c.nav.map((label, i) => <Link key={anchors[i]} href={anchors[i]}>{label}</Link>)}</nav><div className={styles.navActions}><Link className={styles.language} href={`/?locale=${other}`} hrefLang={other} lang={other}>{other.toUpperCase()}</Link><Link className={`${styles.navSignIn} button button--secondary`} href={signIn}>{c.signIn}</Link><details className={styles.mobileMenu}><summary>{c.menu}</summary><nav aria-label={locale === "fr" ? "Navigation mobile" : "Mobile navigation"}>{c.nav.map((label, i) => <Link key={anchors[i]} href={anchors[i]}>{label}</Link>)}<Link href={signIn}>{c.signIn}</Link></nav></details></div></header>
+    <section className={styles.hero} aria-labelledby="hero-title"><div className={styles.heroMedia} aria-hidden="true"><Image className={styles.heroImage} src="/images/marketing/kjora-hero-abidjan.webp" alt="" fill sizes="100vw" preload /></div><div className={styles.heroShade} aria-hidden="true"/><div className={styles.heroContent}><Eyebrow>{c.hero[0]}</Eyebrow><h1 id="hero-title">{c.hero[1]}</h1><p className={styles.heroLead}>{c.hero[2]}</p><div className={styles.heroActions}><Link className="button button--primary" href={start}>{c.start}</Link><Link className={`${styles.heroSecondary} button button--secondary`} href={signIn}>{c.signIn}</Link></div></div></section>
+    <section className={styles.proofBar} aria-label={locale === "fr" ? "Valeur principale" : "Key value"}>{c.proof.map(([title, text]) => <article key={title}><span aria-hidden="true">✓</span><div><h2>{title}</h2><p>{text}</p></div></article>)}</section>
+    <section className={`${styles.section} ${styles.problemSection}`}><div className={styles.sectionIntro}><Eyebrow>{c.problem[0]}</Eyebrow><h2>{c.problem[1]}</h2><p>{c.problem[2]}</p></div><div className={styles.problemGrid}>{c.problems.map(([title, text], i) => <article key={title}><span>0{i + 1}</span><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+    <section className={`${styles.section} ${styles.featureSection}`} id="fonctionnalites"><div className={styles.sectionIntro}><Eyebrow>{c.featuresHead[0]}</Eyebrow><h2>{c.featuresHead[1]}</h2></div><div className={styles.featureGrid}>{c.features.map(([title, text], i) => <article key={title}><span className={styles.featureNumber}>{String(i + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+    <section className={`${styles.section} ${styles.storySection}`} id="afrique"><div className={styles.storyImage}><Image src="/images/marketing/kjora-proprietaire-locataire.webp" alt={c.africa[3]} width={1536} height={1024} sizes="(max-width: 840px) 100vw, 50vw"/></div><div className={styles.storyCopy}><Eyebrow>{c.africa[0]}</Eyebrow><h2>{c.africa[1]}</h2><p>{c.africa[2]}</p><ul>{c.africaPoints.map((point) => <li key={point}><span aria-hidden="true">✓</span>{point}</li>)}</ul></div></section>
+    <section className={`${styles.section} ${styles.storySection} ${styles.storyReverse}`} id="diaspora"><div className={styles.storyImage}><Image src="/images/marketing/kjora-diaspora-canada.webp" alt={c.diaspora[3]} width={1672} height={941} sizes="(max-width: 840px) 100vw, 50vw"/></div><div className={styles.storyCopy}><Eyebrow>{c.diaspora[0]}</Eyebrow><h2>{c.diaspora[1]}</h2><p>{c.diaspora[2]}</p><ul>{c.diasporaPoints.map((point) => <li key={point}><span aria-hidden="true">✓</span>{point}</li>)}</ul></div></section>
+    <section className={`${styles.section} ${styles.stepsSection}`} id="fonctionnement"><div className={styles.sectionIntro}><Eyebrow>{c.howHead[0]}</Eyebrow><h2>{c.howHead[1]}</h2></div><ol className={styles.steps}>{c.how.map(([number, title, text]) => <li key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></li>)}</ol></section>
+    <section className={`${styles.section} ${styles.claritySection}`}><div className={styles.sectionIntro}><Eyebrow>{c.clarityHead[0]}</Eyebrow><h2>{c.clarityHead[1]}</h2></div><div className={styles.clarityGrid}>{c.clarity.map(([title, text]) => <article key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+    <section className={`${styles.section} ${styles.plansSection}`} id="offres"><div className={styles.sectionIntro}><Eyebrow>{c.plansHead[0]}</Eyebrow><h2>{c.plansHead[1]}</h2><p>{c.plansHead[2]}</p></div><div className={styles.planGrid}>{c.plans.map(([slug, name, price, cad, note]) => { const featured = slug === "decouverte"; return <article className={featured ? styles.featuredPlan : ""} key={slug}><h3>{name}</h3><p className={styles.planPrice}>{price}{featured ? "" : <small>{c.priceSuffix}</small>}</p><p className={styles.planCad}>{c.cadLabel} · {cad}{featured ? "" : ` ${c.priceSuffix}`}</p><p>{note}</p><Link className={`button ${featured ? "button--primary" : "button--secondary"}`} href={planHref(slug)}>{featured ? c.freeCta : c.planCta}</Link></article>; })}</div><div className={styles.customPlan}><p>{c.custom}</p><Link href={local("/contact", locale)}>{c.customCta} <span aria-hidden="true">→</span></Link></div></section>
+    <section className={`${styles.section} ${styles.securitySection}`} id="securite"><div><Eyebrow>{c.security[0]}</Eyebrow><h2>{c.security[1]}</h2><p>{c.security[2]}</p></div><Link className={`${styles.securityButton} button button--secondary`} href={local("/securite", locale)}>{c.security[3]}</Link></section>
+    <section className={`${styles.section} ${styles.partnerSection}`}><div><Eyebrow>{c.partner[0]}</Eyebrow><h2>{c.partner[1]}</h2><p>{c.partner[2]}</p></div><Link className="button button--secondary" href={local("/partenaires", locale)}>{c.partner[3]}</Link></section>
+    <section className={`${styles.section} ${styles.faqSection}`} id="faq"><div className={styles.sectionIntro}><Eyebrow>{c.faqHead[0]}</Eyebrow><h2>{c.faqHead[1]}</h2></div><div className={styles.faq}>{c.faq.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
+    <section className={styles.finalCta}><Eyebrow>{c.final[0]}</Eyebrow><h2>{c.final[1]}</h2><div><Link className="button button--primary" href={start}>{c.start}</Link><Link className={styles.finalHelp} href={local("/aide", locale)}>{c.help}</Link></div></section><PublicFooter locale={locale}/>
   </main>;
 }
