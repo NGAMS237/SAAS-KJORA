@@ -402,6 +402,6 @@ test("l'API onboarding normalise toute entrée client avant le RPC", () => {
   assert.match(onboardingApiSource, /isPlanSlug/);
   assert.match(onboardingApiSource, /isRentCollectionMethod/);
   assert.match(onboardingApiSource, /isOnboardingStep/);
-  assert.match(onboardingApiSource, /sameOrigin/, "protection CSRF same-origin");
+  assert.match(onboardingApiSource, /isSameOriginRequest/, "protection CSRF same-origin compatible proxy");
   assert.match(onboardingApiSource, /unauthenticated/);
 });

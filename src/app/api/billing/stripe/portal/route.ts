@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/core/http/same-origin";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { getBillingProvider } from "@/core/billing/provider";
 import { ensureBillingProviders } from "@/core/billing/provider-bootstrap";
@@ -7,8 +8,7 @@ import { isProviderConfigured, isProviderKillSwitched } from "@/core/billing/pro
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { authorization, status } = await requireActiveCapability("billing.manage");
   if (!authorization) return NextResponse.json({ error: "forbidden" }, { status });
   if (!isProviderConfigured("stripe") || isProviderKillSwitched("stripe")) {
