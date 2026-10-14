@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/core/http/same-origin";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { isBillingCycle } from "@/core/billing/model";
 import { isPlanSlug } from "@/core/entitlements/model";
@@ -26,13 +27,8 @@ function isAction(value: unknown): value is Action {
   return typeof value === "string" && (ACTIONS as readonly string[]).includes(value);
 }
 
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
-}
-
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) {
+  if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
