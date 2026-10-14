@@ -123,7 +123,7 @@ export default function MentionsLegalesPage() {
           </p>
         </div>
 
-        <div className="aide-bloc">
+        <div className="aide-bloc" id="documents-a-etablir">
           <h2>Documents encore à établir</h2>
           <ul>
             {LEGAL_OPEN_ITEMS.map((item) => <li key={item}>{item}</li>)}
