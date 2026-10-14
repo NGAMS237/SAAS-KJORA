@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/core/http/same-origin";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
@@ -18,11 +19,6 @@ type RentalAction =
   | "create_unit"
   | "update_unit"
   | "archive_unit";
-
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
-}
 
 function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status });
@@ -47,7 +43,7 @@ function mutationError(error: { code?: string; message?: string; details?: strin
 }
 
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) return jsonError("forbidden", 403);
+  if (!isSameOriginRequest(request)) return jsonError("forbidden", 403);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const action = body?.action as RentalAction | undefined;
   if (!body || !action) return jsonError("invalid_payload", 400);

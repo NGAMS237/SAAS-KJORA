@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/core/http/same-origin";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/core/organization/select-active-organization";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
-}
-
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const supabase = await createSupabaseServerClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;

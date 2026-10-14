@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/core/http/same-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPlanSlug } from "@/core/entitlements/model";
 import {
@@ -25,11 +26,6 @@ import {
 //   • un plan_intent invalide est ignoré sans erreur et n'accorde aucun droit.
 // =============================================================================
 
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
-}
-
 export async function GET() {
   const supabase = await createSupabaseServerClient();
   const { data: claims, error: claimsError } = await supabase.auth.getClaims();
@@ -45,7 +41,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) {
+  if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
