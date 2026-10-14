@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { isSameOriginRequest } from "../src/core/http/same-origin.ts";
@@ -53,4 +54,10 @@ test("configuration publique malformée est ignorée", () => {
 
 test("requête sans Origin conserve le comportement serveur existant", () => {
   assert.equal(isSameOriginRequest(request("https://kjorapp.com/api/onboarding/")), true);
+});
+
+test("la route des préférences WhatsApp utilise le contrôle d'origine partagé", () => {
+  const route = readFileSync("src/app/api/profile/whatsapp/route.ts", "utf8");
+  assert.match(route, /isSameOriginRequest\(request\)/);
+  assert.doesNotMatch(route, /request\.headers\.get\("origin"\)\s*!==\s*new URL\(request\.url\)\.origin/);
 });
