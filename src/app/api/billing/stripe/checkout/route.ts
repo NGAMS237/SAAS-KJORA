@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const priceRef = stripeTestPrice(body.plan, body.cycle);
   if (!priceRef) return NextResponse.json({ error: "stripe_test_price_unavailable" }, { status: 503 });
   const prepared = await requestPlanChange(authorization.organizationId, body.plan, body.cycle, "CA");
-  if (!prepared || prepared.outcome !== "upgrade_intent_recorded") {
+  if (!prepared || !["upgrade_intent_recorded", "unchanged"].includes(String(prepared.outcome))) {
     return NextResponse.json({ error: "checkout_not_prepared" }, { status: 409 });
   }
   const clientKey = typeof body.idempotency_key === "string" && /^[a-f0-9-]{36}$/i.test(body.idempotency_key)
