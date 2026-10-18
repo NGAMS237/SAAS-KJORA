@@ -116,7 +116,7 @@ test(".env.example ferme tous les providers et Stripe au premier déploiement sa
   for (const line of lines) {
     if (line.trim().startsWith("#")) continue;
     const [name, value = ""] = line.trim().split("=", 2);
-    if (name === "BILLING_KILL_SWITCH_ALL" || name === "BILLING_KILL_SWITCH_STRIPE") {
+    if (name === "BILLING_KILL_SWITCH_ALL" || name === "BILLING_KILL_SWITCH_STRIPE" || name === "BILLING_KILL_SWITCH_STRIPE_LIVE") {
       assert.equal(value, "1", `${name} doit rester explicitement actif sur Hostinger`);
     } else {
       assert.equal(value, "", `valeur inattendue dans .env.example : ${line}`);
@@ -128,11 +128,11 @@ test(".env.example ferme tous les providers et Stripe au premier déploiement sa
 // 3. Stripe Test — activation explicite, jamais Live
 // ---------------------------------------------------------------------------
 
-test("l'adaptateur Stripe reste sandbox, refuse les clés live et exige CAD", () => {
-  assert.match(STRIPE_ADAPTER, /mode:\s*"sandbox"/);
-  assert.match(STRIPE_ADAPTER, /secret\.startsWith\("sk_test_"\)/);
+test("l'adaptateur Stripe sépare strictement Test et Live et exige CAD", () => {
+  assert.match(STRIPE_ADAPTER, /const mode: ProviderMode = live \? "live" : "sandbox"/);
+  assert.match(STRIPE_ADAPTER, /live \? !secret\.startsWith\("sk_live_"\) : !secret\.startsWith\("sk_test_"\)/);
   assert.match(STRIPE_ADAPTER, /request\.currency !== "CAD"/);
-  assert.doesNotMatch(sansCommentaires(STRIPE_ADAPTER), /sk_live_[A-Za-z0-9]/);
+  assert.match(STRIPE_ADAPTER, /event\.livemode !== live/);
 });
 
 test("Checkout, Portal et signature utilisent le SDK officiel côté serveur", () => {

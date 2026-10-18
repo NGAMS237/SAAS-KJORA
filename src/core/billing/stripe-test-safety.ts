@@ -4,6 +4,14 @@ export function isStripeTestSecret(value: string | null | undefined): boolean {
   return Boolean(value?.trim().startsWith("sk_test_"));
 }
 
+export function isStripeLiveSecret(value: string | null | undefined): boolean {
+  return Boolean(value?.trim().startsWith("sk_live_"));
+}
+
+export function isStripePublishableKey(value: string | null | undefined, mode: "test" | "live"): boolean {
+  return Boolean(value?.trim().startsWith(mode === "live" ? "pk_live_" : "pk_test_"));
+}
+
 export function isStripeWebhookSecret(value: string | null | undefined): boolean {
   return Boolean(value?.trim().startsWith("whsec_"));
 }

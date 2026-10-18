@@ -96,6 +96,9 @@ export type AdminCopy = {
   colRenewal: string;
   colGraceEnds: string;
   colProvider: string;
+  colLastPayment: string;
+  colLastProviderSync: string;
+  colLastWebhook: string;
   providerYes: string;
   providerNo: string;
   searchByOrganization: string;
@@ -418,6 +421,9 @@ const fr: AdminCopy = {
   colRenewal: "Renouvellement",
   colGraceEnds: "Fin de tolérance",
   colProvider: "Fournisseur",
+  colLastPayment: "Dernier paiement",
+  colLastProviderSync: "Dernière synchronisation",
+  colLastWebhook: "Dernier webhook",
   providerYes: "Raccordé",
   providerNo: "Aucun",
   searchByOrganization: "Rechercher par Organization",
@@ -840,6 +846,9 @@ const en: AdminCopy = {
   colRenewal: "Renewal",
   colGraceEnds: "Grace ends",
   colProvider: "Provider",
+  colLastPayment: "Last payment",
+  colLastProviderSync: "Last sync",
+  colLastWebhook: "Last webhook",
   providerYes: "Connected",
   providerNo: "None",
   searchByOrganization: "Search by Organization",

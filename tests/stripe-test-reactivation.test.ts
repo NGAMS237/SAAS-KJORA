@@ -8,7 +8,7 @@ const checkout = read("../src/app/api/billing/stripe/checkout/route.ts");
 
 test("Stripe Test reactivation accepts the unchanged effective plan only through the guarded RPC", () => {
   assert.match(checkout, /\["upgrade_intent_recorded", "unchanged"\]/);
-  assert.match(checkout, /prepare_stripe_test_checkout/);
+  assert.match(checkout, /prepare_stripe_checkout/);
   assert.match(migration, /if sub\.status = 'reactivation_pending' then/);
   assert.match(migration, /private\.has_capability\(target_organization_id, 'billing\.manage'\)/);
 });

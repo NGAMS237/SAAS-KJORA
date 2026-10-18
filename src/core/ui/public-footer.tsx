@@ -16,7 +16,7 @@ export function PublicFooter({ locale = "fr" }: { locale?: "fr" | "en" }) {
         <Link href={`/securite?locale=${locale}`}>{english ? "Security" : "Sécurité"}</Link>
         <Link href={`/confidentialite?locale=${locale}`}>{english ? "Privacy" : "Confidentialité"}</Link>
         <Link href={`/mentions-legales?locale=${locale}`}>{english ? "Legal notice" : "Mentions légales"}</Link>
-        <Link href={`${local("/mentions-legales")}#documents-a-etablir`}>{english ? "Terms" : "Conditions"}</Link>
+        <Link href={local("/conditions-abonnement")}>{english ? "Subscription terms" : "Conditions d'abonnement"}</Link>
       </nav>
       <p>{PRODUIT_NOM} — {MARQUE_NOM}, {english ? `digital and SaaS activity of ${EDITEUR_NOM}. Beta.` : `activité numérique et SaaS de ${EDITEUR_NOM}. Bêta.`}</p>
     </footer>

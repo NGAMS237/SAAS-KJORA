@@ -91,6 +91,11 @@ export type AdminSubscriptionRow = {
   renewalDate: string | null;
   graceEndsOn: string | null;
   hasProvider: boolean;
+  lastPaymentState: string | null;
+  lastPaymentAt: string | null;
+  lastProviderSyncAt: string | null;
+  lastWebhookEvent: string | null;
+  lastWebhookDisposition: string | null;
   updatedAt: string;
 };
 
@@ -348,6 +353,11 @@ function mapSubscriptionRow(r: Record<string, unknown>): AdminSubscriptionRow {
     renewalDate: r.renewal_date ? String(r.renewal_date) : null,
     graceEndsOn: r.grace_ends_on ? String(r.grace_ends_on) : null,
     hasProvider: r.has_provider === true,
+    lastPaymentState: r.last_payment_state ? String(r.last_payment_state) : null,
+    lastPaymentAt: r.last_payment_at ? String(r.last_payment_at) : null,
+    lastProviderSyncAt: r.last_provider_sync_at ? String(r.last_provider_sync_at) : null,
+    lastWebhookEvent: r.last_webhook_event ? String(r.last_webhook_event) : null,
+    lastWebhookDisposition: r.last_webhook_disposition ? String(r.last_webhook_disposition) : null,
     updatedAt: String(r.updated_at ?? ""),
   };
 }

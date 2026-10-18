@@ -10,6 +10,7 @@ import type {
   WebhookVerification,
 } from "../provider";
 import { stripeReturnUrl } from "../stripe-test-safety";
+import type { ProviderMode } from "../provider";
 
 export type StripeTestGateway = {
   checkout(request: CheckoutRequest, secret: string): Promise<CheckoutSession>;
@@ -23,7 +24,7 @@ function absoluteReturnUrl(path: string): string {
 
 const liveGateway: StripeTestGateway = {
   async checkout(request, secret) {
-    if (!secret.startsWith("sk_test_")) throw new Error("STRIPE_TEST_KEY_REQUIRED");
+    if (!secret.startsWith("sk_test_") && !secret.startsWith("sk_live_")) throw new Error("STRIPE_KEY_REQUIRED");
     if (!request.providerPriceRef?.startsWith("price_")) throw new Error("STRIPE_TEST_PRICE_REQUIRED");
     const stripe = new Stripe(secret);
     const session = await stripe.checkout.sessions.create({
@@ -50,8 +51,9 @@ const liveGateway: StripeTestGateway = {
         },
       },
     }, { idempotencyKey: request.idempotencyKey });
-    if (!session.url || session.livemode || !session.id.startsWith("cs_test_")) {
-      throw new Error("STRIPE_TEST_SESSION_REJECTED");
+    const expectedLive = secret.startsWith("sk_live_");
+    if (!session.url || session.livemode !== expectedLive || !session.id.startsWith(expectedLive ? "cs_live_" : "cs_test_")) {
+      throw new Error("STRIPE_SESSION_REJECTED");
     }
     return {
       providerSessionRef: session.id,
@@ -62,7 +64,7 @@ const liveGateway: StripeTestGateway = {
   },
 
   async portal(request, secret) {
-    if (!secret.startsWith("sk_test_")) throw new Error("STRIPE_TEST_KEY_REQUIRED");
+    if (!secret.startsWith("sk_test_") && !secret.startsWith("sk_live_")) throw new Error("STRIPE_KEY_REQUIRED");
     const stripe = new Stripe(secret);
     const session = await stripe.billingPortal.sessions.create({
       customer: request.providerCustomerRef,
@@ -77,18 +79,27 @@ const liveGateway: StripeTestGateway = {
   },
 };
 
-export function createStripeTestAdapter(
+export function createStripeAdapter(
   gateway: StripeTestGateway = liveGateway,
   env: NodeJS.ProcessEnv = process.env,
+  environment: "test" | "live" = "test",
 ): BillingProviderAdapter {
-  const secret = env.STRIPE_SANDBOX_SECRET_KEY?.trim() ?? "";
-  const webhook = env.STRIPE_SANDBOX_WEBHOOK_SECRET?.trim() ?? "";
+  const live = environment === "live";
+  const mode: ProviderMode = live ? "live" : "sandbox";
+  const secret = env[live ? "STRIPE_LIVE_SECRET_KEY" : "STRIPE_SANDBOX_SECRET_KEY"]?.trim() ?? "";
+  const webhook = env[live ? "STRIPE_LIVE_WEBHOOK_SECRET" : "STRIPE_SANDBOX_WEBHOOK_SECRET"]?.trim() ?? "";
   return {
     name: "stripe",
-    mode: "sandbox",
+    mode,
     async createCheckout(request) {
       if (request.currency !== "CAD") throw new Error("STRIPE_TEST_CAD_ONLY");
-      return gateway.checkout(request, secret);
+      if (live ? !secret.startsWith("sk_live_") : !secret.startsWith("sk_test_")) {
+        throw new Error("STRIPE_ENVIRONMENT_KEY_MISMATCH");
+      }
+      const session = await gateway.checkout(request, secret);
+      const expectedPrefix = live ? "cs_live_" : "cs_test_";
+      if (!session.providerSessionRef.startsWith(expectedPrefix)) throw new Error("STRIPE_SESSION_MODE_MISMATCH");
+      return session;
     },
     async openCustomerPortal(request) {
       return gateway.portal(request, secret);
@@ -99,7 +110,7 @@ export function createStripeTestAdapter(
       if (!webhook) return { valid: false, reason: "provider_not_configured" };
       try {
         const event = gateway.verify(rawBody, signature, webhook);
-        if (event.livemode || !event.id) return { valid: false, reason: "invalid_signature" };
+        if (event.livemode !== live || !event.id) return { valid: false, reason: "invalid_signature" };
         return {
           valid: true,
           providerEventId: event.id,
@@ -111,4 +122,8 @@ export function createStripeTestAdapter(
       }
     },
   };
+}
+
+export function createStripeTestAdapter(gateway: StripeTestGateway = liveGateway, env: NodeJS.ProcessEnv = process.env) {
+  return createStripeAdapter(gateway, env, "test");
 }

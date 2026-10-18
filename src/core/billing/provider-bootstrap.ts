@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createStripeTestAdapter } from "./adapters/stripe-test-adapter";
-import { isProviderConfigured, isProviderKillSwitched } from "./provider-config";
+import { createStripeAdapter } from "./adapters/stripe-test-adapter";
+import { isProviderConfigured, isProviderKillSwitched, stripeEnvironment } from "./provider-config";
 import { registerBillingProvider, registeredProviders } from "./provider";
 
 export function ensureBillingProviders(): void {
@@ -10,6 +10,7 @@ export function ensureBillingProviders(): void {
     && !isProviderKillSwitched("stripe")
     && !registeredProviders().includes("stripe")
   ) {
-    registerBillingProvider(createStripeTestAdapter());
+    const environment = stripeEnvironment();
+    if (environment) registerBillingProvider(createStripeAdapter(undefined, process.env, environment));
   }
 }

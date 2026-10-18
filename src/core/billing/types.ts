@@ -40,6 +40,9 @@ export type SubscriptionView = {
   paymentMethodBrand: string | null;
   paymentMethodLast4: string | null;
   paymentMethodExpiresOn: string | null;
+  lastPaymentState: "paid" | "failed" | "action_required" | null;
+  lastPaymentAt: string | null;
+  lastProviderSyncAt: string | null;
 };
 
 export type BillingUsage = {
@@ -83,6 +86,8 @@ export type BillingInvoice = {
   manualReference: string | null;
   /** REVENUE-01B : renseigné uniquement après confirmation manuelle par un platform_admin. */
   manualPaymentConfirmedAt: string | null;
+  /** Distingue les factures SaaS fournisseur des factures manuelles et des documents locatifs. */
+  source: "manual" | "automatic" | "provider";
 };
 
 // ---------------------------------------------------------------------------
@@ -106,6 +111,7 @@ export type BillingCheckoutAffordance = {
 export type CheckoutUnavailableReason =
   | "no_provider_configured"
   | "sandbox_only"
+  | "pilot_invitation_required"
   | "currency_unsupported"
   | "plan_is_free"
   | "plan_requires_quote";
@@ -140,6 +146,8 @@ export const CHECKOUT_UNAVAILABLE_MESSAGES: Record<CheckoutUnavailableReason, st
     "Le règlement en ligne n’est pas encore disponible. Votre demande est enregistrée et nous revenons vers vous.",
   sandbox_only:
     "Le règlement en ligne est en cours de mise en service. Votre demande est enregistrée : aucun montant n’est débité.",
+  pilot_invitation_required:
+    "Le pilote payant est accessible uniquement sur invitation. Aucun paiement n’a été lancé.",
   currency_unsupported:
     "Aucun moyen de règlement en ligne n’est disponible pour cette devise. Nous revenons vers vous.",
   plan_is_free: "Ce plan est gratuit : aucun moyen de paiement n’est nécessaire.",

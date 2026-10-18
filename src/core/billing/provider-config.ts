@@ -7,16 +7,18 @@ import "server-only";
 // il répond « configuré » ou « non configuré », et remet le secret directement
 // à l'adaptateur qui en a besoin, jamais à une couche de présentation.
 //
-// Deux garde-fous durs :
+// Garde-fous durs :
 //   1. Aucune variable provider ne porte le préfixe NEXT_PUBLIC_ — un test
 //      échoue si c'est le cas.
-//   2. Le mode `live` est refusé dans ce lot. Une clé live présente est traitée
-//      comme une erreur de configuration, pas comme une autorisation.
+//   2. Test et Live sont mutuellement exclusifs.
+//   3. Live exige les trois gates du pilote et une configuration complète ;
+//      une clé live présente seule ne constitue jamais une autorisation.
 // =============================================================================
 
 import type { ProviderName } from "./provider-capabilities.ts";
 import type { ProviderMode } from "./provider.ts";
-import { isStripeTestSecret, isStripeWebhookSecret } from "./stripe-test-safety.ts";
+import { isStripeLiveSecret, isStripePublishableKey, isStripeTestSecret, isStripeWebhookSecret } from "./stripe-test-safety.ts";
+import { readStripePriceMapping, type StripeEnvironment } from "./stripe-price-contract.ts";
 
 /** Noms des variables d'environnement, par provider. Jamais de valeurs ici. */
 export const PROVIDER_ENV_KEYS: Record<ProviderName, { secret: string; webhook: string }> = {
@@ -41,16 +43,39 @@ export const PROVIDER_ENV_KEYS: Record<ProviderName, { secret: string; webhook: 
 };
 
 /**
- * Mode d'exécution. Tant que ALIGN-04B n'a pas livré la mise en service,
- * seule la sandbox est acceptée : une valeur `live` est ignorée et
- * journalisée comme anomalie de configuration.
+ * Mode d'exécution. L'absence de configuration ou la coexistence Test/Live
+ * ferme Stripe. Live n'est reconnu que derrière les trois drapeaux du pilote.
  */
 export function providerMode(): ProviderMode {
-  return "sandbox";
+  return stripeEnvironment() === "live" ? "live" : "sandbox";
 }
 
 export function isLiveModeAllowed(): boolean {
-  return false;
+  return stripeEnvironment() === "live";
+}
+
+export function stripeEnvironment(env: NodeJS.ProcessEnv = process.env): StripeEnvironment | null {
+  const testEnabled = env.BILLING_PROVIDER_STRIPE_TEST_ENABLED === "1";
+  const liveEnabled = env.KJORA_PAID_PILOT_ENABLED === "1"
+    && env.KJORA_PAID_PILOT_INVITE_ONLY === "1"
+    && env.BILLING_PROVIDER_STRIPE_LIVE_ENABLED === "1";
+  if (testEnabled === liveEnabled) return null;
+  return liveEnabled ? "live" : "test";
+}
+
+export function stripeServerConfig(env: NodeJS.ProcessEnv = process.env) {
+  const environment = stripeEnvironment(env);
+  if (!environment) return null;
+  const live = environment === "live";
+  const secret = env[live ? "STRIPE_LIVE_SECRET_KEY" : "STRIPE_SANDBOX_SECRET_KEY"]?.trim() ?? "";
+  const webhook = env[live ? "STRIPE_LIVE_WEBHOOK_SECRET" : "STRIPE_SANDBOX_WEBHOOK_SECRET"]?.trim() ?? "";
+  const publishable = env[live ? "STRIPE_LIVE_PUBLISHABLE_KEY" : "STRIPE_TEST_PUBLISHABLE_KEY"]?.trim() ?? "";
+  if (!(live ? isStripeLiveSecret(secret) : isStripeTestSecret(secret))) return null;
+  if (!isStripeWebhookSecret(webhook)) return null;
+  if (live && !isStripePublishableKey(publishable, "live")) return null;
+  if (!live && publishable && !isStripePublishableKey(publishable, "test")) return null;
+  if (!readStripePriceMapping(environment, env)) return null;
+  return { environment, mode: live ? "live" as const : "sandbox" as const, secret, webhook, publishable };
 }
 
 function readSecret(key: string): string | null {
@@ -61,9 +86,7 @@ function readSecret(key: string): string | null {
 export function isProviderConfigured(name: ProviderName): boolean {
   const keys = PROVIDER_ENV_KEYS[name];
   if (name === "stripe") {
-    if (process.env.BILLING_PROVIDER_STRIPE_TEST_ENABLED !== "1") return false;
-    if (!isStripeTestSecret(readSecret(keys.secret))) return false;
-    if (!isStripeWebhookSecret(readSecret(keys.webhook))) return false;
+    return stripeServerConfig() !== null;
   }
   return readSecret(keys.secret) !== null && readSecret(keys.webhook) !== null;
 }
@@ -92,6 +115,7 @@ function isKillSwitchOn(key: string): boolean {
 
 export function isProviderKillSwitched(name: ProviderName): boolean {
   if (isKillSwitchOn("BILLING_KILL_SWITCH_ALL")) return true;
+  if (name === "stripe" && stripeEnvironment() === "live" && isKillSwitchOn("BILLING_KILL_SWITCH_STRIPE_LIVE")) return true;
   return isKillSwitchOn(`BILLING_KILL_SWITCH_${name.toUpperCase()}`);
 }
 
@@ -107,9 +131,11 @@ export function configuredProviders(): ProviderName[] {
  * Ne jamais journaliser la valeur, ne jamais la renvoyer dans une réponse HTTP.
  */
 export function webhookSecret(name: ProviderName): string | null {
+  if (name === "stripe") return stripeServerConfig()?.webhook ?? null;
   return readSecret(PROVIDER_ENV_KEYS[name].webhook);
 }
 
 export function apiSecret(name: ProviderName): string | null {
+  if (name === "stripe") return stripeServerConfig()?.secret ?? null;
   return readSecret(PROVIDER_ENV_KEYS[name].secret);
 }
