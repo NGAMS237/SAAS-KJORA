@@ -15,9 +15,12 @@ select is(
   true,
   'la préparation Checkout reste SECURITY DEFINER'
 );
-select is(
-  (select proconfig from pg_proc where oid = 'public.prepare_stripe_test_checkout(uuid,text,text,text,text)'::regprocedure),
-  array['search_path='],
+select ok(
+  coalesce((
+    select array_to_string(proconfig, ',') in ('search_path=', 'search_path=""')
+    from pg_proc
+    where oid = 'public.prepare_stripe_test_checkout(uuid,text,text,text,text)'::regprocedure
+  ), false),
   'la préparation Checkout conserve un search_path vide'
 );
 select ok(

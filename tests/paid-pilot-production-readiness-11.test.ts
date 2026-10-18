@@ -21,6 +21,7 @@ const liveAudit = read("../scripts/audit-stripe-live-catalog.ts");
 const liveConfigure = read("../scripts/configure-stripe-live-catalog.ts");
 const terms = read("../src/app/conditions-abonnement/page.tsx");
 const footer = read("../src/core/ui/public-footer.tsx");
+const stripeCheckoutRlsTest = read("../supabase/tests/database/rls_billing_stripe_saas_01.test.sql");
 
 function mapping(contract: typeof STRIPE_TEST_PRICE_CONTRACT, prefix: string) {
   return Object.fromEntries(contract.map((entry, index) => [entry.envKey, `price_${prefix}_${index}`]));
@@ -149,4 +150,9 @@ test("11 — conditions pilote FR/EN visibles sans prétendre que Live est actif
   assert.match(terms, /Private paid pilot/);
   assert.match(terms, /À VALIDER PAR BLAISE/);
   assert.match(terms, /not a claim that Live payments are enabled/);
+});
+
+test("11 — le test pgTAP accepte les représentations PostgreSQL équivalentes du search_path vide", () => {
+  assert.match(stripeCheckoutRlsTest, /array_to_string\(proconfig, ','\) in \('search_path=', 'search_path=""'\)/);
+  assert.doesNotMatch(stripeCheckoutRlsTest, /array\['search_path='\]/);
 });
