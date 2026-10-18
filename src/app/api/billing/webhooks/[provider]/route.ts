@@ -117,8 +117,19 @@ export async function POST(
     const object = record(record(event.data).object);
     const intentKey = stripeIntentKey(object);
     const eventCreated = stripeTimestamp(event.created);
-    const subscriptionRef = stripeRef(object.subscription, "sub_") ?? stripeRef(object, "sub_");
-    const { error: processError } = await supabase.rpc("process_stripe_test_event", {
+    const parentSubscription = record(record(object.parent).subscription_details).subscription;
+    const subscriptionRef = stripeRef(object.subscription, "sub_")
+      ?? stripeRef(parentSubscription, "sub_")
+      ?? stripeRef(object, "sub_");
+    const invoiceRef = stripeRef(object.invoice, "in_") ?? stripeRef(object, "in_");
+    const statusTransitions = record(object.status_transitions);
+    const amountPaid = typeof object.amount_paid === "number" && Number.isSafeInteger(object.amount_paid)
+      ? object.amount_paid : null;
+    const amountDue = typeof object.amount_due === "number" && Number.isSafeInteger(object.amount_due)
+      ? object.amount_due : null;
+    const currency = typeof object.currency === "string" ? object.currency.toUpperCase() : null;
+    const { error: processError } = await supabase.rpc("process_stripe_event_v2", {
+      p_mode: providerMode(),
       p_provider_event_id: verification.providerEventId,
       p_event_type: verification.eventType,
       p_event_created_at: eventCreated,
@@ -130,6 +141,12 @@ export async function POST(
       p_provider_status: typeof object.status === "string" ? object.status : null,
       p_cancel_at_period_end: object.cancel_at_period_end === true,
       p_current_period_end: stripeTimestamp(object.current_period_end),
+      p_invoice_ref: invoiceRef,
+      p_invoice_amount_minor: verification.eventType === "invoice.paid" ? amountPaid : amountDue,
+      p_invoice_currency: currency,
+      p_invoice_period_start: stripeTimestamp(object.period_start),
+      p_invoice_period_end: stripeTimestamp(object.period_end),
+      p_invoice_paid_at: stripeTimestamp(statusTransitions.paid_at),
     });
     // La RPC journalise et applique atomiquement. Une erreur annule aussi le
     // journal : le 500 permet alors à Stripe de rejouer sans perte d'événement.

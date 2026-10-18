@@ -587,12 +587,15 @@ export function SubscriptionsView({
                   <th scope="col">{t.colRenewal}</th>
                   <th scope="col">{t.colGraceEnds}</th>
                   <th scope="col">{t.colProvider}</th>
+                  <th scope="col">{t.colLastPayment}</th>
+                  <th scope="col">{t.colLastProviderSync}</th>
+                  <th scope="col">{t.colLastWebhook}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="admin-table__muted">
+                    <td colSpan={12} className="admin-table__muted">
                       {t.emptyRows}
                     </td>
                   </tr>
@@ -608,6 +611,15 @@ export function SubscriptionsView({
                       <td className="admin-table__muted">{formatDate(row.renewalDate, lang)}</td>
                       <td className="admin-table__muted">{formatDate(row.graceEndsOn, lang)}</td>
                       <td>{row.hasProvider ? t.providerYes : t.providerNo}</td>
+                      <td>
+                        {row.lastPaymentState ?? "—"}
+                        {row.lastPaymentAt ? <span className="admin-table__muted"> · {formatDate(row.lastPaymentAt, lang)}</span> : null}
+                      </td>
+                      <td className="admin-table__muted">{formatDate(row.lastProviderSyncAt, lang)}</td>
+                      <td>
+                        {row.lastWebhookEvent ?? "—"}
+                        {row.lastWebhookDisposition ? <span className="admin-table__muted"> · {row.lastWebhookDisposition}</span> : null}
+                      </td>
                     </tr>
                   ))
                 )}

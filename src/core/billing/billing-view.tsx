@@ -89,6 +89,7 @@ const RECURRENCE_MESSAGES_EN: Record<RecurrenceMode, string> = {
 const CHECKOUT_UNAVAILABLE_MESSAGES_EN: Record<CheckoutUnavailableReason, string> = {
   no_provider_configured: "Online payment is not available yet. Your request is recorded and we will contact you.",
   sandbox_only: "Online payment is being prepared. Your request is recorded and no amount is charged.",
+  pilot_invitation_required: "The paid pilot is invitation-only. No payment was started.",
   currency_unsupported: "No online payment method is available for this currency. We will contact you.",
   plan_is_free: "This plan is free. No payment method is required.",
   plan_requires_quote: "This plan requires a commercial discussion instead of an online subscription.",
@@ -112,6 +113,7 @@ export function BillingView({
   affordance,
   requestedIntent,
   rentalMarket,
+  stripeEnvironment,
 }: {
   overview: BillingOverview;
   invoices: BillingInvoice[];
@@ -119,6 +121,7 @@ export function BillingView({
   affordance: BillingCheckoutAffordance;
   requestedIntent?: SiteAppIntent;
   rentalMarket?: { country: string; currency: string } | null;
+  stripeEnvironment: "test" | "live" | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -182,7 +185,7 @@ export function BillingView({
     setBusy(false);
   }
 
-  async function openStripeTest(kind: "checkout" | "portal") {
+  async function openStripe(kind: "checkout" | "portal") {
     if (kind === "checkout" && (!requestedPlan || !requestedBillingCountry)) return;
     setBusy(true);
     setMessage(null);
@@ -199,8 +202,8 @@ export function BillingView({
     const body = await response.json().catch(() => null) as { redirect_url?: string } | null;
     if (!response.ok || !body?.redirect_url) {
       setMessage(t(
-        "Stripe Test n’est pas configuré pour cette Preview. Aucun paiement n’a été lancé.",
-        "Stripe Test is not configured for this Preview. No payment was started.",
+        "Stripe n’est pas disponible pour ce pilote. Aucun paiement n’a été lancé.",
+        "Stripe is not available for this pilot. No payment was started.",
       ));
       setBusy(false);
       return;
@@ -332,6 +335,11 @@ export function BillingView({
               : `${formatAmount(prixCourant, sub.currency)} ${t(`par ${sub.billingCycle === "annual" ? "an" : "mois"}.`, `per ${sub.billingCycle === "annual" ? "year" : "month"}.`)}`}
         </p>
         {sub.renewalDate ? <p>{t("Prochaine échéance", "Next renewal")}: {sub.renewalDate}.</p> : null}
+        {sub.lastPaymentState ? <p>{t("Dernier paiement", "Latest payment")}: {
+          sub.lastPaymentState === "paid" ? t("reçu", "received")
+            : sub.lastPaymentState === "action_required" ? t("action requise", "action required")
+              : t("échoué", "failed")
+        }{sub.lastPaymentAt ? ` · ${sub.lastPaymentAt.slice(0, 10)}` : ""}.</p> : null}
         {sub.scheduledPlan ? (
           <p className="form-feedback" role="status">
             {t(`Passage au plan ${PLAN_LABELS[sub.scheduledPlan].fr} prévu le ${sub.scheduledEffectiveOn}.`, `Change to the ${PLAN_LABELS[sub.scheduledPlan].en} plan scheduled for ${sub.scheduledEffectiveOn}.`)}
@@ -466,13 +474,13 @@ export function BillingView({
               : null}
         </p>
         {requestedBillingCountry === "CA" && requestedPlan && affordance.online ? (
-          <button className="button button--primary" disabled={busy} onClick={() => void openStripeTest("checkout")} type="button">
-            {busy ? t("Ouverture…", "Opening…") : t("Continuer vers Stripe Test", "Continue to Stripe Test")}
+          <button className="button button--primary" disabled={busy} onClick={() => void openStripe("checkout")} type="button">
+            {busy ? t("Ouverture…", "Opening…") : stripeEnvironment === "test" ? t("Continuer vers Stripe Test", "Continue to Stripe Test") : t("Continuer vers Stripe", "Continue to Stripe")}
           </button>
         ) : null}
         {sub.provider === "stripe" ? (
-          <button className="button button--secondary" disabled={busy} onClick={() => void openStripeTest("portal")} type="button">
-            {t("Gérer dans le portail Stripe Test", "Manage in Stripe Test portal")}
+          <button className="button button--secondary" disabled={busy} onClick={() => void openStripe("portal")} type="button">
+            {stripeEnvironment === "test" ? t("Gérer dans le portail Stripe Test", "Manage in Stripe Test portal") : t("Gérer mon abonnement", "Manage my subscription")}
           </button>
         ) : null}
       </Card>
@@ -489,7 +497,7 @@ export function BillingView({
               <div className="billing-invoice-row" key={facture.id}>
                 <div>
                   <strong>{facture.number}</strong>
-                  <span>{PLAN_LABELS[facture.plan][locale]} · {facture.periodStart} → {facture.periodEnd}</span>
+                  <span>{facture.source === "provider" ? t("Facture d’abonnement KJORA via Stripe", "KJORA subscription invoice via Stripe") : t("Facture d’abonnement KJORA", "KJORA subscription invoice")} · {PLAN_LABELS[facture.plan][locale]} · {facture.periodStart} → {facture.periodEnd}</span>
                 </div>
                 <span className="financial-value">{formatAmount(facture.amountMinor, facture.currency)}</span>
                 <Badge tone={facture.status === "paid" ? "success" : "neutral"}>

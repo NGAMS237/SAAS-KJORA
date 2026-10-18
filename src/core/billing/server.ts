@@ -18,7 +18,7 @@ import {
   type BillingCycle,
 } from "@/core/billing/model";
 import { isPlanSlug, type PlanSlug } from "@/core/entitlements/model";
-import { configuredProviders } from "@/core/billing/provider-config";
+import { configuredProviders, stripeEnvironment } from "@/core/billing/provider-config";
 import { affordanceFor, routeProvider } from "@/core/billing/provider-routing";
 import type {
   BillingCheckoutAffordance,
@@ -66,6 +66,10 @@ function parseSubscription(raw: unknown): SubscriptionView {
     paymentMethodBrand: str(r.paymentMethodBrand),
     paymentMethodLast4: str(r.paymentMethodLast4),
     paymentMethodExpiresOn: str(r.paymentMethodExpiresOn),
+    lastPaymentState: ["paid", "failed", "action_required"].includes(String(r.lastPaymentState))
+      ? r.lastPaymentState as SubscriptionView["lastPaymentState"] : null,
+    lastPaymentAt: str(r.lastPaymentAt),
+    lastProviderSyncAt: str(r.lastProviderSyncAt),
   };
 }
 
@@ -117,6 +121,8 @@ function parseBillingInvoiceRow(row: Record<string, unknown>): BillingInvoice | 
     paidAt: str(row.paid_at),
     manualReference: str(row.manual_reference),
     manualPaymentConfirmedAt: str(row.manual_payment_confirmed_at),
+    source: ["manual", "automatic", "provider"].includes(String(row.generation_source))
+      ? row.generation_source as BillingInvoice["source"] : "manual",
   };
 }
 
@@ -175,7 +181,11 @@ export function checkoutAffordance(args: {
   currency: BillingCurrency;
   amountMinor: number;
   methodHint?: unknown;
+  paidPilotEligible?: boolean;
 }): BillingCheckoutAffordance {
+  if (stripeEnvironment() === "live" && args.paidPilotEligible !== true) {
+    return { online: false, recurrence: null, reason: "pilot_invitation_required" };
+  }
   return affordanceFor(
     routeProvider({
       plan: args.plan,
@@ -186,6 +196,19 @@ export function checkoutAffordance(args: {
       methodHint: args.methodHint,
     }),
   );
+}
+
+export function activeStripeEnvironment(): "test" | "live" | null {
+  return stripeEnvironment();
+}
+
+export async function isPaidPilotEligible(organizationId: string): Promise<boolean> {
+  if (stripeEnvironment() !== "live") return true;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("paid_pilot_checkout_eligibility", {
+    target_organization_id: organizationId,
+  });
+  return !error && data === true;
 }
 
 // ---------------------------------------------------------------------------

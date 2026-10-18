@@ -48,8 +48,11 @@ const expectedWebhookUrl = "https://kjorapp.com/api/billing/webhooks/stripe";
 const expectedWebhookEvents = [
   "charge.refunded",
   "checkout.session.completed",
+  "customer.subscription.created",
   "customer.subscription.deleted",
   "customer.subscription.updated",
+  "invoice.paid",
+  "invoice.payment_action_required",
   "invoice.payment_failed",
 ] as const;
 

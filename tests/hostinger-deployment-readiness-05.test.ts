@@ -46,15 +46,16 @@ test("Resend financier, facturation automatique et Meta restent désactivés", (
 });
 
 test("aucun provider Afrique ou Meta n'est enregistré par le bootstrap", () => {
-  assert.match(providerBootstrap, /registerBillingProvider\(createStripeTestAdapter\(\)\)/);
+  assert.match(providerBootstrap, /registerBillingProvider\(createStripeAdapter/);
   assert.doesNotMatch(providerBootstrap, /Flutterwave|CamPay|ElyonPay|Meta/i);
-  assert.match(providerConfig, /return false;\s*\}/);
+  assert.match(providerConfig, /if \(testEnabled === liveEnabled\) return null/);
 });
 
 test("les retours Stripe proviennent de l'origine serveur et le portail reste interne", () => {
   assert.match(stripeAdapter, /process\.env\.KJORA_APP_ORIGIN/);
   assert.match(stripeAdapter, /absoluteReturnUrl\(request\.returnPath\)/);
-  assert.doesNotMatch(stripeAdapter, /NEXT_PUBLIC_.*STRIPE|sk_live_/);
+  assert.doesNotMatch(stripeAdapter, /NEXT_PUBLIC_.*STRIPE/);
+  assert.match(stripeAdapter, /STRIPE_ENVIRONMENT_KEY_MISMATCH/);
 });
 
 test("les webhooks conservent le corps brut avant vérification", () => {

@@ -348,3 +348,13 @@
 - WhatsApp : handoff manuel consent-aware sur document approuvé, aucun provider/statut de livraison fabriqué. Migration additive et pgTAP créés mais non appliqués/non exécutés faute de PostgreSQL.
 - Correctif v3 local : catalogue téléphone fermé de 14 pays avec motifs nationaux identiques en TypeScript et SQL; CI conserve les préfixes mobiles `01`/`05`/`07`, BJ exige et conserve `01`; préférences Owner/partenaire/locataire structurées, `tenant_confirmed` séparé de `verified`, consentement marketing locataire direct seulement et journaux sans téléphone/fingerprint.
 - Migration et pgTAP restent non appliqués/non exécutés tant qu'aucun PostgreSQL isolé n'est disponible; fournisseur WhatsApp toujours désactivé.
+
+### PAID-PILOT-PRODUCTION-READINESS-11 — préparation locale
+
+- Branche locale isolée depuis `9fb142793b0d0d0c3a6cfc97ae09582f1eeb7c57`; aucune mutation distante.
+- Séparation Stripe Test/Live fail-closed, catalogue Live auditable, allowlist Organization et coupe-circuit Live préparés.
+- Migration additive candidate : traitement idempotent des webhooks, synchronisation des factures SaaS, états de paiement et vue Admin sans référence fournisseur sensible.
+- Conditions d’abonnement pilote FR/EN et messages transactionnels FR/EN préparés; aucun envoi n’est activé.
+- Les gates restent fermées : migration Supabase, configuration Stripe Live, redéploiement Hostinger et première action financière réelle exigent chacune une autorisation explicite.
+- L’audit distant en lecture seule observe 13 Organizations, 15 memberships, 3 abonnements, 0 facture Billing, 2 intentions et 3 webhooks. Aucun `invoice.paid` n’est présent dans les événements observés.
+- Les contrôles SQL réels de la nouvelle migration restent NON EXÉCUTÉS tant qu’un environnement éphémère n’est pas disponible ou que la branche n’est pas autorisée à déclencher la CI.

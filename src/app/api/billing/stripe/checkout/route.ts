@@ -5,9 +5,9 @@ import { requireActiveCapability } from "@/core/authorization/server";
 import { isBillingCycle } from "@/core/billing/model";
 import { getBillingProvider } from "@/core/billing/provider";
 import { ensureBillingProviders } from "@/core/billing/provider-bootstrap";
-import { isProviderConfigured, isProviderKillSwitched } from "@/core/billing/provider-config";
+import { isProviderConfigured, isProviderKillSwitched, stripeEnvironment } from "@/core/billing/provider-config";
 import { requestPlanChange } from "@/core/billing/server";
-import { stripeTestPrice } from "@/core/billing/stripe-price-map";
+import { stripePrice } from "@/core/billing/stripe-price-map";
 import { isPlanSlug } from "@/core/entitlements/model";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -25,7 +25,9 @@ export async function POST(request: Request) {
     || typeof body.cycle !== "string" || !isBillingCycle(body.cycle)) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
-  const priceRef = stripeTestPrice(body.plan, body.cycle);
+  const environment = stripeEnvironment();
+  if (!environment) return NextResponse.json({ error: "stripe_unavailable" }, { status: 503 });
+  const priceRef = stripePrice(environment, body.plan, body.cycle);
   if (!priceRef) return NextResponse.json({ error: "stripe_test_price_unavailable" }, { status: 503 });
   const prepared = await requestPlanChange(authorization.organizationId, body.plan, body.cycle, "CA");
   if (!prepared || !["upgrade_intent_recorded", "unchanged"].includes(String(prepared.outcome))) {
@@ -35,10 +37,11 @@ export async function POST(request: Request) {
     ? body.idempotency_key : randomUUID();
   const idempotencyKey = `kjora:${authorization.organizationId}:${clientKey}`;
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("prepare_stripe_test_checkout", {
+  const { data, error } = await supabase.rpc("prepare_stripe_checkout", {
     target_organization_id: authorization.organizationId,
     p_plan: body.plan, p_cycle: body.cycle, p_price_ref: priceRef,
     p_idempotency_key: idempotencyKey,
+    p_mode: environment === "live" ? "live" : "sandbox",
   });
   if (error || !data) return NextResponse.json({ error: "checkout_not_prepared" }, { status: 409 });
   const intent = data as Record<string, unknown>;
@@ -52,7 +55,7 @@ export async function POST(request: Request) {
     providerCustomerRef: typeof intent.customerRef === "string" ? intent.customerRef : null,
     locale: body.locale === "en" ? "en" : "fr",
   });
-  const attached = await supabase.rpc("attach_stripe_test_checkout", {
+  const attached = await supabase.rpc("attach_stripe_checkout", {
     target_intent_id: intent.intentId, p_checkout_session_ref: session.providerSessionRef,
   });
   if (attached.error || attached.data !== true) return NextResponse.json({ error: "checkout_not_recorded" }, { status: 500 });
