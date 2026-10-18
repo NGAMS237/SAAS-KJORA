@@ -27,4 +27,3 @@
 ## Arrêt immédiat
 
 Réactiver `BILLING_KILL_SWITCH_ALL=1` si : signature invalide, facture absente, montant/devise divergents, plan activé sans paiement confirmé, données inter-Organization, événement impossible à rattacher, erreur 5xx répétée ou secret exposé.
-

@@ -1,10 +1,10 @@
 # KJORA — PAID-PILOT-PRODUCTION-READINESS-11
 
-Date : 2026-10-17  
-Dépôt : `NGAMS237/SAAS-KJORA`  
-Branche locale : `codex/kjora-paid-pilot-production-readiness-11`  
-Base : `9fb142793b0d0d0c3a6cfc97ae09582f1eeb7c57`  
-Tree de base : `d7583ce1eea2fc0c862ecebaf2b189f571881829`
+- Date : 2026-10-17
+- Dépôt : `NGAMS237/SAAS-KJORA`
+- Branche locale : `codex/kjora-paid-pilot-production-readiness-11`
+- Base : `9fb142793b0d0d0c3a6cfc97ae09582f1eeb7c57`
+- Tree de base : `d7583ce1eea2fc0c862ecebaf2b189f571881829`
 
 ## Résultat
 

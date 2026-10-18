@@ -19,4 +19,3 @@ Cette checklist décrit une action financière réelle. Elle relève de la Gate 
 - [ ] Journaux sans carte, secret, email complet ou payload sensible.
 
 Avant Stripe Live public : revue juridique/fiscale des taxes, remboursement, rétractation, facture, droit applicable et litiges — **À VALIDER PAR BLAISE et le conseil juridique**.
-

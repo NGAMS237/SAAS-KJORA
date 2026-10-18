@@ -19,4 +19,3 @@ Une migration compensatrice séparée est obligatoire. Elle doit d’abord prouv
 ## Réconciliation
 
 Comparer Stripe et KJORA par identifiants masqués, période, montant, devise et statut. Toute correction financière est manuelle, documentée et append-only. Aucun plan payant ne doit être accordé pour « compenser » une panne sans paiement réellement confirmé.
-

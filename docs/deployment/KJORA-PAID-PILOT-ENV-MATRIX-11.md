@@ -19,4 +19,3 @@ Toutes les valeurs secrètes sont saisies dans Hostinger, jamais dans Git, un ra
 Test et Live ne peuvent jamais être actifs simultanément : la configuration devient invalide et le Checkout répond indisponible. Une configuration Live partielle est également refusée.
 
 Événements attendus : `charge.refunded`, `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `invoice.payment_action_required`.
-
