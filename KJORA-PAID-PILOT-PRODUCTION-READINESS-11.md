@@ -85,7 +85,7 @@ Checkout Test, retour sécurisé, activation de l’abonnement et ouverture du p
 | Gate | Statut |
 |---|---|
 | Code local | PASS |
-| Patch autonome | À PRODUIRE APRÈS COMMITS LOCAUX |
+| Patch autonome | PASS — export depuis la base et application `git am --3way` vérifiée sur worktree propre |
 | CI SQL éphémère | NON EXÉCUTÉ |
 | Gate B — migration Supabase | BLOQUÉE PAR CI, NON AUTORISÉE |
 | Gate A — secrets/catalogue Stripe Live | NON AUTORISÉE |
