@@ -81,3 +81,9 @@ Le lot PUBLIC-ENTRY-PWA-FIX-06 remplace la redirection de la racine par une vitr
 Le statut réseau est vérifié après hydratation par une ressource publique same-origin sans cookie. Les événements `online`/`offline` et le bouton « Réessayer » pilotent le même état; une erreur Supabase ou API métier n'est pas interprétée comme une panne Internet. API, pages authentifiées, documents, contrats et PDF restent hors cache.
 
 Sortie du gate : validations locales vertes, revue du patch, fusion distincte, déploiement Hostinger supervisé puis matrice navigateur sur `kjorapp.com`. Avant ces étapes, `READY FOR PRODUCTION` reste NON.
+
+## Gate 6 — pilote payant privé
+
+Le lot PAID-PILOT-PRODUCTION-READINESS-11 prépare Stripe Live sans l’activer. L’accès est limité à une allowlist d’Organizations, à leur Owner actif et à `billing.manage`. Test et Live sont mutuellement exclusifs; les prix, montants, devises et Organizations sont résolus côté serveur.
+
+Ordre obligatoire : CI SQL éphémère → Gate B Supabase → Gate A Stripe Live → Gate C Hostinger → invitation unique → Gate D premier paiement réel supervisé. L’échec d’un seul contrôle referme les coupe-circuits. Le lancement public, les communications automatiques et Stripe Live ouvert à tous restent hors périmètre.
