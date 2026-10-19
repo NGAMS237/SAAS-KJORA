@@ -12,11 +12,19 @@ const stripeAdapter = read("src/core/billing/adapters/stripe-test-adapter.ts");
 const stripeWebhook = read("src/app/api/billing/webhooks/[provider]/route.ts");
 const resendWebhook = read("src/app/api/webhooks/resend/route.ts");
 const serviceWorker = read("public/sw.js");
+const nextConfig = read("next.config.ts");
 
 test("Hostinger cible explicitement Node.js 22 et les scripts Next.js standard", () => {
   assert.equal(packageJson.engines?.node, "22.x");
   assert.equal(packageJson.scripts?.build, "next build");
   assert.equal(packageJson.scripts?.start, "next start");
+});
+
+test("Hostinger limite explicitement les workers Next.js pendant le build", () => {
+  assert.match(nextConfig, /experimental:\s*\{[\s\S]*?cpus:\s*1,/);
+  assert.match(nextConfig, /experimental:\s*\{[\s\S]*?memoryBasedWorkersCount:\s*false,/);
+  assert.doesNotMatch(nextConfig, /cpus:\s*(?!1\b)\d+/);
+  assert.doesNotMatch(nextConfig, /memoryBasedWorkersCount:\s*true/);
 });
 
 test("un next start auto-hébergé est traité comme Production sans VERCEL_ENV", () => {
