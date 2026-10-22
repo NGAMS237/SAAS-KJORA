@@ -7,6 +7,7 @@ on:
       - codex/site-app-flow-01
       - codex/security-tenants-access-01
       - claude/admin-01-secure-base
+      - codex/kjora-first-paid-pilot-launch-readiness-14
 
 permissions:
   contents: read
@@ -20,6 +21,12 @@ jobs:
     steps:
       - name: Check out the branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
 
       - name: Install application dependencies
         run: npm ci

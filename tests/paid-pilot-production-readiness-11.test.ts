@@ -23,6 +23,7 @@ const terms = read("../src/app/conditions-abonnement/page.tsx");
 const footer = read("../src/core/ui/public-footer.tsx");
 const stripeCheckoutRlsTest = read("../supabase/tests/database/rls_billing_stripe_saas_01.test.sql");
 const paidPilotPgTapTest = read("../supabase/tests/database/paid_pilot_production_readiness_11.test.sql");
+const webhookData = read("../src/core/billing/stripe-webhook-data.ts");
 
 function mapping(contract: typeof STRIPE_TEST_PRICE_CONTRACT, prefix: string) {
   return Object.fromEntries(contract.map((entry, index) => [entry.envKey, `price_${prefix}_${index}`]));
@@ -95,6 +96,8 @@ test("11 — paiement vérifié synchronise une facture SaaS sans écrire dans l
   assert.match(webhook, /object\.amount_due/);
   assert.match(webhook, /object\.invoice/);
   assert.match(webhook, /parentSubscription/);
+  assert.match(webhook, /stripeInvoicePeriod\(object\)/);
+  assert.match(webhookData, /subscriptionLine/);
   assert.match(migration, /bi\.provider_invoice_ref = p_invoice_ref/);
 });
 
