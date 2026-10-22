@@ -6,6 +6,7 @@ import { getBillingProvider } from "@/core/billing/provider";
 import { isProviderConfigured, isProviderKillSwitched, providerMode } from "@/core/billing/provider-config";
 import { decideWebhook, type WebhookContext } from "@/core/billing/webhook-rules";
 import { ensureBillingProviders } from "@/core/billing/provider-bootstrap";
+import { stripeInvoicePeriod } from "@/core/billing/stripe-webhook-data";
 
 // =============================================================================
 // KJORA — Réception des webhooks provider (ALIGN-04A)
@@ -128,6 +129,7 @@ export async function POST(
     const amountDue = typeof object.amount_due === "number" && Number.isSafeInteger(object.amount_due)
       ? object.amount_due : null;
     const currency = typeof object.currency === "string" ? object.currency.toUpperCase() : null;
+    const invoicePeriod = stripeInvoicePeriod(object);
     const { error: processError } = await supabase.rpc("process_stripe_event_v2", {
       p_mode: providerMode(),
       p_provider_event_id: verification.providerEventId,
@@ -144,8 +146,8 @@ export async function POST(
       p_invoice_ref: invoiceRef,
       p_invoice_amount_minor: verification.eventType === "invoice.paid" ? amountPaid : amountDue,
       p_invoice_currency: currency,
-      p_invoice_period_start: stripeTimestamp(object.period_start),
-      p_invoice_period_end: stripeTimestamp(object.period_end),
+      p_invoice_period_start: invoicePeriod.start,
+      p_invoice_period_end: invoicePeriod.end,
       p_invoice_paid_at: stripeTimestamp(statusTransitions.paid_at),
     });
     // La RPC journalise et applique atomiquement. Une erreur annule aussi le
