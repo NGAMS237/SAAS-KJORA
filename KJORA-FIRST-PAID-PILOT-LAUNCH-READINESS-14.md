@@ -53,3 +53,15 @@ perform any provider action manually. Never delete or alter payment history.
 Code review and isolated SQL replay remain mandatory. Stripe Live configuration,
 first real payment, three pilots, and public launch are not authorized by this
 document.
+
+## Evidence obtained locally (2026-10-22)
+
+- `npm ci`, TypeScript, ESLint, 1,053 Node tests, production build and
+  `git diff --check` passed locally. The host ran Node 24.19.0; Node 22 was
+  not installed.
+- A local `next start` smoke test returned `200` for `/`, `/connexion/` and
+  `/administration/`. `/app/` and `/app/billing/` redirected unauthenticated
+  requests to `/connexion/`. The Stripe webhook returned `503` while all
+  billing configuration was deliberately absent; this is not a signature test.
+- Docker is not installed, so Supabase ephemeral reset, full migration replay,
+  pgTAP, SQL access/concurrency and Admin mutation flows were not executed.
