@@ -7,10 +7,16 @@ import {
   readStripePriceMapping,
 } from "../src/core/billing/stripe-price-contract.ts";
 import { isStripeLiveSecret, isStripePublishableKey, isStripeTestSecret } from "../src/core/billing/stripe-test-safety.ts";
+import { resolveStripeEnvironment } from "../src/core/billing/stripe-mode.ts";
+import {
+  isAcceptedStripeWebhookEvent,
+  stripeWebhookHasBusinessEffect,
+} from "../src/core/billing/stripe-webhook-events.ts";
 import { billingTransactionalCopy } from "../src/core/billing/transactional-copy.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 const config = read("../src/core/billing/provider-config.ts");
+const mode = read("../src/core/billing/stripe-mode.ts");
 const checkout = read("../src/app/api/billing/stripe/checkout/route.ts");
 const webhook = read("../src/app/api/billing/webhooks/[provider]/route.ts");
 const adapter = read("../src/core/billing/adapters/stripe-test-adapter.ts");
@@ -51,12 +57,28 @@ test("11 — clés Stripe Test/Live strictement distinguées", () => {
 
 test("11 — activation Live exige pilote, invitation et drapeau fournisseur, sans coexistence Test", () => {
   for (const token of ["KJORA_PAID_PILOT_ENABLED", "KJORA_PAID_PILOT_INVITE_ONLY", "BILLING_PROVIDER_STRIPE_LIVE_ENABLED"]) {
-    assert.ok(config.includes(token));
+    assert.ok(mode.includes(token));
   }
-  assert.match(config, /if \(testEnabled === liveEnabled\) return null/);
+  assert.match(mode, /BILLING_PROVIDER_MODE/);
+  assert.match(mode, /if \(testEnabled === liveEnabled\) return null/);
   assert.match(config, /BILLING_KILL_SWITCH_STRIPE_LIVE/);
   assert.match(config, /isStripeLiveSecret\(secret\)/);
   assert.match(config, /isStripePublishableKey\(publishable, "live"\)/);
+});
+
+test("15 — le sélecteur explicite ferme Stripe par défaut et refuse les mélanges Test/Live", () => {
+  const sandbox = { BILLING_PROVIDER_MODE: "sandbox", BILLING_PROVIDER_STRIPE_TEST_ENABLED: "1" };
+  const live = {
+    BILLING_PROVIDER_MODE: "live",
+    KJORA_PAID_PILOT_ENABLED: "1",
+    KJORA_PAID_PILOT_INVITE_ONLY: "1",
+    BILLING_PROVIDER_STRIPE_LIVE_ENABLED: "1",
+  };
+  assert.equal(resolveStripeEnvironment({}), null);
+  assert.equal(resolveStripeEnvironment({ ...sandbox, BILLING_PROVIDER_MODE: "live" }), null);
+  assert.equal(resolveStripeEnvironment({ ...live, BILLING_PROVIDER_MODE: "sandbox" }), null);
+  assert.equal(resolveStripeEnvironment(sandbox), "test");
+  assert.equal(resolveStripeEnvironment(live), "live");
 });
 
 test("11 — Checkout ne fait confiance ni au prix, ni au pays, ni à l'Organization du client", () => {
@@ -140,12 +162,15 @@ test("11 — six messages transactionnels FR/EN restent purs et sans donnée car
 test("11 — le catalogue de webhooks couvre le cycle complet supervisé", () => {
   for (const event of [
     "checkout.session.completed", "customer.subscription.created", "customer.subscription.updated",
-    "customer.subscription.deleted", "invoice.paid", "invoice.payment_failed",
+    "customer.subscription.deleted", "invoice.created", "invoice.finalized", "invoice.paid", "invoice.payment_failed",
     "invoice.payment_action_required", "charge.refunded",
   ]) {
-    assert.ok(webhook.includes(event) || migration.includes(`'${event}'`));
+    assert.equal(isAcceptedStripeWebhookEvent(event), true);
     assert.ok(liveAudit.includes(`"${event}"`));
   }
+  assert.equal(stripeWebhookHasBusinessEffect("invoice.created"), false);
+  assert.equal(stripeWebhookHasBusinessEffect("invoice.finalized"), false);
+  assert.equal(stripeWebhookHasBusinessEffect("invoice.paid"), true);
 });
 
 test("11 — conditions pilote FR/EN visibles sans prétendre que Live est actif", () => {

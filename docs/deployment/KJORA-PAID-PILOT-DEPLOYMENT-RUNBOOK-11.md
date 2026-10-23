@@ -8,7 +8,7 @@
 4. Vérifier les grants, RLS, compteurs avant/après et exécuter les contrôles SQL transactionnels.
 5. Gate A : dans Stripe Live, saisir les clés et créer/auditer le catalogue uniquement après autorisation explicite. Ne jamais copier de secret dans un journal.
 6. Créer le webhook Live exact `https://kjorapp.com/api/billing/webhooks/stripe`, avec la liste fermée d’événements. Saisir son secret directement dans Hostinger.
-7. Gate C : ajouter les variables Live dans Hostinger en gardant `BILLING_KILL_SWITCH_ALL=1`, redéployer, puis smoke tests publics/authentifiés.
+7. Gate C : définir `BILLING_PROVIDER_MODE=live`, ajouter les variables Live dans Hostinger en gardant `BILLING_KILL_SWITCH_ALL=1`, redéployer, puis smoke tests publics/authentifiés.
 8. Ajouter une seule Organization pilote à l’allowlist par un `platform_admin`; confirmer Owner actif, `billing.manage`, pays CA et devise SaaS CAD.
 9. Lever les coupe-circuits pour une fenêtre supervisée seulement.
 10. Gate D : premier Checkout Live et paiement réel seulement après accord explicite de Blaise.

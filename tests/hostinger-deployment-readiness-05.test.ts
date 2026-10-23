@@ -6,7 +6,7 @@ import { isProductionDeployment } from "../src/modules/communications/config.ts"
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const packageJson = JSON.parse(read("package.json")) as { engines?: { node?: string }; scripts?: Record<string, string> };
 const envExample = read(".env.example");
-const providerConfig = read("src/core/billing/provider-config.ts");
+const stripeMode = read("src/core/billing/stripe-mode.ts");
 const providerBootstrap = read("src/core/billing/provider-bootstrap.ts");
 const stripeAdapter = read("src/core/billing/adapters/stripe-test-adapter.ts");
 const stripeWebhook = read("src/app/api/billing/webhooks/[provider]/route.ts");
@@ -56,7 +56,7 @@ test("Resend financier, facturation automatique et Meta restent désactivés", (
 test("aucun provider Afrique ou Meta n'est enregistré par le bootstrap", () => {
   assert.match(providerBootstrap, /registerBillingProvider\(createStripeAdapter/);
   assert.doesNotMatch(providerBootstrap, /Flutterwave|CamPay|ElyonPay|Meta/i);
-  assert.match(providerConfig, /if \(testEnabled === liveEnabled\) return null/);
+  assert.match(stripeMode, /if \(testEnabled === liveEnabled\) return null/);
 });
 
 test("les retours Stripe proviennent de l'origine serveur et le portail reste interne", () => {

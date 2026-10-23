@@ -11,6 +11,8 @@ const EXPECTED_EVENTS = [
   "customer.subscription.created",
   "customer.subscription.deleted",
   "customer.subscription.updated",
+  "invoice.created",
+  "invoice.finalized",
   "invoice.paid",
   "invoice.payment_action_required",
   "invoice.payment_failed",

@@ -87,3 +87,10 @@ Sortie du gate : validations locales vertes, revue du patch, fusion distincte, d
 Le lot PAID-PILOT-PRODUCTION-READINESS-11 prépare Stripe Live sans l’activer. L’accès est limité à une allowlist d’Organizations, à leur Owner actif et à `billing.manage`. Test et Live sont mutuellement exclusifs; les prix, montants, devises et Organizations sont résolus côté serveur.
 
 Ordre obligatoire : CI SQL éphémère → Gate B Supabase → Gate A Stripe Live → Gate C Hostinger → invitation unique → Gate D premier paiement réel supervisé. L’échec d’un seul contrôle referme les coupe-circuits. Le lancement public, les communications automatiques et Stripe Live ouvert à tous restent hors périmètre.
+
+## STRIPE-LIVE-SAFE-ACTIVATION-15 — séparation applicative prête pour revue
+
+Le sélecteur serveur `BILLING_PROVIDER_MODE` ferme Stripe si absent ou invalide;
+`sandbox` et `live` sont exclusifs. Ce lot ne renseigne aucune variable, ne
+crée aucun webhook et n'ouvre aucun coupe-circuit. La configuration Hostinger,
+le webhook Stripe et le premier paiement restent des autorisations distinctes.
