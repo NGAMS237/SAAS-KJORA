@@ -19,6 +19,7 @@ import type { ProviderName } from "./provider-capabilities.ts";
 import type { ProviderMode } from "./provider.ts";
 import { isStripeLiveSecret, isStripePublishableKey, isStripeTestSecret, isStripeWebhookSecret } from "./stripe-test-safety.ts";
 import { readStripePriceMapping, type StripeEnvironment } from "./stripe-price-contract.ts";
+import { resolveStripeEnvironment } from "./stripe-mode.ts";
 
 /** Noms des variables d'environnement, par provider. Jamais de valeurs ici. */
 export const PROVIDER_ENV_KEYS: Record<ProviderName, { secret: string; webhook: string }> = {
@@ -43,8 +44,9 @@ export const PROVIDER_ENV_KEYS: Record<ProviderName, { secret: string; webhook: 
 };
 
 /**
- * Mode d'exécution. L'absence de configuration ou la coexistence Test/Live
- * ferme Stripe. Live n'est reconnu que derrière les trois drapeaux du pilote.
+ * Mode d'exécution fermé. L'absence de sélecteur, un sélecteur invalide ou la
+ * coexistence Test/Live ferment Stripe. Live n'est reconnu que derrière un
+ * choix explicite et les trois drapeaux du pilote.
  */
 export function providerMode(): ProviderMode {
   return stripeEnvironment() === "live" ? "live" : "sandbox";
@@ -55,12 +57,7 @@ export function isLiveModeAllowed(): boolean {
 }
 
 export function stripeEnvironment(env: NodeJS.ProcessEnv = process.env): StripeEnvironment | null {
-  const testEnabled = env.BILLING_PROVIDER_STRIPE_TEST_ENABLED === "1";
-  const liveEnabled = env.KJORA_PAID_PILOT_ENABLED === "1"
-    && env.KJORA_PAID_PILOT_INVITE_ONLY === "1"
-    && env.BILLING_PROVIDER_STRIPE_LIVE_ENABLED === "1";
-  if (testEnabled === liveEnabled) return null;
-  return liveEnabled ? "live" : "test";
+  return resolveStripeEnvironment(env);
 }
 
 export function stripeServerConfig(env: NodeJS.ProcessEnv = process.env) {
