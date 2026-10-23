@@ -6,15 +6,15 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf
 const migration = read("../supabase/migrations/20260928201745_billing_stripe_saas_01.sql");
 const pilotMigration = read("../supabase/migrations/20261017120000_paid_pilot_production_readiness_11.sql");
 const adapter = read("../src/core/billing/adapters/stripe-test-adapter.ts");
-const config = read("../src/core/billing/provider-config.ts");
+const mode = read("../src/core/billing/stripe-mode.ts");
 const prices = read("../src/core/billing/stripe-price-map.ts");
 const priceContract = read("../src/core/billing/stripe-price-contract.ts");
 const webhook = read("../src/app/api/billing/webhooks/[provider]/route.ts");
 const env = read("../.env.example");
 
 test("Stripe Test reste désactivé par défaut et refuse les clés live", () => {
-  assert.match(config, /const testEnabled = env\.BILLING_PROVIDER_STRIPE_TEST_ENABLED === "1"/);
-  assert.match(config, /if \(testEnabled === liveEnabled\) return null/);
+  assert.match(mode, /const testEnabled = env\.BILLING_PROVIDER_STRIPE_TEST_ENABLED === "1"/);
+  assert.match(mode, /if \(testEnabled === liveEnabled\) return null/);
   assert.match(env, /BILLING_PROVIDER_STRIPE_TEST_ENABLED=0/);
   assert.match(adapter, /live \? !secret\.startsWith\("sk_live_"\) : !secret\.startsWith\("sk_test_"\)/);
 });

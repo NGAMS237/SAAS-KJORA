@@ -7,6 +7,7 @@ import { isProviderConfigured, isProviderKillSwitched, providerMode } from "@/co
 import { decideWebhook, type WebhookContext } from "@/core/billing/webhook-rules";
 import { ensureBillingProviders } from "@/core/billing/provider-bootstrap";
 import { stripeInvoicePeriod } from "@/core/billing/stripe-webhook-data";
+import { isAcceptedStripeWebhookEvent, stripeWebhookHasBusinessEffect } from "@/core/billing/stripe-webhook-events";
 
 // =============================================================================
 // KJORA — Réception des webhooks provider (ALIGN-04A)
@@ -100,6 +101,13 @@ export async function POST(
   if (!verification.valid) {
     // 400 et non 401 : on ne distingue pas les motifs de rejet vers l'extérieur.
     return NextResponse.json({ received: false }, { status: 400 });
+  }
+
+  if (provider === "stripe" && !isAcceptedStripeWebhookEvent(verification.eventType)) {
+    return ack();
+  }
+  if (provider === "stripe" && !stripeWebhookHasBusinessEffect(verification.eventType)) {
+    return ack();
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();

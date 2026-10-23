@@ -355,10 +355,11 @@ test("23 — aucun secret provider n'est exposé, et le client n'importe rien de
 
   // (d) Live reste fail-closed et exige les gates du pilote.
   const config = sansCommentaires(readFileSync(join(ROOT, "src/core/billing/provider-config.ts"), "utf8"));
-  assert.match(config, /if \(testEnabled === liveEnabled\) return null/);
-  assert.match(config, /KJORA_PAID_PILOT_ENABLED/);
-  assert.match(config, /KJORA_PAID_PILOT_INVITE_ONLY/);
-  assert.match(config, /BILLING_PROVIDER_STRIPE_LIVE_ENABLED/);
+  const stripeMode = sansCommentaires(readFileSync(join(ROOT, "src/core/billing/stripe-mode.ts"), "utf8"));
+  assert.match(stripeMode, /if \(testEnabled === liveEnabled\) return null/);
+  assert.match(stripeMode, /KJORA_PAID_PILOT_ENABLED/);
+  assert.match(stripeMode, /KJORA_PAID_PILOT_INVITE_ONLY/);
+  assert.match(stripeMode, /BILLING_PROVIDER_STRIPE_LIVE_ENABLED/);
 
   // (e) .env.example ne contient que des noms, jamais de valeurs.
   const env = readFileSync(join(ROOT, ".env.example"), "utf8");

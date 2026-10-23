@@ -8,6 +8,10 @@ import {
 } from "../src/core/billing/stripe-price-contract.ts";
 import { isStripeLiveSecret, isStripePublishableKey, isStripeTestSecret } from "../src/core/billing/stripe-test-safety.ts";
 import { resolveStripeEnvironment } from "../src/core/billing/stripe-mode.ts";
+import {
+  isAcceptedStripeWebhookEvent,
+  stripeWebhookHasBusinessEffect,
+} from "../src/core/billing/stripe-webhook-events.ts";
 import { billingTransactionalCopy } from "../src/core/billing/transactional-copy.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -161,9 +165,12 @@ test("11 — le catalogue de webhooks couvre le cycle complet supervisé", () =>
     "customer.subscription.deleted", "invoice.created", "invoice.finalized", "invoice.paid", "invoice.payment_failed",
     "invoice.payment_action_required", "charge.refunded",
   ]) {
-    assert.ok(webhook.includes(event) || migration.includes(`'${event}'`));
+    assert.equal(isAcceptedStripeWebhookEvent(event), true);
     assert.ok(liveAudit.includes(`"${event}"`));
   }
+  assert.equal(stripeWebhookHasBusinessEffect("invoice.created"), false);
+  assert.equal(stripeWebhookHasBusinessEffect("invoice.finalized"), false);
+  assert.equal(stripeWebhookHasBusinessEffect("invoice.paid"), true);
 });
 
 test("11 — conditions pilote FR/EN visibles sans prétendre que Live est actif", () => {
