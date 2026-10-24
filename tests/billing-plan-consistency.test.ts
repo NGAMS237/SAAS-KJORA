@@ -49,6 +49,17 @@ test("manual Avancé revocation presents Découverte and leaves Avancé availabl
   assert.equal(priceFor("avance", "monthly", "CAD"), 3199);
 });
 
+test("a stale active subscription cannot expose cancellation after a manual right is revoked", () => {
+  const afterManualGrantRevocation = overview("decouverte");
+  const source = readFileSync(
+    new URL("../src/core/billing/billing-view.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.equal(afterManualGrantRevocation.subscription.exists, false);
+  assert.match(source, /sub\.exists && sub\.status === "active" && currentPlan !== "decouverte"/);
+});
+
 test("an active effective plan remains the common display and checkout comparison source", () => {
   const current = overview("avance");
 

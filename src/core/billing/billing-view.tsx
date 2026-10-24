@@ -530,7 +530,7 @@ export function BillingView({
       </Card>
 
       {/* ------------------------------------------------------ Annulation */}
-      {sub.status === "active" ? (
+      {sub.exists && sub.status === "active" && currentPlan !== "decouverte" ? (
         <Card muted>
           <h2>{t("Annuler l’abonnement", "Cancel subscription")}</h2>
           <p>{t("Vous conservez l’accès complet jusqu’à la fin de la période déjà réglée. Aucun remboursement n’est effectué et vos données sont conservées.", "You keep full access until the end of the paid period. No refund is issued and your data is retained.")}</p>

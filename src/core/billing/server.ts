@@ -181,9 +181,10 @@ export function checkoutAffordance(args: {
   currency: BillingCurrency;
   amountMinor: number;
   methodHint?: unknown;
+  paidPilotInviteOnly?: boolean;
   paidPilotEligible?: boolean;
 }): BillingCheckoutAffordance {
-  if (stripeEnvironment() === "live" && args.paidPilotEligible !== true) {
+  if (stripeEnvironment() === "live" && args.paidPilotInviteOnly === true && args.paidPilotEligible !== true) {
     return { online: false, recurrence: null, reason: "pilot_invitation_required" };
   }
   return affordanceFor(
@@ -202,13 +203,30 @@ export function activeStripeEnvironment(): "test" | "live" | null {
   return stripeEnvironment();
 }
 
-export async function isPaidPilotEligible(organizationId: string): Promise<boolean> {
-  if (stripeEnvironment() !== "live") return true;
+export type PaidPilotCheckoutAccess = {
+  inviteOnly: boolean;
+  eligible: boolean;
+};
+
+/**
+ * The database owns the authorization boundary for Live Checkout.  Hostinger
+ * selects the mode, but it cannot by itself relax an RPC callable by an
+ * authenticated browser session.
+ */
+export async function getPaidPilotCheckoutAccess(organizationId: string): Promise<PaidPilotCheckoutAccess> {
+  if (stripeEnvironment() !== "live") return { inviteOnly: false, eligible: true };
   const supabase = await createSupabaseServerClient();
+  const { data: inviteOnly, error: inviteOnlyError } = await supabase.rpc("stripe_live_checkout_invite_only");
+  if (inviteOnlyError || typeof inviteOnly !== "boolean") return { inviteOnly: true, eligible: false };
+  if (!inviteOnly) return { inviteOnly: false, eligible: true };
   const { data, error } = await supabase.rpc("paid_pilot_checkout_eligibility", {
     target_organization_id: organizationId,
   });
-  return !error && data === true;
+  return { inviteOnly: true, eligible: !error && data === true };
+}
+
+export async function isPaidPilotEligible(organizationId: string): Promise<boolean> {
+  return (await getPaidPilotCheckoutAccess(organizationId)).eligible;
 }
 
 // ---------------------------------------------------------------------------
