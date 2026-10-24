@@ -23,6 +23,10 @@ export type CommercialActionResult =
 function revalidateOrganization(organizationId: string) {
   revalidatePath("/administration/organizations");
   revalidatePath(`/administration/organizations/${organizationId}`);
+  // The customer Billing page consumes the same effective entitlement as the
+  // Admin console. Revalidate it on every grant, revoke or extension so a
+  // former manual plan cannot remain presented after the Admin mutation.
+  revalidatePath("/app/billing");
 }
 
 async function callAdminCommercialRpc(

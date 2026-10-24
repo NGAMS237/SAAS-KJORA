@@ -44,6 +44,7 @@ import {
   type CheckoutUnavailableReason,
   type RecurrenceMode,
 } from "@/core/billing/types";
+import { currentBillingPlan, isCurrentBillingPlan } from "@/core/billing/presentation";
 
 const PLAN_ORDER: PlanSlug[] = ["decouverte", "essentiel", "avance", "patrimoine"];
 
@@ -128,6 +129,7 @@ export function BillingView({
   const [message, setMessage] = useState<string | null>(null);
 
   const sub = overview.subscription;
+  const currentPlan = currentBillingPlan(overview);
   const bloque = isBillingBlocked(sub.status);
   const avertissement = needsBillingWarning(sub.status);
   const requestedPlan = requestedIntent?.plan;
@@ -211,7 +213,7 @@ export function BillingView({
     window.location.assign(body.redirect_url);
   }
 
-  const prixCourant = priceFor(sub.plan, sub.billingCycle, sub.currency);
+  const prixCourant = priceFor(currentPlan, sub.billingCycle, sub.currency);
 
   return (
     <div className="page-stack">
@@ -277,7 +279,7 @@ export function BillingView({
           )}</small></p>
           <button
             className="button button--primary"
-            disabled={busy || requestedPlan === sub.plan || !requestedBillingCountry}
+            disabled={busy || isCurrentBillingPlan(overview, requestedPlan) || !requestedBillingCountry}
             onClick={async () => {
               if (await persistIntent(requestedCycle, requestedBillingCountry)) {
                 await act({ action: "change_plan", plan: requestedPlan, cycle: requestedCycle, billing_country: requestedBillingCountry });
@@ -323,7 +325,7 @@ export function BillingView({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Plan</p>
-            <h2>{PLAN_LABELS[overview.effectivePlan][locale]}</h2>
+            <h2>{PLAN_LABELS[currentPlan][locale]}</h2>
           </div>
           <Badge tone="neutral">{locale === "en" ? (sub.billingCycle === "annual" ? "Annual" : "Monthly") : BILLING_CYCLE_LABELS[sub.billingCycle]}</Badge>
         </div>
@@ -395,7 +397,7 @@ export function BillingView({
             )}</p>
           ) : null}
           <div className="billing-plan-grid">
-            {PLAN_ORDER.filter((p) => p !== overview.effectivePlan).map((p) => {
+            {PLAN_ORDER.filter((p) => p !== currentPlan).map((p) => {
               const prix = priceFor(p, sub.billingCycle, selectedSubscriptionCurrency);
               return (
                 <button className="billing-plan-option" disabled={busy || !requestedBillingCountry} key={p} type="button"
