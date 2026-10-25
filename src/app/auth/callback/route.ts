@@ -6,8 +6,10 @@ import {
 } from "@/core/auth/callback-diagnostics";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { safeNextPath } from "@/core/auth/safe-next-path";
+import { getPublicRequestOrigin } from "@/core/routing/public-origin";
 
 export async function GET(request: NextRequest) {
+  const publicOrigin = getPublicRequestOrigin(request);
   const code = request.nextUrl.searchParams.get("code");
   const flowId = request.nextUrl.searchParams.get("sb_flow_id");
   const nextPath = safeNextPath(request.nextUrl.searchParams.get("next"), request.nextUrl.origin);
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(
-      new URL(`${loginPath}?reason=invalid-or-expired-link`, request.url),
+      new URL(`${loginPath}?reason=invalid-or-expired-link`, publicOrigin),
     );
   }
 
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (!error) {
-    return applyAuthState(NextResponse.redirect(new URL(nextPath, request.url)));
+    return applyAuthState(NextResponse.redirect(new URL(nextPath, publicOrigin)));
   }
 
   const cookieNames = request.cookies.getAll().map(({ name }) => name);
@@ -42,6 +44,6 @@ export async function GET(request: NextRequest) {
 
   const reason = classifyAuthCallbackFailure(error);
   return applyAuthState(
-    NextResponse.redirect(new URL(`${loginPath}?reason=${reason}`, request.url)),
+    NextResponse.redirect(new URL(`${loginPath}?reason=${reason}`, publicOrigin)),
   );
 }
