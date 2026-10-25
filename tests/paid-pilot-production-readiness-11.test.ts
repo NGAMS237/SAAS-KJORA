@@ -7,7 +7,7 @@ import {
   readStripePriceMapping,
 } from "../src/core/billing/stripe-price-contract.ts";
 import { isStripeLiveSecret, isStripePublishableKey, isStripeTestSecret } from "../src/core/billing/stripe-test-safety.ts";
-import { resolveStripeEnvironment } from "../src/core/billing/stripe-mode.ts";
+import { isPaidPilotInviteOnly, resolveStripeEnvironment } from "../src/core/billing/stripe-mode.ts";
 import {
   isAcceptedStripeWebhookEvent,
   stripeWebhookHasBusinessEffect,
@@ -21,6 +21,8 @@ const checkout = read("../src/app/api/billing/stripe/checkout/route.ts");
 const webhook = read("../src/app/api/billing/webhooks/[provider]/route.ts");
 const adapter = read("../src/core/billing/adapters/stripe-test-adapter.ts");
 const migration = read("../supabase/migrations/20261017120000_paid_pilot_production_readiness_11.sql");
+const publicCheckoutControl = read("../supabase/migrations/20261024193000_stripe_live_public_checkout_control.sql");
+const billingServer = read("../src/core/billing/server.ts");
 const adminServer = read("../src/modules/platform-admin/server.ts");
 const adminView = read("../src/modules/platform-admin/views.tsx");
 const liveAudit = read("../scripts/audit-stripe-live-catalog.ts");
@@ -55,7 +57,7 @@ test("11 — clés Stripe Test/Live strictement distinguées", () => {
   assert.equal(isStripePublishableKey("pk_test_fixture", "live"), false);
 });
 
-test("11 — activation Live exige pilote, invitation et drapeau fournisseur, sans coexistence Test", () => {
+test("11 — activation Live exige le pilote, un mode d’accès explicite et le drapeau fournisseur, sans coexistence Test", () => {
   for (const token of ["KJORA_PAID_PILOT_ENABLED", "KJORA_PAID_PILOT_INVITE_ONLY", "BILLING_PROVIDER_STRIPE_LIVE_ENABLED"]) {
     assert.ok(mode.includes(token));
   }
@@ -79,6 +81,19 @@ test("15 — le sélecteur explicite ferme Stripe par défaut et refuse les mél
   assert.equal(resolveStripeEnvironment({ ...live, BILLING_PROVIDER_MODE: "sandbox" }), null);
   assert.equal(resolveStripeEnvironment(sandbox), "test");
   assert.equal(resolveStripeEnvironment(live), "live");
+  assert.equal(resolveStripeEnvironment({ ...live, KJORA_PAID_PILOT_INVITE_ONLY: "0" }), "live");
+  assert.equal(resolveStripeEnvironment({ ...live, KJORA_PAID_PILOT_INVITE_ONLY: "" }), null);
+  assert.equal(isPaidPilotInviteOnly(live), true);
+  assert.equal(isPaidPilotInviteOnly({ ...live, KJORA_PAID_PILOT_INVITE_ONLY: "0" }), false);
+  assert.match(billingServer, /paidPilotInviteOnly === true/);
+});
+
+test("16 — le lancement public reste contrôlé côté base, pas seulement par une variable Hostinger", () => {
+  assert.match(publicCheckoutControl, /stripe_live_invite_only boolean not null default true/);
+  assert.match(publicCheckoutControl, /public\.stripe_live_checkout_invite_only\(\)/);
+  assert.match(publicCheckoutControl, /public\.admin_set_stripe_live_invite_only\(target_invite_only boolean\)/);
+  assert.match(publicCheckoutControl, /p_mode = 'live' and public\.stripe_live_checkout_invite_only\(\)/);
+  assert.match(publicCheckoutControl, /grant execute on function public\.stripe_live_checkout_invite_only\(\) to authenticated/);
 });
 
 test("11 — Checkout ne fait confiance ni au prix, ni au pays, ni à l'Organization du client", () => {

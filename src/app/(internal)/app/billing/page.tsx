@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getActiveAuthorization } from "@/core/authorization/server";
-import { activeStripeEnvironment, checkoutAffordance, getBillingOverview, isPaidPilotEligible, listBillingInvoices } from "@/core/billing/server";
+import { activeStripeEnvironment, checkoutAffordance, getBillingOverview, getPaidPilotCheckoutAccess, listBillingInvoices } from "@/core/billing/server";
 import { priceFor } from "@/core/billing/model";
 import { BillingView } from "@/core/billing/billing-view";
 import { currentBillingPlan } from "@/core/billing/presentation";
@@ -31,7 +31,7 @@ export default async function BillingPage({
   const params = await searchParams;
   const incomingIntent = parseSiteAppIntent(params);
   await persistIncomingSiteAppIntent(incomingIntent);
-  const [overview, invoices, state, rentalProfileResult, paidPilotEligible] = await Promise.all([
+  const [overview, invoices, state, rentalProfileResult, paidPilotAccess] = await Promise.all([
     getBillingOverview(authorization.organizationId),
     listBillingInvoices(authorization.organizationId),
     loadOnboardingState(supabase),
@@ -40,7 +40,7 @@ export default async function BillingPage({
       .select("country_code, currency_code")
       .eq("organization_id", authorization.organizationId)
       .maybeSingle(),
-    isPaidPilotEligible(authorization.organizationId),
+    getPaidPilotCheckoutAccess(authorization.organizationId),
   ]);
 
   if (!overview) notFound();
@@ -63,7 +63,8 @@ export default async function BillingPage({
     cycle: affordanceCycle,
     currency: affordanceCurrency,
     amountMinor: priceFor(affordancePlan, affordanceCycle, affordanceCurrency) ?? 0,
-    paidPilotEligible,
+    paidPilotInviteOnly: paidPilotAccess.inviteOnly,
+    paidPilotEligible: paidPilotAccess.eligible,
   });
 
   const rentalProfile = rentalProfileResult.data;
