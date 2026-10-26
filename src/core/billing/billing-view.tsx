@@ -58,6 +58,7 @@ type Quote = {
   effectiveOn?: string;
   currency?: BillingCurrency;
   blockers?: Array<{ libelle?: string; quota?: string; actuel: number; limite: number }>;
+  marketBlockers?: string[];
 };
 
 const SUBSCRIPTION_STATUS_LABELS_EN: Record<SubscriptionStatus, string> = {
@@ -201,12 +202,17 @@ export function BillingView({
         idempotency_key: crypto.randomUUID(),
       } : {}),
     });
-    const body = await response.json().catch(() => null) as { redirect_url?: string } | null;
+    const body = await response.json().catch(() => null) as { redirect_url?: string; error?: string } | null;
     if (!response.ok || !body?.redirect_url) {
-      setMessage(t(
-        "Stripe n’est pas disponible pour ce pilote. Aucun paiement n’a été lancé.",
-        "Stripe is not available for this pilot. No payment was started.",
-      ));
+      setMessage(body?.error === "billing_market_change_blocked"
+        ? t(
+          "Le pays de facturation ne peut pas encore changer car un engagement financier actif doit d’abord être résolu. Aucun paiement n’a été lancé.",
+          "The billing country cannot change yet because an active financial commitment must be resolved first. No payment was started.",
+        )
+        : t(
+          "Stripe n’est pas disponible pour ce pilote. Aucun paiement n’a été lancé.",
+          "Stripe is not available for this pilot. No payment was started.",
+        ));
       setBusy(false);
       return;
     }
@@ -437,6 +443,17 @@ export function BillingView({
                 ))}
               </ul>
               <p><small>{t("Rien n’a été modifié et aucune donnée n’a été supprimée.", "Nothing was changed and no data was deleted.")}</small></p>
+            </div>
+          ) : null}
+
+          {quote?.outcome === "billing_market_change_blocked" ? (
+            <div className="billing-quote billing-quote--refused" role="alert">
+              <h3>{t("Changement de marché indisponible", "Market change unavailable")}</h3>
+              <p>{t(
+                "Un engagement financier actif doit d’abord être résolu. L’historique d’audit seul ne bloque pas ce changement.",
+                "An active financial commitment must be resolved first. Audit history alone does not block this change.",
+              )}</p>
+              <p><small>{t("Aucun paiement ni Checkout Stripe n’a été lancé.", "No payment or Stripe Checkout was started.")}</small></p>
             </div>
           ) : null}
 

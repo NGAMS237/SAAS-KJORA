@@ -30,6 +30,9 @@ export async function POST(request: Request) {
   const priceRef = stripePrice(environment, body.plan, body.cycle);
   if (!priceRef) return NextResponse.json({ error: "stripe_test_price_unavailable" }, { status: 503 });
   const prepared = await requestPlanChange(authorization.organizationId, body.plan, body.cycle, "CA");
+  if (prepared?.outcome === "billing_market_change_blocked") {
+    return NextResponse.json({ error: "billing_market_change_blocked" }, { status: 409 });
+  }
   if (!prepared || !["upgrade_intent_recorded", "unchanged"].includes(String(prepared.outcome))) {
     return NextResponse.json({ error: "checkout_not_prepared" }, { status: 409 });
   }
