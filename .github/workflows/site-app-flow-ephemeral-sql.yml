@@ -8,6 +8,7 @@ on:
       - codex/security-tenants-access-01
       - claude/admin-01-secure-base
       - codex/kjora-first-paid-pilot-launch-readiness-14
+      - codex/kjora-billing-market-transition-fix
 
 permissions:
   contents: read
@@ -43,6 +44,7 @@ jobs:
         run: |
           mv supabase/migrations/20260911210927_site_app_flow_canada_intent.sql "$RUNNER_TEMP/site-app-flow.sql"
           mv supabase/migrations/20261005205909_country_billing_whatsapp_flow_fix_07.sql "$RUNNER_TEMP/country-billing-whatsapp-flow-fix-07.sql"
+          mv supabase/migrations/20261026120000_billing_market_active_commitment_guard.sql "$RUNNER_TEMP/billing-market-active-commitment-guard.sql"
 
       - name: Start a clean local Supabase stack
         run: npx --yes supabase@2.117.0 start
@@ -56,7 +58,12 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/country-billing-whatsapp-flow-fix-07.sql"
 
       - name: Run Canada SQL and access-control tests
-        run: npx --yes supabase@2.117.0 test db supabase/tests/database/site_app_flow_canada_intent.test.sql
+        run: |
+          npx --yes supabase@2.117.0 test db supabase/tests/database/site_app_flow_canada_intent.test.sql
+          npx --yes supabase@2.117.0 test db supabase/tests/database/country_billing_whatsapp_flow_fix_07.test.sql
+
+      - name: Apply the active financial commitment market guard
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/billing-market-active-commitment-guard.sql"
 
       - name: Verify concurrent subscription preparation
         run: bash .github/ci/site-app-flow-concurrency.sh "$DATABASE_URL"
@@ -67,7 +74,7 @@ jobs:
       - name: Run the existing database regression suite
         shell: bash
         run: |
-          mapfile -t tests < <(find supabase/tests/database -name '*.test.sql' ! -name 'site_app_flow_canada_intent.test.sql' -print | sort)
+          mapfile -t tests < <(find supabase/tests/database -name '*.test.sql' ! -name 'site_app_flow_canada_intent.test.sql' ! -name 'country_billing_whatsapp_flow_fix_07.test.sql' -print | sort)
           for test_file in "${tests[@]}"; do
             npx --yes supabase@2.117.0 test db "$test_file"
           done
