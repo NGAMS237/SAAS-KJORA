@@ -48,6 +48,8 @@ import { currentBillingPlan, isCurrentBillingPlan } from "@/core/billing/present
 
 const PLAN_ORDER: PlanSlug[] = ["decouverte", "essentiel", "avance", "patrimoine"];
 
+type QuotaBlocker = { libelle?: string; quota?: string; actuel: number; limite: number };
+
 type Quote = {
   plan?: string;
   outcome?: string;
@@ -57,9 +59,10 @@ type Quote = {
   daysRemaining?: number;
   effectiveOn?: string;
   currency?: BillingCurrency;
-  blockers?: Array<{ libelle?: string; quota?: string; actuel: number; limite: number }>;
-  marketBlockers?: string[];
+  blockers?: QuotaBlocker[] | string[];
 };
+
+type BillingNotice = { kind: "error" | "success"; message: string };
 
 const SUBSCRIPTION_STATUS_LABELS_EN: Record<SubscriptionStatus, string> = {
   free: "Discovery", active: "Active", payment_failed: "Payment failed",
@@ -128,6 +131,17 @@ export function BillingView({
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<BillingNotice | null>(() => {
+    if (typeof window === "undefined") return null;
+    const persisted = window.sessionStorage.getItem("kjora.billing.notice");
+    if (!persisted) return null;
+    window.sessionStorage.removeItem("kjora.billing.notice");
+    try {
+      return JSON.parse(persisted) as BillingNotice;
+    } catch {
+      return null;
+    }
+  });
 
   const sub = overview.subscription;
   const currentPlan = currentBillingPlan(overview);
@@ -147,6 +161,35 @@ export function BillingView({
   const selectedSubscriptionCurrency = requestedBillingCountry
     ? subscriptionCurrencyForBillingCountry(requestedBillingCountry)
     : sub.currency;
+  const marketBlockers = Array.isArray(quote?.blockers)
+    ? quote.blockers.filter((blocker): blocker is string => typeof blocker === "string")
+    : [];
+  const quotaBlockers = Array.isArray(quote?.blockers)
+    ? quote.blockers.filter((blocker): blocker is QuotaBlocker => typeof blocker === "object" && blocker !== null)
+    : [];
+  const marketChangeBlocked = quote?.outcome === "billing_market_change_blocked";
+
+  function marketBlockerMessageFor(blockers: unknown) {
+    const values = Array.isArray(blockers)
+      ? blockers.filter((blocker): blocker is string => typeof blocker === "string")
+      : [];
+    return values.includes("active_commercial_intervention")
+      ? t(
+        "Une offre commerciale gratuite reste active. Révoquez-la ou attendez sa fin avant de changer de marché.",
+        "A complimentary commercial offer is still active. Revoke it or wait for it to end before changing billing market.",
+      )
+      : t(
+        "Un engagement financier actif doit d’abord être résolu. L’historique d’audit seul ne bloque pas ce changement.",
+        "An active financial commitment must be resolved first. Audit history alone does not block this change.",
+      );
+  }
+
+  const marketBlockerMessage = marketBlockerMessageFor(marketBlockers);
+
+  function publishNotice(next: BillingNotice) {
+    setNotice(next);
+    window.sessionStorage.setItem("kjora.billing.notice", JSON.stringify(next));
+  }
 
   async function persistIntent(cycle: BillingCycle, country: BillingCountry | "") {
     if (!requestedPlan || !country) return false;
@@ -163,7 +206,9 @@ export function BillingView({
       }),
     });
     if (!response.ok) {
-      setMessage(t("Impossible d’enregistrer ce choix. Réessayez.", "Unable to save this selection. Try again."));
+      const next = { kind: "error" as const, message: t("Impossible d’enregistrer ce choix. Réessayez.", "Unable to save this selection. Try again.") };
+      setMessage(next.message);
+      publishNotice(next);
       return false;
     }
     return true;
@@ -180,11 +225,18 @@ export function BillingView({
     });
     const body = (await response.json().catch(() => null)) as { result?: Quote } | null;
     if (!response.ok || !body?.result) {
-      setMessage(t("L’opération n’a pas abouti. Réessayez dans un instant.", "The operation did not complete. Try again in a moment."));
+      const next = { kind: "error" as const, message: t("L’opération n’a pas abouti. Réessayez dans un instant.", "The operation did not complete. Try again in a moment.") };
+      setMessage(next.message);
+      publishNotice(next);
       setBusy(false);
       return;
     }
     setQuote(body.result);
+    if (body.result.outcome === "billing_market_change_blocked") {
+      publishNotice({ kind: "error", message: marketBlockerMessageFor(body.result.blockers) });
+    } else {
+      publishNotice({ kind: "success", message: t("Votre demande a été enregistrée. Aucun paiement n’a été lancé.", "Your request was recorded. No payment was started.") });
+    }
     setBusy(false);
   }
 
@@ -204,15 +256,15 @@ export function BillingView({
     });
     const body = await response.json().catch(() => null) as { redirect_url?: string; error?: string } | null;
     if (!response.ok || !body?.redirect_url) {
-      setMessage(body?.error === "billing_market_change_blocked"
-        ? t(
-          "Le pays de facturation ne peut pas encore changer car un engagement financier actif doit d’abord être résolu. Aucun paiement n’a été lancé.",
-          "The billing country cannot change yet because an active financial commitment must be resolved first. No payment was started.",
-        )
-        : t(
-          "Stripe n’est pas disponible pour ce pilote. Aucun paiement n’a été lancé.",
-          "Stripe is not available for this pilot. No payment was started.",
-        ));
+      const failure = body?.error === "billing_market_change_blocked"
+        ? t("Le pays de facturation ne peut pas encore changer car un engagement financier actif doit d’abord être résolu. Aucun paiement n’a été lancé.", "The billing country cannot change yet because an active financial commitment must be resolved first. No payment was started.")
+        : body?.error === "pilot_not_eligible"
+          ? t("Cette Organization n’est pas admissible au Checkout Live pour ce pays. Aucun paiement n’a été lancé.", "This organization is not eligible for Live Checkout in this country. No payment was started.")
+          : body?.error === "stripe_unavailable" || body?.error === "stripe_test_price_unavailable"
+            ? t("Stripe n’est pas disponible pour cette offre. Aucun paiement n’a été lancé.", "Stripe is unavailable for this offer. No payment was started.")
+            : t("Une erreur technique a empêché la préparation du règlement. Aucun paiement n’a été lancé.", "A technical error prevented payment preparation. No payment was started.");
+      setMessage(failure);
+      publishNotice({ kind: "error", message: failure });
       setBusy(false);
       return;
     }
@@ -228,6 +280,7 @@ export function BillingView({
         title={t("Abonnement & facturation", "Subscription & billing")}
         description={t("Votre plan, votre consommation et vos factures. Sans rapport avec les loyers que vous encaissez.", "Your plan, usage and invoices. This is separate from the rent you collect.")}
       />
+      {notice ? <div className={`billing-notice billing-notice--${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"} aria-live="polite">{notice.message}</div> : null}
 
       {rentalMarket?.country === "CI" && sub.currency !== "XOF" ? (
         <p className="form-feedback form-feedback--error" role="alert">{t(
@@ -436,7 +489,7 @@ export function BillingView({
               <h3>{t("Descente impossible pour l’instant", "Downgrade unavailable for now")}</h3>
               <p>{t("Votre usage dépasse les limites du plan visé :", "Your usage exceeds the target plan limits:")}</p>
               <ul>
-                {(quote.blockers ?? []).map((b) => (
+                {quotaBlockers.map((b) => (
                   <li key={b.quota}>
                     {b.libelle ?? b.quota}: {b.actuel} {t("pour une limite de", "with a limit of")} {b.limite}
                   </li>
@@ -449,10 +502,7 @@ export function BillingView({
           {quote?.outcome === "billing_market_change_blocked" ? (
             <div className="billing-quote billing-quote--refused" role="alert">
               <h3>{t("Changement de marché indisponible", "Market change unavailable")}</h3>
-              <p>{t(
-                "Un engagement financier actif doit d’abord être résolu. L’historique d’audit seul ne bloque pas ce changement.",
-                "An active financial commitment must be resolved first. Audit history alone does not block this change.",
-              )}</p>
+              <p>{marketBlockerMessage}</p>
               <p><small>{t("Aucun paiement ni Checkout Stripe n’a été lancé.", "No payment or Stripe Checkout was started.")}</small></p>
             </div>
           ) : null}
@@ -492,10 +542,14 @@ export function BillingView({
               ? (locale === "en" ? CHECKOUT_UNAVAILABLE_MESSAGES_EN[affordance.reason] : CHECKOUT_UNAVAILABLE_MESSAGES[affordance.reason])
               : null}
         </p>
-        {requestedBillingCountry === "CA" && requestedPlan && affordance.online ? (
-          <button className="button button--primary" disabled={busy} onClick={() => void openStripe("checkout")} type="button">
+        {requestedBillingCountry === "CA" && requestedPlan ? (
+          <>
+          <button className="button button--primary" disabled={busy || marketChangeBlocked || !affordance.online} onClick={() => void openStripe("checkout")} type="button">
             {busy ? t("Ouverture…", "Opening…") : stripeEnvironment === "test" ? t("Continuer vers Stripe Test", "Continue to Stripe Test") : t("Continuer vers Stripe", "Continue to Stripe")}
           </button>
+          {marketChangeBlocked ? <p className="form-feedback form-feedback--error" role="alert">{marketBlockerMessage}</p> : null}
+          {!marketChangeBlocked && !affordance.online ? <p className="form-feedback form-feedback--error" role="status">{affordance.reason ? (locale === "en" ? CHECKOUT_UNAVAILABLE_MESSAGES_EN[affordance.reason] : CHECKOUT_UNAVAILABLE_MESSAGES[affordance.reason]) : t("Stripe est indisponible pour le moment.", "Stripe is currently unavailable.")}</p> : null}
+          </>
         ) : null}
         {sub.provider === "stripe" ? (
           <button className="button button--secondary" disabled={busy} onClick={() => void openStripe("portal")} type="button">
