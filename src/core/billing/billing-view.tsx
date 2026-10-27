@@ -480,7 +480,10 @@ export function BillingView({
                   ? t(`${formatAmount(quote.amountDueMinor, quote.currency ?? sub.currency)} pour les ${quote.daysRemaining} jours restants.`, `${formatAmount(quote.amountDueMinor, quote.currency ?? sub.currency)} for the remaining ${quote.daysRemaining} days.`)
                   : t("Estimation indisponible.", "Estimate unavailable.")}
               </p>
-              <p><small>{t("Le règlement en ligne n’est pas encore disponible. Votre demande est enregistrée : aucun montant n’a été débité et votre plan actuel reste inchangé.", "Online payment is not available yet. Your request is recorded: no amount was charged and your current plan remains unchanged.")}</small></p>
+              <p><small>{affordance.online
+                ? t("Votre demande est enregistrée. Vous pouvez poursuivre vers Stripe lorsque vous êtes prêt ; aucun montant n’a été débité et votre plan actuel reste inchangé.", "Your request is recorded. You may continue to Stripe when you are ready; no amount was charged and your current plan remains unchanged.")
+                : t("Le règlement en ligne n’est pas disponible pour cette offre. Votre demande est enregistrée : aucun montant n’a été débité et votre plan actuel reste inchangé.", "Online payment is unavailable for this offer. Your request is recorded: no amount was charged and your current plan remains unchanged.")}
+              </small></p>
             </div>
           ) : null}
 
