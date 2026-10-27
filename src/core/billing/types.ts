@@ -17,12 +17,15 @@ import type {
   SubscriptionStatus,
 } from "./model.ts";
 import type { PlanSlug } from "../entitlements/model.ts";
+import type { BillingCountry } from "../onboarding/plan-intent.ts";
 
 export type SubscriptionView = {
   exists: boolean;
   status: SubscriptionStatus;
   plan: PlanSlug;
   billingCycle: BillingCycle;
+  /** Marché d'abonnement canonique, distinct du marché locatif. */
+  billingCountry: BillingCountry;
   currency: BillingCurrency;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;

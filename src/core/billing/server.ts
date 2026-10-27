@@ -26,7 +26,7 @@ import type {
   BillingOverview,
   SubscriptionView,
 } from "@/core/billing/types";
-import type { BillingCountry } from "@/core/onboarding/plan-intent";
+import { isBillingCountry, type BillingCountry } from "@/core/onboarding/plan-intent";
 
 // Les types de vue vivent dans `types.ts`, qui est pur : le client peut les
 // importer sans franchir la frontière `server-only`. On les ré-exporte ici
@@ -50,6 +50,7 @@ function parseSubscription(raw: unknown): SubscriptionView {
     status: isSubscriptionStatus(r.status) ? r.status : "free",
     plan: plan(r.plan) ?? "decouverte",
     billingCycle: isBillingCycle(r.billingCycle) ? r.billingCycle : "monthly",
+    billingCountry: isBillingCountry(r.billingCountry) ? r.billingCountry : "CM",
     currency: isBillingCurrency(r.currency) ? r.currency : "XAF",
     currentPeriodStart: str(r.currentPeriodStart),
     currentPeriodEnd: str(r.currentPeriodEnd),
