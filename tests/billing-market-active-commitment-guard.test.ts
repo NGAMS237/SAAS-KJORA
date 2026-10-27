@@ -33,6 +33,16 @@ test("the refusal is precise and is not represented as missing Stripe configurat
   assert.doesNotMatch(billingView, /billing_market_change_blocked[\s\S]{0,280}Stripe n’est pas disponible/i);
 });
 
+test("billing keeps a persistent accessible explanation and prevents Checkout after a market refusal", () => {
+  assert.match(billingView, /sessionStorage\.setItem\("kjora\.billing\.notice"/);
+  assert.match(billingView, /role=\{notice\.kind === "error" \? "alert" : "status"\}/);
+  assert.match(billingView, /active_commercial_intervention/);
+  assert.match(billingView, /disabled=\{busy \|\| marketChangeBlocked \|\| !affordance\.online\}/);
+  assert.match(billingView, /pilot_not_eligible/);
+  assert.match(billingView, /stripe_unavailable/);
+  assert.match(billingView, /erreur technique|technical error/i);
+});
+
 test("a successful Canada market change continues through the canonical plan request and CAD catalog", () => {
   assert.match(migration, /set billing_country = target_billing_country,[\s\S]*currency = target_currency/);
   assert.match(migration, /result := public\.request_plan_change\(target_organization_id,target_plan,target_cycle\)/);

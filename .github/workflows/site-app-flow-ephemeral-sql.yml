@@ -9,6 +9,7 @@ on:
       - claude/admin-01-secure-base
       - codex/kjora-first-paid-pilot-launch-readiness-14
       - codex/kjora-billing-market-transition-fix
+      - codex/kjora-billing-market-ux-feedback
 
 permissions:
   contents: read

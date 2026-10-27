@@ -4895,6 +4895,15 @@ a.portfolio-metric:hover {
   background: var(--surface-muted); border: 1px solid var(--border);
   border-radius: var(--radius-md); margin-top: 14px; padding: 14px 16px;
 }
+.billing-notice {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 12px 14px;
+}
+.billing-notice--error { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); color: var(--danger); }
+.billing-notice--success { background: var(--success-soft, var(--info-soft)); color: var(--success, var(--info)); }
 .billing-quote--refused { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
 .billing-quote h3 { font-size: 1rem; margin: 0 0 8px; }
 .billing-quote p, .billing-quote li { color: var(--text-secondary); line-height: 1.6; margin: 0 0 6px; }
