@@ -41,6 +41,7 @@ test("billing keeps a persistent accessible explanation and prevents Checkout af
   assert.match(billingView, /pilot_not_eligible/);
   assert.match(billingView, /stripe_unavailable/);
   assert.match(billingView, /erreur technique|technical error/i);
+  assert.match(billingView, /affordance\.online[\s\S]{0,260}poursuivre vers Stripe/);
 });
 
 test("a successful Canada market change continues through the canonical plan request and CAD catalog", () => {
