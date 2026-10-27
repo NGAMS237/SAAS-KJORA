@@ -4,7 +4,9 @@ import test from "node:test";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 const migration = read("../supabase/migrations/20261026120000_billing_market_active_commitment_guard.sql");
+const overviewMigration = read("../supabase/migrations/20261027090000_billing_overview_market_source_of_truth.sql");
 const billingView = read("../src/core/billing/billing-view.tsx");
+const billingServer = read("../src/core/billing/server.ts");
 const checkoutRoute = read("../src/app/api/billing/stripe/checkout/route.ts");
 
 test("historical audit rows do not block a free market change", () => {
@@ -48,4 +50,13 @@ test("a successful Canada market change continues through the canonical plan req
   assert.match(migration, /set billing_country = target_billing_country,[\s\S]*currency = target_currency/);
   assert.match(migration, /result := public\.request_plan_change\(target_organization_id,target_plan,target_cycle\)/);
   assert.match(migration, /when 'CA' then 'CAD'/);
+});
+
+test("the persisted subscription market, not the rental market, is the Billing source of truth after a change", () => {
+  assert.match(overviewMigration, /'billingCountry', sub\.billing_country/);
+  assert.match(overviewMigration, /revoke all on function public\.get_billing_overview\(uuid\) from public, anon/);
+  assert.match(overviewMigration, /grant execute on function public\.get_billing_overview\(uuid\) to authenticated/);
+  assert.match(billingServer, /billingCountry: isBillingCountry\(r\.billingCountry\)/);
+  assert.match(billingView, /requestedIntent\?\.billingCountry[\s\S]*\?\? sub\.billingCountry/);
+  assert.match(billingView, /poursuivre depuis les offres ci-dessous/);
 });

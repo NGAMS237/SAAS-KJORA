@@ -10,6 +10,7 @@ on:
       - codex/kjora-first-paid-pilot-launch-readiness-14
       - codex/kjora-billing-market-transition-fix
       - codex/kjora-billing-market-ux-feedback
+      - codex/kjora-billing-market-source-of-truth
 
 permissions:
   contents: read

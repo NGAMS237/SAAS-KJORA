@@ -153,6 +153,7 @@ export function BillingView({
   );
   const [requestedBillingCountry, setRequestedBillingCountry] = useState<BillingCountry | "">(
     requestedIntent?.billingCountry
+      ?? sub.billingCountry
       ?? (rentalMarket?.country === "CI" ? "CI" : rentalMarket?.country === "CM" ? "CM" : ""),
   );
   const showRequestedIntent = Boolean(requestedPlan && needsIntentPreservation(requestedPlan));
@@ -408,7 +409,7 @@ export function BillingView({
         ) : null}
         {sub.pendingPlan ? (
           <p className="form-feedback" role="status">
-            {t(`Changement vers ${PLAN_LABELS[sub.pendingPlan].fr} demandé. Le règlement en ligne n’est pas encore disponible : nous revenons vers vous.`, `Change to the ${PLAN_LABELS[sub.pendingPlan].en} plan requested. Online payment is not available yet; we will contact you.`)}
+            {t(`Changement vers ${PLAN_LABELS[sub.pendingPlan].fr} demandé. Vous pouvez le poursuivre depuis les offres ci-dessous ; aucun montant n’a été débité.`, `Change to the ${PLAN_LABELS[sub.pendingPlan].en} plan requested. You may continue it from the offers below; no amount has been charged.`)}
           </p>
         ) : null}
       </Card>

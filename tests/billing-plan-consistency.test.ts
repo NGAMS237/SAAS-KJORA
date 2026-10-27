@@ -16,6 +16,7 @@ function overview(effectivePlan: BillingOverview["effectivePlan"]): BillingOverv
       // shown to the Organization or block a new paid-plan request.
       plan: "avance",
       billingCycle: "monthly",
+      billingCountry: "CA",
       currency: "CAD",
       currentPeriodStart: null,
       currentPeriodEnd: null,
