@@ -18,6 +18,9 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf
 const config = read("../src/core/billing/provider-config.ts");
 const mode = read("../src/core/billing/stripe-mode.ts");
 const checkout = read("../src/app/api/billing/stripe/checkout/route.ts");
+const billingPage = read("../src/app/(internal)/app/billing/page.tsx");
+const billingView = read("../src/core/billing/billing-view.tsx");
+const billingTypes = read("../src/core/billing/types.ts");
 const webhook = read("../src/app/api/billing/webhooks/[provider]/route.ts");
 const adapter = read("../src/core/billing/adapters/stripe-test-adapter.ts");
 const migration = read("../supabase/migrations/20261017120000_paid_pilot_production_readiness_11.sql");
@@ -103,6 +106,21 @@ test("11 — Checkout ne fait confiance ni au prix, ni au pays, ni à l'Organiza
   assert.doesNotMatch(checkout, /body\.(amount|amountMinor|price|priceRef|currency|country|organizationId)/);
   assert.match(migration, /sub\.billing_country <> 'CA' or sub\.currency <> 'CAD'/);
   assert.match(migration, /sub\.pending_amount_minor is distinct from amount/);
+});
+
+test("17 — un changement payant Canada ouvre directement Stripe avec une erreur visible et idempotente", () => {
+  assert.match(billingPage, /sub\.pendingPlan \?\? requestedIntent\.plan \?\? currentPlan/);
+  assert.match(billingView, /checkoutLabel\(requestedPlan, requestedCycle, requestedPrice\)/);
+  assert.match(billingView, /Continue to Stripe/);
+  assert.match(billingView, /checkoutAttemptKeys/);
+  assert.match(billingView, /if \(inFlightRef\.current\) return/);
+  assert.match(billingView, /stripe_environment_mismatch/);
+  assert.match(billingView, /stripe_provider_rejected/);
+  assert.match(billingView, /payment service could not be reached/i);
+  assert.doesNotMatch(billingTypes, /demande est enregistrée et nous revenons vers vous/i);
+  assert.match(checkout, /catch \(error\)[\s\S]*checkoutProviderError\(error\)/);
+  assert.match(checkout, /billing\.stripe\.checkout_failed/);
+  assert.doesNotMatch(checkout, /console\.error\([^\n]*error\)/);
 });
 
 test("11 — le pilote Live est limité à l'Owner invité et à billing.manage", () => {

@@ -80,5 +80,5 @@ test("an Admin manual-right mutation invalidates the customer billing route", ()
 
   assert.ok(actions.includes('revalidatePath("/app/billing")'));
   assert.ok(billingPage.includes('dynamic = "force-dynamic"'));
-  assert.ok(billingPage.includes("const affordancePlan = requestedIntent.plan ?? currentPlan"));
+  assert.ok(billingPage.includes("const affordancePlan = sub.pendingPlan ?? requestedIntent.plan ?? currentPlan"));
 });
