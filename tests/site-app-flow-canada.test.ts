@@ -143,7 +143,7 @@ test("an incomplete or invalid new URL cannot silently erase the stored intent",
 
 test("Découverte remains free and needs no payment", () => {
   assert.match(billingView, /Gratuit, sans moyen de paiement/);
-  assert.match(billingView, /No payment or Stripe Checkout is started/);
+  assert.match(billingView, /This plan is free\. No payment method is required/);
   assert.doesNotMatch(migration, /insert into public\.organization_plans[\s\S]{0,200}'decouverte'/i);
 });
 
@@ -159,8 +159,8 @@ test("the newly added commercial journey exposes complete English copy", () => {
     [billingView, "Subscription & billing"],
     [billingView, "Change plan"],
     [billingView, "No invoices"],
-    [billingView, "Prepare this plan"],
-    [billingView, "Preparing…"],
+    [billingView, "Continue to Stripe"],
+    [billingView, "Opening…"],
     [billingView, "Unable to save this selection"],
   ] as const) assert.match(source, new RegExp(phrase, "i"));
 });
@@ -171,7 +171,8 @@ test("URL intent never activates a paid entitlement", () => {
     migration.indexOf("create or replace function public.prepare_plan_change_for_market"),
   );
   assert.doesNotMatch(replacementRpc, /organization_plans|activate_pending_plan|subscription.*status\s*=\s*'active'/i);
-  assert.match(billingView, /records an upgrade request only/i);
+  assert.match(billingView, /official Stripe page/i);
+  assert.match(billingView, /openStripe\("checkout"/);
 });
 
 test("EXPORT-01 still uses its secured list_contracts_for_export RPC", () => {

@@ -10,8 +10,27 @@ import { requestPlanChange } from "@/core/billing/server";
 import { stripePrice } from "@/core/billing/stripe-price-map";
 import { isPlanSlug } from "@/core/entitlements/model";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { CheckoutSession } from "@/core/billing/provider";
 
 export const runtime = "nodejs";
+
+const SAFE_STRIPE_ERRORS = new Set([
+  "STRIPE_KEY_REQUIRED",
+  "STRIPE_TEST_PRICE_REQUIRED",
+  "STRIPE_SESSION_REJECTED",
+  "STRIPE_TEST_CAD_ONLY",
+  "STRIPE_ENVIRONMENT_KEY_MISMATCH",
+  "STRIPE_SESSION_MODE_MISMATCH",
+]);
+
+function checkoutProviderError(error: unknown) {
+  const code = error instanceof Error && SAFE_STRIPE_ERRORS.has(error.message) ? error.message : null;
+  if (code === "STRIPE_ENVIRONMENT_KEY_MISMATCH" || code === "STRIPE_SESSION_MODE_MISMATCH") {
+    return "stripe_environment_mismatch";
+  }
+  if (code) return "stripe_provider_rejected";
+  return "stripe_provider_error";
+}
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -51,13 +70,23 @@ export async function POST(request: Request) {
   ensureBillingProviders();
   const adapter = getBillingProvider("stripe");
   if (!adapter) return NextResponse.json({ error: "stripe_test_unavailable" }, { status: 503 });
-  const session = await adapter.createCheckout({
-    organizationId: authorization.organizationId, plan: body.plan, cycle: body.cycle,
-    currency: "CAD", amountMinor: Number(intent.amountMinor), method: "card",
-    idempotencyKey, returnPath: "/app/billing", providerPriceRef: priceRef,
-    providerCustomerRef: typeof intent.customerRef === "string" ? intent.customerRef : null,
-    locale: body.locale === "en" ? "en" : "fr",
-  });
+  let session: CheckoutSession;
+  try {
+    session = await adapter.createCheckout({
+      organizationId: authorization.organizationId, plan: body.plan, cycle: body.cycle,
+      currency: "CAD", amountMinor: Number(intent.amountMinor), method: "card",
+      idempotencyKey, returnPath: "/app/billing", providerPriceRef: priceRef,
+      providerCustomerRef: typeof intent.customerRef === "string" ? intent.customerRef : null,
+      locale: body.locale === "en" ? "en" : "fr",
+    });
+  } catch (error) {
+    const providerError = checkoutProviderError(error);
+    console.error("billing.stripe.checkout_failed", {
+      organizationId: authorization.organizationId,
+      code: providerError,
+    });
+    return NextResponse.json({ error: providerError }, { status: 502 });
+  }
   const attached = await supabase.rpc("attach_stripe_checkout", {
     target_intent_id: intent.intentId, p_checkout_session_ref: session.providerSessionRef,
   });

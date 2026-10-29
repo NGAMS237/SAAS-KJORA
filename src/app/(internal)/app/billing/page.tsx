@@ -53,10 +53,16 @@ export default async function BillingPage({
     ? siteAppIntentFromOnboardingState(state)
     : null;
   const requestedIntent = mergeSiteAppIntent(incomingIntent, storedIntent);
-  const affordancePlan = requestedIntent.plan ?? currentPlan;
-  const affordanceCycle = requestedIntent.billingCycle ?? sub.billingCycle;
-  const affordanceCurrency = requestedIntent.billingCountry
-    ? subscriptionCurrencyForBillingCountry(requestedIntent.billingCountry)
+  // A prepared paid change is the authoritative Checkout target. Falling
+  // back to the onboarding intent could otherwise evaluate Discovery and
+  // disable Stripe even though an Avancé request is already pending.
+  const affordancePlan = sub.pendingPlan ?? requestedIntent.plan ?? currentPlan;
+  const affordanceCycle = sub.pendingCycle ?? requestedIntent.billingCycle ?? sub.billingCycle;
+  const affordanceBillingCountry = sub.pendingPlan
+    ? sub.billingCountry
+    : requestedIntent.billingCountry ?? sub.billingCountry;
+  const affordanceCurrency = affordanceBillingCountry
+    ? subscriptionCurrencyForBillingCountry(affordanceBillingCountry)
     : sub.currency;
   const affordance = checkoutAffordance({
     plan: affordancePlan,

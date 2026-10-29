@@ -7,7 +7,7 @@
 // les devis proviennent de la base.
 // =============================================================================
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CreditCard, ReceiptText, TriangleAlert } from "lucide-react";
 import { Card, PageHeader, EmptyState, Badge } from "@/core/ui/ui";
 import {
@@ -92,8 +92,8 @@ const RECURRENCE_MESSAGES_EN: Record<RecurrenceMode, string> = {
 };
 
 const CHECKOUT_UNAVAILABLE_MESSAGES_EN: Record<CheckoutUnavailableReason, string> = {
-  no_provider_configured: "Online payment is not available yet. Your request is recorded and we will contact you.",
-  sandbox_only: "Online payment is being prepared. Your request is recorded and no amount is charged.",
+  no_provider_configured: "Stripe is currently unavailable. No Checkout or payment was started.",
+  sandbox_only: "Stripe Live is not enabled for this environment. No Checkout or payment was started.",
   pilot_invitation_required: "The paid pilot is invitation-only. No payment was started.",
   currency_unsupported: "No online payment method is available for this currency. We will contact you.",
   plan_is_free: "This plan is free. No payment method is required.",
@@ -129,6 +129,8 @@ export function BillingView({
   stripeEnvironment: "test" | "live" | null;
 }) {
   const [busy, setBusy] = useState(false);
+  const inFlightRef = useRef(false);
+  const checkoutAttemptKeys = useRef(new Map<string, string>());
   const [quote, setQuote] = useState<Quote | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<BillingNotice | null>(() => {
@@ -162,6 +164,20 @@ export function BillingView({
   const selectedSubscriptionCurrency = requestedBillingCountry
     ? subscriptionCurrencyForBillingCountry(requestedBillingCountry)
     : sub.currency;
+  const requestedPrice = requestedPlan
+    ? priceFor(requestedPlan, requestedCycle, selectedSubscriptionCurrency)
+    : null;
+  const requestedCanCheckout = requestedBillingCountry === "CA"
+    && typeof requestedPrice === "number"
+    && requestedPrice > 0
+    && stripeEnvironment !== null;
+  const checkoutPlan = sub.pendingPlan && sub.pendingPlan !== "decouverte"
+    ? sub.pendingPlan
+    : requestedPlan && requestedPlan !== "decouverte"
+      ? requestedPlan
+      : null;
+  const checkoutCycle = sub.pendingCycle ?? requestedCycle;
+  const checkoutPrice = checkoutPlan ? priceFor(checkoutPlan, checkoutCycle, "CAD") : null;
   const marketBlockers = Array.isArray(quote?.blockers)
     ? quote.blockers.filter((blocker): blocker is string => typeof blocker === "string")
     : [];
@@ -186,6 +202,19 @@ export function BillingView({
   }
 
   const marketBlockerMessage = marketBlockerMessageFor(marketBlockers);
+
+  function checkoutLabel(plan: PlanSlug, cycle: BillingCycle, amountMinor: number) {
+    const amount = new Intl.NumberFormat(locale === "en" ? "en-CA" : "fr-CA", {
+      style: "currency",
+      currency: "CAD",
+      currencyDisplay: "code",
+    }).format(amountMinor / 100).replace(/\s/g, " ");
+    const period = cycle === "annual" ? t("an", "year") : t("mois", "month");
+    const action = stripeEnvironment === "test"
+      ? t("Continuer vers Stripe Test", "Continue to Stripe Test")
+      : t("Continuer vers Stripe", "Continue to Stripe");
+    return `${planLabel(plan, locale)} — ${amount}/${period} — ${action}`;
+  }
 
   function publishNotice(next: BillingNotice) {
     setNotice(next);
@@ -216,60 +245,96 @@ export function BillingView({
   }
 
   async function act(payload: Record<string, unknown>) {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     setMessage(null);
     setQuote(null);
-    const response = await fetch("/api/billing", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const body = (await response.json().catch(() => null)) as { result?: Quote } | null;
-    if (!response.ok || !body?.result) {
-      const next = { kind: "error" as const, message: t("L’opération n’a pas abouti. Réessayez dans un instant.", "The operation did not complete. Try again in a moment.") };
+    try {
+      const response = await fetch("/api/billing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = (await response.json().catch(() => null)) as { result?: Quote } | null;
+      if (!response.ok || !body?.result) {
+        const next = { kind: "error" as const, message: t("L’opération n’a pas abouti. Réessayez dans un instant.", "The operation did not complete. Try again in a moment.") };
+        setMessage(next.message);
+        publishNotice(next);
+        return;
+      }
+      setQuote(body.result);
+      if (body.result.outcome === "billing_market_change_blocked") {
+        publishNotice({ kind: "error", message: marketBlockerMessageFor(body.result.blockers) });
+      } else {
+        publishNotice({ kind: "success", message: t("Votre demande a été enregistrée. Aucun paiement n’a été lancé.", "Your request was recorded. No payment was started.") });
+      }
+    } catch {
+      const next = { kind: "error" as const, message: t("Le serveur de facturation est momentanément injoignable. Réessayez dans un instant.", "The billing server is temporarily unreachable. Try again in a moment.") };
       setMessage(next.message);
       publishNotice(next);
+    } finally {
+      inFlightRef.current = false;
       setBusy(false);
-      return;
     }
-    setQuote(body.result);
-    if (body.result.outcome === "billing_market_change_blocked") {
-      publishNotice({ kind: "error", message: marketBlockerMessageFor(body.result.blockers) });
-    } else {
-      publishNotice({ kind: "success", message: t("Votre demande a été enregistrée. Aucun paiement n’a été lancé.", "Your request was recorded. No payment was started.") });
-    }
-    setBusy(false);
   }
 
-  async function openStripe(kind: "checkout" | "portal") {
-    if (kind === "checkout" && (!requestedPlan || !requestedBillingCountry)) return;
+  async function openStripe(kind: "checkout" | "portal", checkout?: { plan: PlanSlug; cycle: BillingCycle }) {
+    if (kind === "checkout" && (!checkout || requestedBillingCountry !== "CA")) return;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     setMessage(null);
-    const response = await fetch(`/api/billing/stripe/${kind}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(kind === "checkout" ? {
-        plan: requestedPlan,
-        cycle: requestedCycle,
-        locale,
-        idempotency_key: crypto.randomUUID(),
-      } : {}),
-    });
-    const body = await response.json().catch(() => null) as { redirect_url?: string; error?: string } | null;
-    if (!response.ok || !body?.redirect_url) {
-      const failure = body?.error === "billing_market_change_blocked"
-        ? t("Le pays de facturation ne peut pas encore changer car un engagement financier actif doit d’abord être résolu. Aucun paiement n’a été lancé.", "The billing country cannot change yet because an active financial commitment must be resolved first. No payment was started.")
-        : body?.error === "pilot_not_eligible"
-          ? t("Cette Organization n’est pas admissible au Checkout Live pour ce pays. Aucun paiement n’a été lancé.", "This organization is not eligible for Live Checkout in this country. No payment was started.")
-          : body?.error === "stripe_unavailable" || body?.error === "stripe_test_price_unavailable"
-            ? t("Stripe n’est pas disponible pour cette offre. Aucun paiement n’a été lancé.", "Stripe is unavailable for this offer. No payment was started.")
-            : t("Une erreur technique a empêché la préparation du règlement. Aucun paiement n’a été lancé.", "A technical error prevented payment preparation. No payment was started.");
+    try {
+      const attemptFingerprint = checkout ? `${checkout.plan}:${checkout.cycle}:CA` : "portal";
+      let idempotencyKey = checkoutAttemptKeys.current.get(attemptFingerprint);
+      if (!idempotencyKey) {
+        idempotencyKey = crypto.randomUUID();
+        checkoutAttemptKeys.current.set(attemptFingerprint, idempotencyKey);
+      }
+      const response = await fetch(`/api/billing/stripe/${kind}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(kind === "checkout" ? {
+          plan: checkout?.plan,
+          cycle: checkout?.cycle,
+          locale,
+          idempotency_key: idempotencyKey,
+        } : {}),
+      });
+      const body = await response.json().catch(() => null) as { redirect_url?: string; error?: string } | null;
+      if (!response.ok || !body?.redirect_url) {
+        const failure = body?.error === "billing_market_change_blocked"
+          ? t("Le pays de facturation ne peut pas encore changer car un engagement financier actif doit d’abord être résolu. Aucun paiement n’a été lancé.", "The billing country cannot change yet because an active financial commitment must be resolved first. No payment was started.")
+          : body?.error === "pilot_not_eligible"
+            ? t("Cette Organization n’est pas admissible au Checkout Live pour ce pays. Aucun paiement n’a été lancé.", "This organization is not eligible for Live Checkout in this country. No payment was started.")
+            : body?.error === "stripe_environment_mismatch"
+              ? t("La configuration Stripe Live est incohérente avec l’environnement actif. Aucun Checkout n’a été créé.", "The Stripe Live configuration does not match the active environment. No Checkout was created.")
+              : body?.error === "stripe_provider_rejected" || body?.error === "stripe_provider_error"
+                ? t("Stripe a refusé la création du Checkout. Aucun paiement n’a été lancé.", "Stripe rejected Checkout creation. No payment was started.")
+                : body?.error === "checkout_not_recorded"
+                  ? t("Stripe a répondu, mais la session n’a pas pu être enregistrée. Ne réessayez pas immédiatement et contactez le support.", "Stripe responded, but the session could not be recorded. Do not retry immediately; contact support.")
+                  : body?.error === "checkout_not_prepared"
+                    ? t("Le serveur n’a pas pu préparer le Checkout. Aucun paiement n’a été lancé.", "The server could not prepare Checkout. No payment was started.")
+                    : body?.error === "stripe_unavailable" || body?.error === "stripe_test_unavailable" || body?.error === "stripe_test_price_unavailable"
+                      ? t("Stripe n’est pas disponible pour cette offre. Aucun paiement n’a été lancé.", "Stripe is unavailable for this offer. No payment was started.")
+                      : t(`Une erreur technique (${body?.error ?? response.status}) a empêché la préparation du règlement. Aucun paiement n’a été lancé.`, `A technical error (${body?.error ?? response.status}) prevented payment preparation. No payment was started.`);
+        setMessage(failure);
+        publishNotice({ kind: "error", message: failure });
+        return;
+      }
+      window.location.assign(body.redirect_url);
+    } catch {
+      const failure = t(
+        "Impossible de joindre le service de règlement. Aucun Checkout ni paiement n’a été lancé.",
+        "The payment service could not be reached. No Checkout or payment was started.",
+      );
       setMessage(failure);
       publishNotice({ kind: "error", message: failure });
+    } finally {
+      inFlightRef.current = false;
       setBusy(false);
-      return;
     }
-    window.location.assign(body.redirect_url);
   }
 
   const prixCourant = priceFor(currentPlan, sub.billingCycle, sub.currency);
@@ -333,21 +398,32 @@ export function BillingView({
               `Rental market: ${rentalMarket.country}/${rentalMarket.currency}. KJORA subscription: ${requestedBillingCountry}/${subscriptionCurrencyForBillingCountry(requestedBillingCountry)}. These currencies remain separate.`,
             )}</p>
           ) : null}
-          <p><small>{t(
-            "La confirmation enregistre seulement une demande de montée en gamme. Aucun paiement ni Checkout Stripe n’est lancé dans ce parcours.",
-            "Confirming records an upgrade request only. No payment or Stripe Checkout is started in this flow.",
+          <p><small>{requestedCanCheckout ? t(
+            "Vous allez être redirigé vers la page officielle Stripe. Aucun paiement n’est effectué dans KJORA.",
+            "You will be redirected to the official Stripe page. No payment is made inside KJORA.",
+          ) : t(
+            "Cette action prépare le changement sans masquer une éventuelle erreur de paiement.",
+            "This action prepares the change without hiding any payment error.",
           )}</small></p>
           <button
             className="button button--primary"
             disabled={busy || isCurrentBillingPlan(overview, requestedPlan) || !requestedBillingCountry}
             onClick={async () => {
+              if (requestedCanCheckout) {
+                await openStripe("checkout", { plan: requestedPlan, cycle: requestedCycle });
+                return;
+              }
               if (await persistIntent(requestedCycle, requestedBillingCountry)) {
                 await act({ action: "change_plan", plan: requestedPlan, cycle: requestedCycle, billing_country: requestedBillingCountry });
               }
             }}
             type="button"
           >
-            {busy ? t("Préparation…", "Preparing…") : t("Préparer ce plan", "Prepare this plan")}
+            {busy
+              ? t("Ouverture…", "Opening…")
+              : requestedCanCheckout && requestedPrice !== null
+                ? checkoutLabel(requestedPlan, requestedCycle, requestedPrice)
+                : t("Préparer ce plan", "Prepare this plan")}
           </button>
         </Card>
       ) : null}
@@ -459,11 +535,18 @@ export function BillingView({
           <div className="billing-plan-grid">
             {PLAN_ORDER.filter((p) => p !== currentPlan).map((p) => {
               const prix = priceFor(p, sub.billingCycle, selectedSubscriptionCurrency);
+              const canCheckout = requestedBillingCountry === "CA"
+                && typeof prix === "number"
+                && prix > 0
+                && stripeEnvironment !== null;
               return (
                 <button className="billing-plan-option" disabled={busy || !requestedBillingCountry} key={p} type="button"
-                  onClick={() => act({ action: "change_plan", plan: p, cycle: sub.billingCycle, billing_country: requestedBillingCountry })}>
+                  onClick={() => canCheckout
+                    ? void openStripe("checkout", { plan: p, cycle: sub.billingCycle })
+                    : void act({ action: "change_plan", plan: p, cycle: sub.billingCycle, billing_country: requestedBillingCountry })}>
                   <strong>{PLAN_LABELS[p][locale]}</strong>
                   <span>{prix === null ? t("Sur devis", "Quote required") : prix === 0 ? t("Gratuit", "Free") : formatAmount(prix, selectedSubscriptionCurrency)}</span>
+                  {canCheckout ? <span>{t("Continuer vers Stripe", "Continue to Stripe")}</span> : null}
                 </button>
               );
             })}
@@ -546,10 +629,10 @@ export function BillingView({
               ? (locale === "en" ? CHECKOUT_UNAVAILABLE_MESSAGES_EN[affordance.reason] : CHECKOUT_UNAVAILABLE_MESSAGES[affordance.reason])
               : null}
         </p>
-        {requestedBillingCountry === "CA" && requestedPlan ? (
+        {requestedBillingCountry === "CA" && checkoutPlan && typeof checkoutPrice === "number" ? (
           <>
-          <button className="button button--primary" disabled={busy || marketChangeBlocked || !affordance.online} onClick={() => void openStripe("checkout")} type="button">
-            {busy ? t("Ouverture…", "Opening…") : stripeEnvironment === "test" ? t("Continuer vers Stripe Test", "Continue to Stripe Test") : t("Continuer vers Stripe", "Continue to Stripe")}
+          <button className="button button--primary" disabled={busy || marketChangeBlocked || !affordance.online} onClick={() => void openStripe("checkout", { plan: checkoutPlan, cycle: checkoutCycle })} type="button">
+            {busy ? t("Ouverture…", "Opening…") : checkoutLabel(checkoutPlan, checkoutCycle, checkoutPrice)}
           </button>
           {marketChangeBlocked ? <p className="form-feedback form-feedback--error" role="alert">{marketBlockerMessage}</p> : null}
           {!marketChangeBlocked && !affordance.online ? <p className="form-feedback form-feedback--error" role="status">{affordance.reason ? (locale === "en" ? CHECKOUT_UNAVAILABLE_MESSAGES_EN[affordance.reason] : CHECKOUT_UNAVAILABLE_MESSAGES[affordance.reason]) : t("Stripe est indisponible pour le moment.", "Stripe is currently unavailable.")}</p> : null}

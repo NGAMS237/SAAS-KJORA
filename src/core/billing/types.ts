@@ -146,13 +146,13 @@ export const RECURRENCE_MESSAGES: Record<RecurrenceMode, string> = {
 
 export const CHECKOUT_UNAVAILABLE_MESSAGES: Record<CheckoutUnavailableReason, string> = {
   no_provider_configured:
-    "Le règlement en ligne n’est pas encore disponible. Votre demande est enregistrée et nous revenons vers vous.",
+    "Stripe est indisponible pour le moment. Aucun Checkout ni paiement n’a été lancé.",
   sandbox_only:
-    "Le règlement en ligne est en cours de mise en service. Votre demande est enregistrée : aucun montant n’est débité.",
+    "Stripe Live n’est pas activé dans cet environnement. Aucun Checkout ni paiement n’a été lancé.",
   pilot_invitation_required:
     "Le pilote payant est accessible uniquement sur invitation. Aucun paiement n’a été lancé.",
   currency_unsupported:
-    "Aucun moyen de règlement en ligne n’est disponible pour cette devise. Nous revenons vers vous.",
+    "Aucun moyen de règlement en ligne n’est disponible pour cette devise. Aucun Checkout ni paiement n’a été lancé.",
   plan_is_free: "Ce plan est gratuit : aucun moyen de paiement n’est nécessaire.",
   plan_requires_quote:
     "Ce plan passe par un échange commercial plutôt que par une souscription en ligne.",
