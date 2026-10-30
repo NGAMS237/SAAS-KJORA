@@ -19,14 +19,25 @@ function timestamp(value: unknown): string | null {
 }
 
 export function stripeInvoicePeriod(object: StripeWebhookRecord): { start: string | null; end: string | null } {
-  const direct = { start: timestamp(object.period_start), end: timestamp(object.period_end) };
-  if (direct.start && direct.end) return direct;
-
   const lines = record(object.lines).data;
-  if (!Array.isArray(lines)) return direct;
-  // The subscription line is authoritative when present. Never manufacture a
-  // period from invoice timestamps or from an unrelated invoice item.
-  const subscriptionLine = lines.find((line) => record(line).type === "subscription") ?? lines[0];
-  const period = record(record(subscriptionLine).period);
-  return { start: timestamp(period.start), end: timestamp(period.end) };
+  if (Array.isArray(lines)) {
+    // Stripe's invoice-level period is the window in which invoice items were
+    // added. On an initial subscription invoice it can be a zero-length
+    // window, while the subscription line carries the actual service period.
+    // Newer API versions identify that line through parent.type; older ones
+    // used line.type. Prefer the line contract in both representations.
+    const subscriptionLine = lines.find((line) => {
+      const item = record(line);
+      return item.type === "subscription"
+        || record(item.parent).type === "subscription_item_details";
+    }) ?? lines[0];
+    const period = record(record(subscriptionLine).period);
+    const linePeriod = { start: timestamp(period.start), end: timestamp(period.end) };
+    if (linePeriod.start && linePeriod.end && linePeriod.end > linePeriod.start) return linePeriod;
+  }
+
+  const direct = { start: timestamp(object.period_start), end: timestamp(object.period_end) };
+  return direct.start && direct.end && direct.end > direct.start
+    ? direct
+    : { start: null, end: null };
 }
