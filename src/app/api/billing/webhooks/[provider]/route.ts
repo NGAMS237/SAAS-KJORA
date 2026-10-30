@@ -150,7 +150,8 @@ export async function POST(
       p_payload_digest: digest,
       p_provider_status: typeof object.status === "string" ? object.status : null,
       p_cancel_at_period_end: object.cancel_at_period_end === true,
-      p_current_period_end: stripeTimestamp(object.current_period_end),
+      p_current_period_end: stripeTimestamp(object.current_period_end)
+        ?? (verification.eventType.startsWith("invoice.") ? invoicePeriod.end : null),
       p_invoice_ref: invoiceRef,
       p_invoice_amount_minor: verification.eventType === "invoice.paid" ? amountPaid : amountDue,
       p_invoice_currency: currency,
