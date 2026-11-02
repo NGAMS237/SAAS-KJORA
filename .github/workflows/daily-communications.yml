@@ -1,0 +1,26 @@
+name: Courriels quotidiens
+
+# Hostinger n'exécute pas les crons de vercel.json : ce workflow appelle
+# l'endpoint chaque jour. Il faut le secret GitHub CRON_SECRET (identique à la
+# variable CRON_SECRET d'hPanel).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Appeler /api/cron/daily-communications
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "Secret CRON_SECRET absent"; exit 1; fi
+          code=$(curl -sS -o response.json -w "%{http_code}" -H "Authorization: Bearer $CRON_SECRET" "https://kjorapp.com/api/cron/daily-communications/")
+          echo "HTTP $code"; cat response.json
+          test "$code" = "200"
