@@ -26,7 +26,7 @@ export default async function SupportPage() {
         <ul className="support-tips">
           <li>
             <strong>Vous n’arrivez pas à vous connecter ?</strong> Le lien reçu par email s’ouvre dans le
-            même navigateur et sur le même appareil que la demande. La page <Link href="/aide">Aide</Link>
+            même navigateur et sur le même appareil que la demande. La page <Link href="/aide">Aide</Link>{" "}
             détaille les cas les plus courants.
           </li>
           <li>

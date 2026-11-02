@@ -50,7 +50,7 @@ function friendlyPrepareError(code: string | undefined): string {
     case "PLAN_FEATURE_NOT_AVAILABLE":
       return "Votre offre actuelle n’inclut pas ce type d’export.";
     case "forbidden":
-      return "Vous n’avez pas les droits nécessaires pour exporter les données de cette Organization.";
+      return "Vous n’avez pas les droits nécessaires pour exporter les données de cette organisation.";
     case "invalid_export_range":
       return "La période choisie n’est pas valide (la date de fin doit suivre la date de début).";
     case "billing_blocked":

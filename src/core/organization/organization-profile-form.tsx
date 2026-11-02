@@ -33,11 +33,11 @@ export function OrganizationProfileForm({ organization, currencyLocked }: { orga
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { error?: string };
       setMessage(body.error === "organization_currency_locked"
-        ? t("La devise est verrouillée car l’Organization possède déjà des données financières.", "Currency is locked because the Organization already has financial data.")
+        ? t("La devise est verrouillée car l’organisation possède déjà des données financières.", "Currency is locked because the Organization already has financial data.")
         : response.status === 403 ? t("Vous n’avez pas l’autorisation de modifier ces paramètres.", "You are not allowed to change these settings.") : t("Modification impossible.", "Update failed."));
       return;
     }
-    setMessage(t("Profil de l’Organization mis à jour.", "Organization profile updated."));
+    setMessage(t("Profil de l’organisation mis à jour.", "Organization profile updated."));
     router.refresh();
   }
 
@@ -47,7 +47,7 @@ export function OrganizationProfileForm({ organization, currencyLocked }: { orga
       <div className="form-grid">
         <label className="field"><span>{t("Langue", "Language")}</span><select defaultValue={organization.language} name="language"><option value="fr">Français</option><option value="en">English</option></select></label>
         <label className="field"><span>{t("Fuseau horaire", "Time zone")}</span><select defaultValue={organization.timezone} name="timezone" required>{!ORGANIZATION_TIMEZONES.some(([id]) => id === organization.timezone) ? <option value={organization.timezone}>{organization.timezone}</option> : null}{ORGANIZATION_TIMEZONES.map(([id, label]) => <option key={id} value={id}>{label[language === "FR" ? "fr" : "en"]} · {id}</option>)}</select></label>
-        <label className="field"><span>{t("Devise", "Currency")}</span><select defaultValue={organization.currencyCode} disabled={currencyLocked} name="currency">{RENTAL_CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}</select><small>{currencyLocked ? t("Devise verrouillée depuis la première opération financière enregistrée pour cette Organization (bail, conditions financières du bail, échéance, paiement, allocation ou écriture de compte). Aucun historique ne sera converti.", "Currency locked since this Organization's first recorded financial operation (a lease, a lease's financial terms, a due, a payment, an allocation, or a ledger entry). History is never converted.") : t("Changeable librement tant qu’aucune donnée financière n’existe. Ne modifie jamais la devise de votre abonnement KJORA.", "Freely changeable as long as no financial data exists. Never changes your KJORA subscription currency.")}</small>{currencyLocked ? <input name="currency" type="hidden" value={organization.currencyCode} /> : null}</label>
+        <label className="field"><span>{t("Devise", "Currency")}</span><select defaultValue={organization.currencyCode} disabled={currencyLocked} name="currency">{RENTAL_CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}</select><small>{currencyLocked ? t("Devise verrouillée depuis la première opération financière enregistrée pour cette organisation (bail, conditions financières du bail, échéance, paiement, allocation ou écriture du compte locatif). Aucun historique ne sera converti.", "Currency locked since this Organization's first recorded financial operation (a lease, a lease's financial terms, a due, a payment, an allocation, or a ledger entry). History is never converted.") : t("Changeable librement tant qu’aucune donnée financière n’existe. Ne modifie jamais la devise de votre abonnement KJORA.", "Freely changeable as long as no financial data exists. Never changes your KJORA subscription currency.")}</small>{currencyLocked ? <input name="currency" type="hidden" value={organization.currencyCode} /> : null}</label>
       </div>
       <div className="fixed-configuration"><span><small>{t("Pays", "Country")}</small><strong>{t(defaultsForCountry(organization.countryCode)?.label.fr ?? organization.countryCode, defaultsForCountry(organization.countryCode)?.label.en ?? organization.countryCode)}</strong></span></div>
       {message ? <p className="form-feedback" role="status">{message}</p> : null}

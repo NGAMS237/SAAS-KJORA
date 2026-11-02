@@ -117,7 +117,7 @@ export function PaymentsView({ payments, canRecord, scope = null }: {
   const creditXaf = confirmed.reduce((sum, payment) => sum + payment.creditCreatedXaf, 0);
 
   return <div className="page-stack payments-page-v2">
-    <PageHeader eyebrow={t("Cycle financier", "Financial cycle")} title={t("Paiements", "Payments")} description={t("Encaissements réels, allocations et corrections traçables de l’Organization active.", "Real receipts, allocations and traceable corrections for the active Organization.")} action={canRecord ? <Link className="button button--accent" href="/app/paiements/nouveau"><Plus size={17} />{t("Nouveau paiement", "New payment")}</Link> : undefined} />
+    <PageHeader eyebrow={t("Cycle financier", "Financial cycle")} title={t("Paiements", "Payments")} description={t("Encaissements réels, allocations et corrections traçables de l’organisation active.", "Real receipts, allocations and traceable corrections for the active Organization.")} action={canRecord ? <Link className="button button--accent" href="/app/paiements/nouveau"><Plus size={17} />{t("Nouveau paiement", "New payment")}</Link> : undefined} />
     {scope ? <div className="payments-filter-banner" role="status"><span>{scope.kind === "lease"
       ? t(`Paiements filtrés sur le bail${scope.label ? ` : ${scope.label}` : ""}.`, `Payments filtered by lease${scope.label ? `: ${scope.label}` : ""}.`)
       : t(`Paiements filtrés sur le locataire${scope.label ? ` : ${scope.label}` : ""}.`, `Payments filtered by tenant${scope.label ? `: ${scope.label}` : ""}.`)}</span><Link className="button button--secondary" href="/app/paiements">{t("Voir tous les paiements", "View all payments")}</Link></div> : null}

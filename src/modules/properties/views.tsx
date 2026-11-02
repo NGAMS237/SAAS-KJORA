@@ -56,7 +56,7 @@ function LiveDataNotice() {
   return (
     <div className="live-data-notice" role="note">
       <span aria-hidden="true" />
-      {t("Données enregistrées dans l’Organization active", "Saved data from the active Organization")}
+      {t("Données enregistrées dans l’organisation active", "Saved data from the active Organization")}
     </div>
   );
 }
@@ -96,7 +96,7 @@ export function PropertiesView({
         eyebrow={t("Patrimoine", "Portfolio")}
         title={t("Biens", "Properties")}
         description={t(
-          "Maisons et immeubles enregistrés dans l’Organization active.",
+          "Maisons et immeubles enregistrés dans l’organisation active.",
           "Houses and buildings saved in the active Organization.",
         )}
         action={canManage ? <Link className="button button--primary" href="/app/biens/nouveau"><Plus size={17} />{t("Ajouter un bien", "Add property")}</Link> : undefined}
@@ -137,7 +137,7 @@ export function PropertiesView({
             title={query ? t("Aucun résultat", "No results") : t("Aucun bien", "No properties")}
             description={query
               ? t("Modifiez la recherche.", "Change your search.")
-              : t("Ajoutez le premier bien de cette Organization.", "Add this Organization’s first property.")}
+              : t("Ajoutez le premier bien de cette organisation.", "Add this Organization’s first property.")}
             action={canManage && !query ? <Link className="button button--primary" href="/app/biens/nouveau">{t("Ajouter un bien", "Add property")}</Link> : undefined}
           />
         </Card>
@@ -401,5 +401,5 @@ export function UnitDetailView({
 
 export function MissingPropertyResource() {
   const t = useCopy();
-  return <div className="page-stack"><Card><EmptyState title={t("Ressource introuvable ou inaccessible", "Resource not found or unavailable")} description={t("Vérifiez l’Organization active ou revenez à la liste des biens.", "Check the active Organization or return to the property list.")} action={<Link className="button button--primary" href="/app/biens">{t("Voir les biens", "View properties")}</Link>} /></Card></div>;
+  return <div className="page-stack"><Card><EmptyState title={t("Ressource introuvable ou inaccessible", "Resource not found or unavailable")} description={t("Vérifiez l’organisation active ou revenez à la liste des biens.", "Check the active Organization or return to the property list.")} action={<Link className="button button--primary" href="/app/biens">{t("Voir les biens", "View properties")}</Link>} /></Card></div>;
 }

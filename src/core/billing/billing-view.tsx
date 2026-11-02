@@ -307,7 +307,7 @@ export function BillingView({
         const failure = body?.error === "billing_market_change_blocked"
           ? t("Le pays de facturation ne peut pas encore changer car un engagement financier actif doit d’abord être résolu. Aucun paiement n’a été lancé.", "The billing country cannot change yet because an active financial commitment must be resolved first. No payment was started.")
           : body?.error === "pilot_not_eligible"
-            ? t("Cette Organization n’est pas admissible au Checkout Live pour ce pays. Aucun paiement n’a été lancé.", "This organization is not eligible for Live Checkout in this country. No payment was started.")
+            ? t("Cette organisation n’est pas admissible au Checkout Live pour ce pays. Aucun paiement n’a été lancé.", "This organization is not eligible for Live Checkout in this country. No payment was started.")
             : body?.error === "stripe_environment_mismatch"
               ? t("La configuration Stripe Live est incohérente avec l’environnement actif. Aucun Checkout n’a été créé.", "The Stripe Live configuration does not match the active environment. No Checkout was created.")
               : body?.error === "stripe_provider_rejected" || body?.error === "stripe_provider_error"
@@ -350,7 +350,7 @@ export function BillingView({
 
       {rentalMarket?.country === "CI" && sub.currency !== "XOF" ? (
         <p className="form-feedback form-feedback--error" role="alert">{t(
-          "Cette Organization ivoirienne conserve une ancienne configuration d’abonnement. Son historique n’a pas été réécrit : une revue supervisée est requise avant tout forfait payant.",
+          "Cette organisation ivoirienne conserve une ancienne configuration d’abonnement. Son historique n’a pas été réécrit : une revue supervisée est requise avant tout forfait payant.",
           "This Ivorian Organization keeps a legacy subscription configuration. Its history was not rewritten: supervised review is required before any paid plan.",
         )}</p>
       ) : null}
@@ -620,7 +620,9 @@ export function BillingView({
           <p>{sub.paymentMethodBrand ?? t("Carte", "Card")} ···· {sub.paymentMethodLast4}
             {sub.paymentMethodExpiresOn ? t(` · expire le ${sub.paymentMethodExpiresOn}`, ` · expires ${sub.paymentMethodExpiresOn}`) : ""}</p>
         ) : (
-          <p>{t("Aucun moyen de paiement enregistré.", "No payment method saved.")}</p>
+          <p>{sub.exists && sub.status === "active"
+            ? t("Abonnement payé. Les détails de la carte sont gérés par Stripe et ne sont pas affichés ici.", "Subscription paid. Card details are managed by Stripe and are not shown here.")
+            : t("Aucun moyen de paiement enregistré.", "No payment method saved.")}</p>
         )}
         <p>
           {affordance.online && affordance.recurrence

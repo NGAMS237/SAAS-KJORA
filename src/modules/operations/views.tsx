@@ -76,7 +76,7 @@ function auditContext(entry: AuditEntry, t: ReturnType<typeof useCopy>) {
   const reference = typeof entry.details.reference === "string" ? entry.details.reference
     : typeof entry.details.aggregate_id === "string" ? entry.details.aggregate_id : null;
   const reason = typeof entry.details.reason === "string" ? entry.details.reason : null;
-  const entity = entry.action.startsWith("payment.") ? t("Payment", "Payment")
+  const entity = entry.action.startsWith("payment.") ? t("Paiement", "Payment")
     : entry.action.startsWith("document.") ? t("Document", "Document")
       : t("Membership", "Membership");
   return [entity, reference, reason].filter(Boolean).join(" · ");
@@ -106,26 +106,26 @@ export function DashboardOperationalView({
       <div className="dashboard-hero__content">
         <p className="dashboard-hero__eyebrow">{t("Accueil", "Home")} · {monthLabel(period, language)}</p>
         <h1>{greetingName ? t(`Bonjour, ${greetingName}`, `Hello, ${greetingName}`) : t("Bonjour", "Hello")}</h1>
-        <p>{t("La situation opérationnelle réelle de votre Organization, sans agrégation entre tenants.", "Your Organization’s real operational position, with no cross-tenant aggregation.")}</p>
+        <p>{t("La situation opérationnelle réelle de votre organisation, sans mélange avec les données d’autres organisations.", "Your Organization’s real operational position, with no cross-tenant aggregation.")}</p>
         <div className="dashboard-period-nav" aria-label={t("Période active", "Active period")}>
           <Link className="button button--on-dark" href={`/app?month=${previous.key}`}><ArrowLeft size={16} />{t("Précédent", "Previous")}</Link>
           <strong>{monthLabel(period, language)}</strong>
           <Link className="button button--on-dark" href={`/app?month=${next.key}`}>{t("Suivant", "Next")}<ArrowRight size={16} /></Link>
         </div>
       </div>
-      <div className="dashboard-hero__portfolio"><span className="dashboard-hero__mark" aria-hidden="true"><Gauge size={24} /></span><small>{t("Organization active", "Active Organization")}</small><strong>{organizationName}</strong><p>{t("Données tenant-scoped et permissions recalculées.", "Tenant-scoped data with recalculated permissions.")}</p></div>
+      <div className="dashboard-hero__portfolio"><span className="dashboard-hero__mark" aria-hidden="true"><Gauge size={24} /></span><small>{t("Organisation active", "Active Organization")}</small><strong>{organizationName}</strong><p>{t("Données propres à votre organisation, permissions vérifiées à chaque requête.", "Tenant-scoped data with recalculated permissions.")}</p></div>
     </section>
 
     {dashboard.financeAvailable ? <>
       <section className="operational-kpi-grid" aria-label={t("Indicateurs financiers", "Financial indicators")}>
         <FinancialStateCard icon={CalendarClock} label={t("Attendu", "Expected")} value={money(dashboard.expectedXaf, language)} helper={t("Échéances de la période active", "Dues in the active period")} tone="info" />
-        <FinancialStateCard icon={Banknote} label={t("Encaissé", "Collected")} value={money(dashboard.collectedXaf, language)} helper={t("Payments confirmés reçus pendant la période", "Confirmed Payments received during the period")} tone="positive" />
-        <FinancialStateCard icon={WalletCards} label={t("Crédit appliqué", "Credit applied")} value={money(dashboard.creditAppliedXaf, language)} helper={t("Crédit d’ouverture et crédit Payment appliqués", "Opening and Payment credit applied")} tone="neutral" />
+        <FinancialStateCard icon={Banknote} label={t("Encaissé", "Collected")} value={money(dashboard.collectedXaf, language)} helper={t("Paiements confirmés reçus pendant la période", "Confirmed Payments received during the period")} tone="positive" />
+        <FinancialStateCard icon={WalletCards} label={t("Couvert par un crédit", "Covered by credit")} value={money(dashboard.creditAppliedXaf, language)} helper={t("Crédit d’ouverture et trop-perçus déjà déduits des échéances", "Opening and Payment credit applied")} tone="neutral" />
         <FinancialStateCard icon={CircleDollarSign} label={t("Reste dû", "Remaining")} value={money(dashboard.remainingXaf, language)} helper={t("Position réelle des échéances de la période", "Real position of dues in the period")} tone={dashboard.remainingXaf ? "warning" : "positive"} />
         <FinancialStateCard icon={AlertTriangle} label={t("En retard", "Overdue")} value={money(dashboard.overdueXaf, language)} helper={t(`${dashboard.overdueCount ?? 0} échéance(s)`, `${dashboard.overdueCount ?? 0} due(s)`)} tone={dashboard.overdueCount ? "danger" : "positive"} />
       </section>
-      <p className="dashboard-truth-note">{t("Attendu, encaissé, crédit et reste dû sont des vérités distinctes : Kjora ne soustrait pas arbitrairement les Payments du montant attendu.", "Expected, collected, credit and remaining are distinct truths: Kjora never arbitrarily subtracts Payments from expected amounts.")}</p>
-    </> : <Card className="dashboard-access-card"><ShieldCheck size={22} /><div><h2>{t("Finance protégée", "Finance protected")}</h2><p>{t("Votre rôle ne possède pas les capabilities Due et Payment. Aucun montant financier n’est exposé.", "Your role does not have Due and Payment capabilities. No financial amount is exposed.")}</p></div></Card>}
+      <p className="dashboard-truth-note">{t("Attendu, encaissé, crédit et reste dû sont des vérités distinctes : Kjora ne soustrait pas arbitrairement les paiements du montant attendu.", "Expected, collected, credit and remaining are distinct truths: Kjora never arbitrarily subtracts Payments from expected amounts.")}</p>
+    </> : <Card className="dashboard-access-card"><ShieldCheck size={22} /><div><h2>{t("Finance protégée", "Finance protected")}</h2><p>{t("Votre rôle ne donne pas accès aux informations financières. Aucun montant financier n’est exposé.", "Your role does not have Due and Payment capabilities. No financial amount is exposed.")}</p></div></Card>}
 
     <div className="dashboard-lower-grid">
       <Card className="operations-summary-card">
@@ -193,5 +193,5 @@ export function OperationsPageView({
   notificationNotice?: string | null;
 }) {
   const t = useCopy();
-  return <div className="page-stack operations-page"><header className="page-header"><div><p className="eyebrow">{t("Suivi", "Overview")}</p><h1>{t("Activité", "Activity")}</h1><p className="page-header__description">{t("Activité, notifications et audit restent trois couches distinctes de la même Organization active.", "Activity, notifications and audit remain three distinct layers for the same active Organization.")}</p></div></header><ActivityFeed events={activity} currentUserId={currentUserId} nextHref={activityNextHref} /><div id="notifications"><NotificationsView embedded notice={notificationNotice} notifications={notifications} /></div>{auditEntries ? <OperationalAuditView entries={auditEntries} filters={auditFilters} nextHref={auditNextHref} /> : null}{health ? <OperationalHealthView emailDeliveryEnabled={emailDeliveryEnabled} health={health} /> : null}</div>;
+  return <div className="page-stack operations-page"><header className="page-header"><div><p className="eyebrow">{t("Suivi", "Overview")}</p><h1>{t("Activité", "Activity")}</h1><p className="page-header__description">{t("Activité, notifications et journal d’audit de votre organisation.", "Activity, notifications and audit remain three distinct layers for the same active Organization.")}</p></div></header><ActivityFeed events={activity} currentUserId={currentUserId} nextHref={activityNextHref} /><div id="notifications"><NotificationsView embedded notice={notificationNotice} notifications={notifications} /></div>{auditEntries ? <OperationalAuditView entries={auditEntries} filters={auditFilters} nextHref={auditNextHref} /> : null}{health ? <OperationalHealthView emailDeliveryEnabled={emailDeliveryEnabled} health={health} /> : null}</div>;
 }

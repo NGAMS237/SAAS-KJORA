@@ -11,11 +11,14 @@ function cleanName(value: unknown) {
   return firstName.charAt(0).toLocaleUpperCase("fr-FR") + firstName.slice(1);
 }
 
-export function getUserGreetingName(metadata: UserMetadata | null | undefined) {
-  if (!metadata) return null;
-  for (const field of NAME_FIELDS) {
-    const name = cleanName(metadata[field]);
-    if (name) return name;
+export function getUserGreetingName(metadata: UserMetadata | null | undefined, email?: string | null) {
+  if (metadata) {
+    for (const field of NAME_FIELDS) {
+      const name = cleanName(metadata[field]);
+      if (name) return name;
+    }
   }
+  // Repli : partie locale de l'adresse courriel (« jean.tremblay@… » -> « Jean »).
+  if (email) return cleanName(email.split("@")[0].split(/[._+-]/)[0]);
   return null;
 }

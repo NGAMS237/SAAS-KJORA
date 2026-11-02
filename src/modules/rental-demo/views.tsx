@@ -33,7 +33,7 @@ export function PropertiesExperience() {
   const [query, setQuery] = useState("");
   const filtered = state.properties.filter((property) => `${property.name} ${property.locality}`.toLowerCase().includes(query.toLowerCase()));
   return <div className="page-stack">
-    <PageHeader eyebrow={t("Patrimoine", "Portfolio")} title={t("Biens", "Properties")} description={t("Maisons et immeubles de démonstration dans l’Organization active.", "Demo houses and buildings in the active Organization.")} action={<Link className="button button--primary" href="/app/biens/nouveau"><Plus size={17} />{t("Ajouter un bien", "Add property")}</Link>} />
+    <PageHeader eyebrow={t("Patrimoine", "Portfolio")} title={t("Biens", "Properties")} description={t("Maisons et immeubles de démonstration dans l’organisation active.", "Demo houses and buildings in the active Organization.")} action={<Link className="button button--primary" href="/app/biens/nouveau"><Plus size={17} />{t("Ajouter un bien", "Add property")}</Link>} />
     <DemoModeBanner />
     <label className="demo-search"><Search aria-hidden="true" size={18}/><span className="sr-only">{t("Rechercher", "Search")}</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder={t("Rechercher un bien ou une localité", "Search a property or locality")} /></label>
     {filtered.length ? <div className="demo-card-grid">{filtered.map((property) => {

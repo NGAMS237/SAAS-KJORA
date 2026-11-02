@@ -45,7 +45,7 @@ function useCopy() {
 
 function LiveDataNotice() {
   const t = useCopy();
-  return <div className="live-data-notice" role="note"><span aria-hidden="true" />{t("Données réelles de l’Organization active", "Live data from the active Organization")}</div>;
+  return <div className="live-data-notice" role="note"><span aria-hidden="true" />{t("Données réelles de l’organisation active", "Live data from the active Organization")}</div>;
 }
 
 function money(value: number) {
@@ -188,7 +188,7 @@ export function TenantsView({ tenants, canManage }: { tenants: TenantSummary[]; 
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => filterTenants(tenants, query), [tenants, query]);
   return <div className="page-stack resource-index-v2 tenancy-index-v2">
-    <PageHeader eyebrow={t("Relations locatives", "Tenancy")} title={t("Locataires", "Tenants")} description={t("Dossiers réels liés à l’Organization active, sans accès portail automatique.", "Live records linked to the active Organization, without automatic portal access.")} action={canManage ? <Link className="button button--primary" href="/app/locataires/nouveau"><UserRoundPlus size={17} />{t("Ajouter", "Add")}</Link> : undefined} />
+    <PageHeader eyebrow={t("Relations locatives", "Tenancy")} title={t("Locataires", "Tenants")} description={t("Dossiers réels liés à l’organisation active, sans accès portail automatique.", "Live records linked to the active Organization, without automatic portal access.")} action={canManage ? <Link className="button button--primary" href="/app/locataires/nouveau"><UserRoundPlus size={17} />{t("Ajouter", "Add")}</Link> : undefined} />
     <LiveDataNotice />
     <label className="demo-search"><Search size={18} /><span className="sr-only">{t("Rechercher", "Search")}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Nom, téléphone ou email", "Name, phone or email")} /></label>
     {filtered.length ? <div className="demo-card-grid">{filtered.map((tenant) => <Link className="demo-resource-card" href={`/app/locataires/${tenant.id}`} key={tenant.id}><span className="demo-resource-card__icon"><UserRound size={22} /></span><div><h2>{tenant.fullName}</h2><p>{tenant.phone ?? tenant.email}</p><div className="demo-meta"><span>{tenant.currentLease ? `${tenant.currentLease.propertyName} · ${tenant.currentLease.unitLabel}` : t("Aucun bail actif", "No active lease")}</span></div></div><ChevronRight size={20} /></Link>)}</div> : <Card><EmptyState icon={UserRound} title={query ? t("Aucun résultat", "No results") : t("Aucun locataire", "No tenants")} description={query ? t("Modifiez la recherche.", "Change your search.") : t("Ajoutez le premier dossier locataire.", "Add the first tenant record.")} action={canManage && !query ? <Link className="button button--primary" href="/app/locataires/nouveau">{t("Ajouter un locataire", "Add tenant")}</Link> : undefined} /></Card>}
@@ -540,5 +540,5 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
 
 export function MissingTenancyResource({ leases = false }: { leases?: boolean }) {
   const t = useCopy(); const href = leases ? "/app/locations" : "/app/locataires";
-  return <div className="page-stack"><Card><EmptyState title={t("Ressource introuvable ou inaccessible", "Resource not found or unavailable")} description={t("Vérifiez l’Organization active ou revenez à la liste.", "Check the active Organization or return to the list.")} action={<Link className="button button--primary" href={href}>{t("Retour à la liste", "Back to list")}</Link>} /></Card></div>;
+  return <div className="page-stack"><Card><EmptyState title={t("Ressource introuvable ou inaccessible", "Resource not found or unavailable")} description={t("Vérifiez l’organisation active ou revenez à la liste.", "Check the active Organization or return to the list.")} action={<Link className="button button--primary" href={href}>{t("Retour à la liste", "Back to list")}</Link>} /></Card></div>;
 }

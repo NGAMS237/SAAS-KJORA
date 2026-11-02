@@ -104,7 +104,7 @@ export function MonthEndPreviewPanel({ preview, selectedMonth, invalidMonth, ema
     [t("Envoyés ou remis", "Sent or delivered"), preview.sent],
   ] as const : [];
   return <Card id="month-end-preview">
-    <div className="section-heading"><div><p className="eyebrow">Dry-run</p><h2>{t("Fin de mois Afrique", "Africa month-end")}</h2></div></div>
+    <div className="section-heading"><div><p className="eyebrow">{t("Simulation", "Dry run")}</p><h2>{t("Fin de mois Afrique", "Africa month-end")}</h2></div></div>
     <form action="/app/documents" className="form-grid" method="get">
       <label className="field"><span>{t("Mois à consulter", "Month to review")}</span><input defaultValue={selectedMonth} name="month" type="month" /></label>
       <div className="demo-form-actions"><button className="button button--secondary" type="submit">{t("Actualiser l’aperçu", "Refresh preview")}</button>
@@ -358,7 +358,7 @@ export function NotificationsView({ notifications: serverNotifications, embedded
   const notifications = useNotificationsWithLocalReadState(serverNotifications);
   const { busyId, error, setRead, markAll, markOpened } = useNotificationReadActions();
   const unread = notifications.filter((notification) => !notification.readAt);
-  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">{t("Alertes", "Alerts")}</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’Organization active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unread.length ? <button className="button button--secondary" disabled={busyId === "all"} onClick={() => markAll(unread.map((notification) => notification.id))} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
+  return <div className={embedded ? undefined : "page-stack"}><div className="section-heading"><div><p className="eyebrow">{t("Alertes", "Alerts")}</p><h2>{t("Notifications", "Notifications")}</h2><p>{t("Alertes autorisées de l’organisation active.", "Authorized alerts for the active Organization.")}</p></div><div className="section-heading__actions">{unread.length ? <button className="button button--secondary" disabled={busyId === "all"} onClick={() => markAll(unread.map((notification) => notification.id))} type="button"><CheckCheck size={16} />{t("Tout marquer comme lu", "Mark all read")}</button> : null}<BellRing size={24} /></div></div>
     <NotificationNoticeBanner notice={notice} />
     {error ? <p className="form-feedback form-feedback--error" role="alert">{error}</p> : null}
     <p className="sr-only" aria-live="polite">{t(`${unread.length} notification(s) non lue(s)`, `${unread.length} unread notification(s)`)}</p>
