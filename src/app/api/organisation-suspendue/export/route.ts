@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveMyRestrictedOrganization } from "@/core/organization/restricted-organizations";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
@@ -32,8 +33,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 async function readInput(request: NextRequest): Promise<Record<string, string>> {

@@ -291,3 +291,88 @@ test("MAX_IMPORT_ROWS correspond à la limite appliquée par commit_data_import"
   assert.equal(MAX_IMPORT_ROWS, 500);
   assert.match(migration, /max_rows constant integer := 500/);
 });
+
+// ---------------------------------------------------------------------------
+// Séparateur CSV (Excel / Rentila en locale FR) + conversion Rentila.
+// Données 100 % fictives.
+// ---------------------------------------------------------------------------
+
+import { detectCsvDelimiter } from "../src/modules/data-import/csv.ts";
+import {
+  assumeLeaseStartDate,
+  convertRentilaExports,
+  isRentilaBiensFile,
+  isRentilaLocatairesFile,
+} from "../src/modules/data-import/rentila.ts";
+
+const RENTILA_BIENS = '﻿Identifiant;Type;Superficie;Pièces;Chambres;"Salles de bain";Adresse;"Code postal";Région;Ville;Pays;Description;Loyer;Charges;Propriétaire;Locataires\n'
+  + '"Boutique B1";Commerce;24;;0;0;"Rue Test";237;Centre;Yaoundé;Cameroun;"Boutique; neuve";40000;0;"PROPRIO";"Alice DUPONT"\n'
+  + '"Chambre 1 E1";Chambre;0;2;1;1;"Rue Test (Bar)";237;Centre;Yaoundé;Cameroun;"Chambre";30000;0;"PROPRIO";"Bob MARTIN, Carole DURAND"\n'
+  + '"Chambre vide";Chambre;0;2;1;1;"Rue Test";237;Centre;Yaoundé;Cameroun;"Libre";20000;0;"PROPRIO";\n';
+const RENTILA_LOCATAIRES = '﻿Type;Prénom;Nom;Société;"Date de naissance";Téléphone;Mobile;E-mail;Adresse;"Code postal";Région;Ville;Pays;Notes;Solde\n'
+  + 'Particulier;" Alice";Dupont;;;;"6 11 22 33 44";alice@example.com;;;;;;;0\n'
+  + 'Particulier;Bob;Martin;;;"(438) 000-0000";;;;;;;;;-60000\n'
+  + 'Particulier;Carole;Durand;;;;"6 99 88 77 66";;;;;;;;-5000\n';
+
+test("detectCsvDelimiter reconnaît ; , et tabulation, en ignorant les séparateurs entre guillemets", () => {
+  assert.equal(detectCsvDelimiter("a;b;c\n1;2;3"), ";");
+  assert.equal(detectCsvDelimiter("a,b,c\n1,2,3"), ",");
+  assert.equal(detectCsvDelimiter("a\tb\tc"), "\t");
+  assert.equal(detectCsvDelimiter('"a,b,c";d;e'), ";");
+  assert.equal(detectCsvDelimiter("seule_colonne\nvaleur"), ",");
+});
+
+test("parseCsv lit un CSV à point-virgule avec BOM, guillemets et ; dans une cellule", () => {
+  const parsed = parseCsv(RENTILA_BIENS);
+  assert.equal(parsed.headers.length, 16);
+  assert.equal(parsed.headers[0], "Identifiant");
+  assert.equal(parsed.rows.length, 3);
+  assert.equal(parsed.rows[0]["Description"], "Boutique; neuve");
+});
+
+test("détection des deux exports Rentila", () => {
+  assert.equal(isRentilaBiensFile(parseCsv(RENTILA_BIENS).headers), true);
+  assert.equal(isRentilaLocatairesFile(parseCsv(RENTILA_LOCATAIRES).headers), true);
+  assert.equal(isRentilaBiensFile(parseCsv(RENTILA_LOCATAIRES).headers), false);
+  assert.equal(isRentilaBiensFile(["nom_bien", "loyer_base_xaf"]), false);
+});
+
+test("assumeLeaseStartDate : sans dette = 1er du mois ; avec dette = mois nécessaires, jamais dans le futur", () => {
+  const today = new Date("2026-11-02T12:00:00Z");
+  assert.equal(assumeLeaseStartDate("2026-11-02", 30000, 0, today), "2026-11-01");
+  assert.equal(assumeLeaseStartDate("2026-11-02", 30000, 60000, today), "2026-10-01");
+  assert.equal(assumeLeaseStartDate("2026-11-02", 30000, 249000, today), "2026-03-01");
+  assert.equal(assumeLeaseStartDate("2027-05-01", 30000, 0, today), "2026-11-01");
+});
+
+test("convertRentilaExports produit un fichier KJORA qui passe la validation sans erreur", () => {
+  const conversion = convertRentilaExports(parseCsv(RENTILA_BIENS), parseCsv(RENTILA_LOCATAIRES), { migrationAsOfDate: "2026-11-02" });
+  assert.equal(conversion.file.rows.length, 2);
+  assert.deepEqual(conversion.vacantUnits, ["Chambre vide"]);
+
+  const mapping = suggestColumnMapping(conversion.file);
+  assert.equal(mapping.filter((m) => m.targetField).length, conversion.file.headers.length);
+
+  for (const mapped of applyMapping(conversion.file, mapping)) {
+    const { row, issues } = normalizeRow(mapped);
+    const all = [...issues, ...validateRow(row)];
+    assert.deepEqual(all.filter((i) => i.severity === "error"), [], `ligne ${mapped.rowNumber}`);
+  }
+});
+
+test("convertRentilaExports : types, contacts, soldes et colocataires", () => {
+  const { file, notes } = convertRentilaExports(parseCsv(RENTILA_BIENS), parseCsv(RENTILA_LOCATAIRES), { migrationAsOfDate: "2026-11-02", propertyName: "Immeuble Test" });
+  const [alice, bob] = file.rows;
+  assert.equal(alice.nom_bien, "Immeuble Test");
+  assert.equal(alice.type_logement, "Commerce");
+  assert.equal(alice.nom_complet_locataire, "Alice Dupont");
+  assert.equal(alice.telephone_locataire, "6 11 22 33 44");
+  assert.equal(alice.situation_ouverture, "a jour");
+  assert.equal(bob.nom_complet_locataire, "Bob Martin");
+  assert.equal(bob.telephone_locataire, "(438) 000-0000"); // Mobile vide -> Téléphone
+  assert.equal(bob.situation_ouverture, "dette");
+  assert.equal(bob.montant_ouverture_xaf, "60000");
+  assert.equal(bob.date_debut_bail, "2026-10-01"); // 60000 / 30000 = 2 mois dus -> début oct. 2026
+  assert.ok(notes.get(3)?.some((n) => n.code === "IMPORT_RENTILA_COTENANT_SKIPPED" && n.message.includes("Carole Durand")));
+  assert.ok(notes.get(2)?.some((n) => n.code === "IMPORT_RENTILA_ASSUMED_DEFAULTS"));
+});

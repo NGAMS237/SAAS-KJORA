@@ -6,6 +6,7 @@ import { getOrganizationEntitlements } from "@/core/entitlements/server";
 import { ImportFileError, parseCsv } from "@/modules/data-import/csv";
 import { parseXlsx } from "@/modules/data-import/xlsx";
 import { checkFileSecurity, type FileMetadata } from "@/modules/data-import/security";
+import { convertRentilaExports, isRentilaBiensFile, isRentilaLocatairesFile } from "@/modules/data-import/rentila";
 import { suggestColumnMapping, applyMapping } from "@/modules/data-import/mapping";
 import { normalizeRow } from "@/modules/data-import/normalize";
 import { validateRow } from "@/modules/data-import/validation";
@@ -20,6 +21,7 @@ import type {
   ImportSource,
   NormalizedLeaseRow,
   QuotaConflict,
+  ValidationIssue,
 } from "@/modules/data-import/model";
 import { MAX_IMPORT_ROWS } from "@/modules/data-import/model";
 export { buildCommitPayload, type FinalizedRowInput } from "@/modules/data-import/commit-payload";
@@ -34,6 +36,14 @@ function parseFile(source: ImportSource, buffer: Buffer) {
   return source === "csv" ? parseCsv(buffer.toString("utf8")) : parseXlsx(buffer);
 }
 
+export type CompanionFile = { metadata: FileMetadata; buffer: Buffer };
+export type PreviewOptions = {
+  /** Fichier Rentila « Locataires » accompagnant le fichier « Biens ». */
+  companion?: CompanionFile;
+  /** Nom commun du bien quand tous les logements Rentila sont dans le même immeuble. */
+  propertyName?: string;
+};
+
 /**
  * Construit l'aperçu complet d'un import (§7 étapes 2 à 6, §8 : aucune écriture).
  * `columnMappingOverride` permet à l'utilisateur d'ajuster le mapping proposé
@@ -45,9 +55,36 @@ export async function previewImport(
   buffer: Buffer,
   migrationAsOfDate: string,
   columnMappingOverride?: ColumnMapping[],
+  options: PreviewOptions = {},
 ): Promise<ImportPreviewResult> {
   const source = checkFileSecurity(metadata);
-  const parsedFile = parseFile(source, buffer);
+  let parsedFile = parseFile(source, buffer);
+  let fileHash = sha256Hex(buffer);
+  let sourceNotes: string[] = [];
+  const rentilaNotes = new Map<number, ValidationIssue[]>();
+
+  if (isRentilaLocatairesFile(parsedFile.headers) && !isRentilaBiensFile(parsedFile.headers)) {
+    throw new ImportFileError("IMPORT_RENTILA_WRONG_FILE", "Ce fichier est l'export Rentila « Locataires ». Choisissez le fichier « Biens » comme fichier principal et ajoutez celui-ci comme fichier Locataires.");
+  }
+  if (isRentilaBiensFile(parsedFile.headers)) {
+    if (!options.companion) {
+      throw new ImportFileError("IMPORT_RENTILA_COMPANION_MISSING", "Export Rentila détecté (Biens). Ajoutez aussi l'export Rentila « Locataires » pour reprendre les coordonnées et les soldes.");
+    }
+    const companionSource = checkFileSecurity(options.companion.metadata);
+    const companionParsed = parseFile(companionSource, options.companion.buffer);
+    if (!isRentilaLocatairesFile(companionParsed.headers)) {
+      throw new ImportFileError("IMPORT_RENTILA_COMPANION_INVALID", "Le second fichier n'est pas un export Rentila « Locataires » (colonnes Prénom, Nom, Mobile, E-mail, Solde attendues).");
+    }
+    const conversion = convertRentilaExports(parsedFile, companionParsed, { migrationAsOfDate, propertyName: options.propertyName });
+    parsedFile = conversion.file;
+    fileHash = sha256Hex(Buffer.concat([buffer, options.companion.buffer]));
+    for (const [rowNumber, notes] of conversion.notes) {
+      rentilaNotes.set(rowNumber, notes.map((note) => ({ rowNumber, ...note })));
+    }
+    if (conversion.vacantUnits.length > 0) {
+      sourceNotes = [`Logements sans locataire dans l'export Rentila (aucun bail créé) : ${conversion.vacantUnits.join(", ")}.`];
+    }
+  }
   if (parsedFile.rows.length > MAX_IMPORT_ROWS) {
     throw new ImportFileError("IMPORT_TOO_MANY_ROWS", `Le fichier contient ${parsedFile.rows.length} lignes, la limite est de ${MAX_IMPORT_ROWS}.`);
   }
@@ -85,7 +122,7 @@ export async function previewImport(
   for (const mapped of mappedRows) {
     const { row: baseRow, issues: normalizeIssues } = normalizeRow(mapped);
     const row = withFingerprints(baseRow);
-    const issues = [...normalizeIssues, ...validateRow(row)];
+    const issues = [...normalizeIssues, ...validateRow(row), ...(rentilaNotes.get(mapped.rowNumber) ?? [])];
     const duplicates: DuplicateCandidate[] = [];
 
     if (row.property.fingerprint && row.property.name) {
@@ -129,8 +166,9 @@ export async function previewImport(
 
   return {
     fileName: metadata.fileName,
-    fileSha256: sha256Hex(buffer),
+    fileSha256: fileHash,
     source,
+    sourceNotes,
     columnMapping,
     totalRows: rows.length,
     validRowCount,

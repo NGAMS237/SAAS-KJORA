@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { createClient } from "@supabase/supabase-js";
 import { createHash, createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -16,8 +17,7 @@ const privateResponse = (body: unknown, init?: ResponseInit) => NextResponse.jso
 
 export async function POST(request: Request) {
   try {
-    const origin = request.headers.get("origin");
-    if (!origin || origin !== new URL(request.url).origin) {
+    if (!isSameOrigin(request, { requireOrigin: true })) {
       return privateResponse({error:"forbidden"},{status:403});
     }
     const salt=process.env.KJORA_PARTNERS_HASH_SALT?.trim();

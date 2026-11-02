@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/core/organization/select-active-organization";
@@ -5,8 +6,7 @@ import { MEMBERSHIP_INVITATION_COOKIE } from "@/core/team/invitation-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const cookieStore = await cookies();
   const token = cookieStore.get(MEMBERSHIP_INVITATION_COOKIE)?.value;
   if (!token) return NextResponse.json({ error: "invalid_invitation" }, { status: 400 });

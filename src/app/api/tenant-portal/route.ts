@@ -1,9 +1,12 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendTenantPortalInvitationEmail } from "@/tenant-portal/invitation-email";
 
-function sameOrigin(request: Request) { const origin = request.headers.get("origin"); return !origin || origin === new URL(request.url).origin; }
+function sameOrigin(request: Request) {
+  return isSameOrigin(request);
+}
 function error(code: string, status: number) { return NextResponse.json({ error: code }, { status }); }
 
 export async function POST(request: Request) {

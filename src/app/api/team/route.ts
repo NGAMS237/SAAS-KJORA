@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse } from "next/server";
 import { isInternalRole } from "@/core/authorization/capabilities";
 import { requireActiveCapability } from "@/core/authorization/server";
@@ -17,8 +18,7 @@ type TeamAction =
   | "transfer_owner";
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 function jsonError(error: string, status: number) {

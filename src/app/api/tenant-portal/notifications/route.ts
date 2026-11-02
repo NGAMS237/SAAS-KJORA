@@ -1,10 +1,10 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { loadPortalContext } from "@/tenant-portal/server";
 
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const context = await loadPortalContext();
   if (!context?.activeAccess) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const body = await request.json().catch(() => null) as { action?: unknown; notificationId?: unknown } | null;

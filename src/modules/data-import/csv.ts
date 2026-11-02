@@ -1,6 +1,7 @@
 // IMPORT-01 — parseur CSV minimal, sans dépendance externe.
 //
-// Volontairement strict et sans "magie" : gère les guillemets doubles, les
+// Volontairement strict : détecte le séparateur (virgule, point-virgule,
+// tabulation) sur la ligne d'en-tête, gère les guillemets doubles, les
 // champs contenant des virgules/retours-ligne échappés, et les fins de ligne
 // \n / \r\n. Le contenu n'est jamais interprété comme du code (§20) : une
 // cellule qui commence par =, +, -, @ (déclencheur de formule dans Excel/
@@ -26,7 +27,33 @@ export function sanitizeForDisplay(value: string): string {
   return value;
 }
 
-function parseCsvLines(content: string): string[][] {
+/**
+ * Détecte le séparateur de colonnes à partir de la ligne d'en-tête (hors
+ * guillemets) : point-virgule (Excel/Rentila en locale FR), tabulation ou
+ * virgule. En cas d'égalité ou d'absence de séparateur, la virgule reste le
+ * défaut historique de KJORA.
+ */
+export function detectCsvDelimiter(content: string): string {
+  const counts: Record<string, number> = { ",": 0, ";": 0, "\t": 0 };
+  let inQuotes = false;
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i];
+    if (char === '"') {
+      if (inQuotes && content[i + 1] === '"') i += 1;
+      else inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && (char === "\n" || char === "\r")) break;
+    if (!inQuotes && char in counts) counts[char] += 1;
+  }
+  let best = ",";
+  for (const candidate of [";", "\t"]) {
+    if (counts[candidate] > counts[best]) best = candidate;
+  }
+  return best;
+}
+
+function parseCsvLines(content: string, delimiter = ","): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -66,7 +93,7 @@ function parseCsvLines(content: string): string[][] {
       i += 1;
       continue;
     }
-    if (char === ",") {
+    if (char === delimiter) {
       pushField();
       i += 1;
       continue;
@@ -92,7 +119,7 @@ const MAX_PARSED_ROWS = 5000; // garde-fou de parsing, distinct du MAX_IMPORT_RO
 
 export function parseCsv(content: string): ParsedFile {
   if (content.charCodeAt(0) === 0xfeff) content = content.slice(1); // BOM UTF-8
-  const lines = parseCsvLines(content);
+  const lines = parseCsvLines(content, detectCsvDelimiter(content));
   if (lines.length === 0) throw new ImportFileError("IMPORT_FILE_EMPTY", "Le fichier ne contient aucune ligne.");
   if (lines.length - 1 > MAX_PARSED_ROWS) {
     throw new ImportFileError("IMPORT_FILE_TOO_LARGE", `Le fichier contient plus de ${MAX_PARSED_ROWS} lignes.`);

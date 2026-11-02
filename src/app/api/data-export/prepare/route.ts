@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
@@ -8,8 +9,7 @@ import { estimateExportRowCounts, scopesForFormat } from "@/modules/data-export/
 export const runtime = "nodejs";
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 // Estimation grossière, uniquement pour l'affichage "taille estimée" (§4) —

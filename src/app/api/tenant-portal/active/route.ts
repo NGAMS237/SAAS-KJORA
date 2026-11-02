@@ -1,10 +1,10 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { ACTIVE_PORTAL_ACCESS_COOKIE } from "@/tenant-portal/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null) as { accessId?: unknown } | null;
   if (typeof body?.accessId !== "string") return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   const supabase = await createSupabaseServerClient();
