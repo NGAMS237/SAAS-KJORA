@@ -8,6 +8,8 @@ import { LeaseDetailView, MissingTenancyResource } from "@/modules/tenancy/views
 import { getPayments } from "@/modules/payments/server";
 import { getFinancialDocuments } from "@/modules/documents/server";
 import { ContractEntryLink } from "@/modules/contracts/entry-link";
+import { listLeaseCoTenants } from "@/modules/tenancy/co-tenants";
+import { LeaseCoTenantsCard } from "@/modules/tenancy/co-tenants-card";
 
 export default async function LeasePage({ params, searchParams }: { params: Promise<{ leaseId: string }>; searchParams: Promise<{ initialReceived?: string }> }) {
   const [{ leaseId }, query] = await Promise.all([params, searchParams]);
@@ -32,6 +34,8 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
     canViewPayments ? getPayments(authorization.organizationId, { leaseId }) : Promise.resolve(null),
     canViewDocuments ? getFinancialDocuments(authorization.organizationId, { leaseId }) : Promise.resolve(null),
   ]);
+  const coTenants = await listLeaseCoTenants(authorization.organizationId, leaseId);
   return <><LeaseDetailView lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />
+    {coTenants.available ? <LeaseCoTenantsCard canManage={authorization.capabilities.includes("lease.manage")} candidates={options.tenants} holderTenantId={lease.tenantId} items={coTenants.items} leaseId={lease.id} /> : null}
     {hasContractRbac ? <ContractEntryLink currentPlan={contractEntitlementError?.plan ?? "decouverte"} entitled={!contractEntitlementError} leaseId={lease.id} /> : null}</>;
 }
