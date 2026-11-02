@@ -13,7 +13,8 @@ type TenancyAction =
   | "update_lease"
   | "activate_lease"
   | "end_lease"
-  | "schedule_rent_change";
+  | "schedule_rent_change"
+  | "set_contract_dates";
 
 function sameOrigin(request: Request) {
   return isSameOrigin(request);
@@ -153,6 +154,16 @@ export async function POST(request: Request) {
       return mutationError(error);
     }
     return NextResponse.json({ termsId: data }, { status: 201 });
+  }
+  if (action === "set_contract_dates") {
+    const date = (value: unknown) => (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
+    const start = date(body.contractStartDate);
+    const end = date(body.contractEndDate);
+    if (typeof body.leaseId !== "string" || !UUID_PATTERN.test(body.leaseId)) return jsonError("invalid_payload", 400);
+    if (start && end && end < start) return jsonError("invalid_contract_dates", 400);
+    const { error } = await supabase.rpc("set_lease_contract_dates", { target_lease_id: body.leaseId, target_contract_start: start, target_contract_end: end });
+    if (error) return mutationError(error);
+    return NextResponse.json({ ok: true });
   }
   if (action === "end_lease") {
     const endedOn = typeof body.endedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.endedOn) ? body.endedOn : null;
