@@ -12,7 +12,8 @@ type TenancyAction =
   | "create_lease"
   | "update_lease"
   | "activate_lease"
-  | "end_lease";
+  | "end_lease"
+  | "schedule_rent_change";
 
 function sameOrigin(request: Request) {
   return isSameOrigin(request);
@@ -122,6 +123,36 @@ export async function POST(request: Request) {
       .select("id")
       .maybeSingle();
     return error || !data ? mutationError(error) : NextResponse.json({ leaseId: data.id });
+  }
+  if (action === "schedule_rent_change") {
+    const effectiveFrom = typeof body.effectiveFrom === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.effectiveFrom) ? body.effectiveFrom : null;
+    const baseRent = Number(body.baseRentXaf);
+    const charges = Number(body.recurringChargesXaf ?? 0);
+    if (!effectiveFrom) return jsonError("invalid_effective_date", 400);
+    if (!Number.isSafeInteger(baseRent) || baseRent <= 0 || !Number.isSafeInteger(charges) || charges < 0) return jsonError("invalid_rent_amounts", 400);
+    const { data: lease, error: leaseError } = await supabase
+      .from("leases")
+      .select("due_day, generate_due_days_before, status")
+      .eq("organization_id", organizationId)
+      .eq("id", body.leaseId)
+      .maybeSingle();
+    if (leaseError || !lease) return mutationError(leaseError);
+    if (lease.status !== "active") return jsonError("lease_not_active", 409);
+    const { data, error } = await supabase.rpc("schedule_lease_financial_terms", {
+      target_lease_id: body.leaseId,
+      target_effective_from: effectiveFrom,
+      target_base_rent_xaf: baseRent,
+      target_recurring_charges_xaf: charges,
+      target_due_day: Math.min(Number(lease.due_day), 28),
+      target_generate_due_days_before: lease.generate_due_days_before,
+    });
+    if (error) {
+      if (error.message?.includes("future_period_already_generated")) return jsonError("future_period_already_generated", 409);
+      if (error.message?.includes("invalid_future_financial_terms")) return jsonError("invalid_effective_date", 400);
+      if (error.code === "23505") return jsonError("duplicate_resource", 409);
+      return mutationError(error);
+    }
+    return NextResponse.json({ termsId: data }, { status: 201 });
   }
   if (action === "end_lease") {
     const endedOn = typeof body.endedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.endedOn) ? body.endedOn : null;
