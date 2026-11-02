@@ -44,10 +44,14 @@ const FIELD_LABELS: Record<ImportTargetField, string> = {
 type StepKey = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type ResolutionsByRow = Map<number, Partial<Record<"property" | "unit" | "tenant", { resolution: DuplicateResolution; existingId: string | null }>>>;
 
-async function requestPreview(file: File, migrationAsOfDate: string, columnMapping?: ColumnMapping[]): Promise<ImportPreviewResult> {
+type RentilaInputs = { companionFile: File | null; propertyName: string };
+
+async function requestPreview(file: File, migrationAsOfDate: string, columnMapping?: ColumnMapping[], rentila?: RentilaInputs): Promise<ImportPreviewResult> {
   const form = new FormData();
   form.set("file", file);
   form.set("migrationAsOfDate", migrationAsOfDate);
+  if (rentila?.companionFile) form.set("companionFile", rentila.companionFile);
+  if (rentila?.propertyName.trim()) form.set("propertyName", rentila.propertyName.trim());
   if (columnMapping) form.set("columnMapping", JSON.stringify(columnMapping));
   const response = await fetch("/api/data-import/preview", { method: "POST", body: form });
   const payload = (await response.json()) as ImportPreviewResult & { error?: string; message?: string };
@@ -62,6 +66,8 @@ export function DataImportWizardView() {
   const [error, setError] = useState("");
 
   const [file, setFile] = useState<File | null>(null);
+  const [companionFile, setCompanionFile] = useState<File | null>(null);
+  const [propertyName, setPropertyName] = useState("");
   const [migrationAsOfDate, setMigrationAsOfDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
   const [mappingDraft, setMappingDraft] = useState<ColumnMapping[]>([]);
@@ -76,7 +82,7 @@ export function DataImportWizardView() {
   async function runPreview(nextFile: File, nextMapping?: ColumnMapping[]) {
     setBusy(true); setError("");
     try {
-      const result = await requestPreview(nextFile, migrationAsOfDate, nextMapping);
+      const result = await requestPreview(nextFile, migrationAsOfDate, nextMapping, { companionFile, propertyName });
       setPreview(result);
       setMappingDraft(result.columnMapping);
       setSkippedRows(new Set(result.rows.filter((r) => r.issues.some((i) => i.severity === "error")).map((r) => r.rowNumber)));
@@ -181,6 +187,20 @@ export function DataImportWizardView() {
               <input type="date" value={migrationAsOfDate} onChange={(event) => setMigrationAsOfDate(event.target.value)} />
             </label>
           </div>
+          <details className="field-help">
+            <summary>Je migre depuis Rentila</summary>
+            <p>Choisissez l&apos;export Rentila « Biens » comme fichier principal ci-dessus, puis ajoutez l&apos;export « Locataires » ici. KJORA les fusionne automatiquement.</p>
+            <div className="form-grid">
+              <label className="field">
+                <span>Export Rentila « Locataires » (.csv ou .xlsx)</span>
+                <input type="file" accept=".csv,.xlsx" onChange={(event) => setCompanionFile(event.target.files?.[0] ?? null)} />
+              </label>
+              <label className="field">
+                <span>Nom du bien (optionnel, si tous les logements sont dans le même immeuble)</span>
+                <input type="text" maxLength={120} value={propertyName} onChange={(event) => setPropertyName(event.target.value)} />
+              </label>
+            </div>
+          </details>
           <p className="field-help">KJORA reprend la situation réelle à cette date : les baux déjà en cours gardent leur vraie date de début, seul un arriéré ou une avance éventuelle est enregistré comme mouvement d&apos;ouverture — jamais comme un faux historique de paiements.</p>
           <button className="button button--primary" disabled={!file || busy} onClick={handleFileChosen}>Analyser le fichier</button>
         </Card>
@@ -189,6 +209,7 @@ export function DataImportWizardView() {
       {step === 2 && preview ? (
         <Card>
           <p>Fichier analysé : <strong>{preview.fileName}</strong> — {preview.totalRows} ligne(s) détectée(s).</p>
+          {preview.sourceNotes?.map((note) => <p className="field-help" key={note}>{note}</p>)}
           <p className="field-help">Chaque ligne décrit un bail (bien, logement le cas échéant, locataire, et sa situation au moment de l&apos;import).</p>
           <button className="button button--primary" onClick={() => setStep(3)}>Continuer vers la correspondance des colonnes</button>
         </Card>
@@ -306,7 +327,7 @@ export function DataImportWizardView() {
           ) : (
             <p>Ce fichier avait déjà été importé précédemment : aucune donnée n&apos;a été dupliquée.</p>
           )}
-          <button className="button button--secondary" onClick={() => { setStep(1); setFile(null); setPreview(null); setCommitResult(null); setSkippedRows(new Set()); setResolutions(new Map()); }}>Importer un autre fichier</button>
+          <button className="button button--secondary" onClick={() => { setStep(1); setFile(null); setCompanionFile(null); setPropertyName(""); setPreview(null); setCommitResult(null); setSkippedRows(new Set()); setResolutions(new Map()); }}>Importer un autre fichier</button>
         </Card>
       ) : null}
     </div>

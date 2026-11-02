@@ -159,6 +159,8 @@ export type ImportPreviewResult = {
   warningRowCount: number;
   errorRowCount: number;
   rows: ImportPreviewRow[];
+  /** Remarques sur la conversion du fichier source (ex. logements Rentila sans locataire). */
+  sourceNotes?: string[];
   quotaConflict: QuotaConflict | null;
 };
 

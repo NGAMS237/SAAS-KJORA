@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
   const file = form.get("file");
   const migrationAsOfDate = form.get("migrationAsOfDate");
   const columnMappingRaw = form.get("columnMapping");
+  const companionFile = form.get("companionFile");
+  const propertyNameRaw = form.get("propertyName");
 
   if (!(file instanceof File)) return NextResponse.json({ error: "file_missing" }, { status: 400 });
   if (typeof migrationAsOfDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(migrationAsOfDate)) {
@@ -47,6 +49,13 @@ export async function POST(request: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const companion = companionFile instanceof File && companionFile.size > 0
+    ? {
+        metadata: { fileName: companionFile.name, mimeType: companionFile.type || "application/octet-stream", sizeBytes: companionFile.size },
+        buffer: Buffer.from(await companionFile.arrayBuffer()),
+      }
+    : undefined;
+  const propertyName = typeof propertyNameRaw === "string" ? propertyNameRaw.trim().slice(0, 120) : undefined;
 
   try {
     const preview = await previewImport(
@@ -55,6 +64,7 @@ export async function POST(request: NextRequest) {
       buffer,
       migrationAsOfDate,
       columnMapping,
+      { companion, propertyName },
     );
     return NextResponse.json(preview);
   } catch (error) {
