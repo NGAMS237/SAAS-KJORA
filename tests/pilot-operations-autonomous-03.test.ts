@@ -92,7 +92,7 @@ test("les aperçus fournisseur sont locaux, fictifs et masquent le numéro Whats
 test("la candidature partenaire exige une origine same-site et rend les conditions visibles", () => {
   const route = read("../src/app/api/partners/applications/route.ts");
   const page = read("../src/app/partenaires/page.tsx");
-  assert.match(route, /if \(!origin \|\| origin !== new URL\(request\.url\)\.origin\)/);
+  assert.match(route, /if \(!isSameOrigin\(request, \{ requireOrigin: true \}\)\)/);
   assert.match(route, /status:403/);
   assert.match(page, /Conditions visibles avant candidature/);
   assert.match(page, /No compensation, amount, or percentage is promised/);

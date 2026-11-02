@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -14,8 +15,7 @@ type TenancyAction =
   | "end_lease";
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 function jsonError(error: string, status: number) {

@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -5,8 +6,7 @@ import { ACTIVE_PORTAL_ACCESS_COOKIE } from "@/tenant-portal/server";
 import { TENANT_PORTAL_INVITATION_COOKIE } from "@/tenant-portal/invitation-cookie";
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const token = (await cookies()).get(TENANT_PORTAL_INVITATION_COOKIE)?.value;
   if (!token) return NextResponse.json({ error: "invalid_invitation" }, { status: 400 });
   const supabase = await createSupabaseServerClient();

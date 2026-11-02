@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildManualWhatsAppMessage, buildWhatsAppUrl, normalizeManualWhatsAppContext } from "@/modules/communications/manual-whatsapp";
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 const privateResponse = (body: unknown, init?: ResponseInit) => NextResponse.json(body, { ...init, headers: { ...init?.headers, "Cache-Control": "private, no-store" } });
 
 export async function POST(request: Request) {
-  if (request.headers.get("origin") !== new URL(request.url).origin) return privateResponse({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(request, { requireOrigin: true })) return privateResponse({ error: "forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null) as { documentId?: unknown } | null;
   if (!body || typeof body.documentId !== "string" || !UUID_PATTERN.test(body.documentId)) return privateResponse({ error: "invalid_document" }, { status: 400 });
   const supabase = await createSupabaseServerClient();

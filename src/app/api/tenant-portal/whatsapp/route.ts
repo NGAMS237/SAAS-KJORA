@@ -1,10 +1,11 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { UUID_PATTERN } from "@/modules/properties/model";
 
 export async function POST(request: Request) {
   const reply=(body:unknown,init?:ResponseInit)=>NextResponse.json(body,{...init,headers:{...init?.headers,"Cache-Control":"private, no-store"}});
-  if (request.headers.get("origin") !== new URL(request.url).origin) return reply({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(request, { requireOrigin: true })) return reply({ error: "forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null) as { accessId?: unknown; action?: unknown } | null;
   if (!body || typeof body.accessId !== "string" || !UUID_PATTERN.test(body.accessId) || !["confirm_service", "disable", "consent_marketing", "revoke_marketing"].includes(String(body.action))) return reply({ error: "invalid_request" }, { status: 400 });
   const supabase = await createSupabaseServerClient();

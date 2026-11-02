@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { ImportFileError } from "@/modules/data-import/csv";
@@ -7,8 +8,7 @@ import type { ColumnMapping } from "@/modules/data-import/model";
 export const runtime = "nodejs";
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 // IMPORT-01 §8 : cette route ne fait AUCUNE écriture métier. Elle lit

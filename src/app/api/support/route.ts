@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { loadAnyMembershipOrganization } from "@/core/organization/load-organization-context";
@@ -21,8 +22,7 @@ import { isSupportEmailConfigured, sendSupportRequestEmail } from "@/core/suppor
 // =============================================================================
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 export async function POST(request: Request) {

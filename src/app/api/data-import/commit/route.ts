@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
@@ -7,8 +8,7 @@ import { IMPORT_SOURCES, MAX_IMPORT_ROWS, type CommitRowPayload, type ImportSour
 export const runtime = "nodejs";
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 function mutationError(error: { code?: string; message?: string; details?: string } | null) {

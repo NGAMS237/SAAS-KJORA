@@ -1,3 +1,4 @@
+import { isSameOrigin } from "@/core/security/same-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
@@ -7,8 +8,7 @@ import { getLeaseContract, hashContractContent, preparedContractContent } from "
 export const runtime = "nodejs";
 
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return isSameOrigin(request);
 }
 
 export async function POST(request: NextRequest) {
