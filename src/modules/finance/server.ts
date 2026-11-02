@@ -123,3 +123,13 @@ export async function getTenantFinancialDetail(organizationId: string, tenantId:
     ledger: ((ledgerResult.data ?? []) as LedgerRow[]).map(ledger),
   };
 }
+
+// Solde dû par locataire, pour signaler les retards directement dans la liste.
+export async function listTenantAmountsDue(organizationId: string): Promise<Record<string, number>> {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.from("tenant_financial_positions").select("tenant_id, amount_due_xaf").eq("organization_id", organizationId).limit(2000);
+  if (result.error) throw result.error;
+  const out: Record<string, number> = {};
+  for (const row of (result.data ?? []) as Array<{ tenant_id: string; amount_due_xaf: number | string }>) out[row.tenant_id] = Number(row.amount_due_xaf);
+  return out;
+}

@@ -64,16 +64,40 @@ export function TenantFinancialSummary({ tenantId, financial }: { tenantId?: str
   </Card>;
 }
 
+function daysBetween(from: string, to: string) {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.max(0, Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000));
+}
+
+// Nouvelle échéance : avis émis depuis moins de 7 jours et pas encore réglée.
+function isFreshNotice(due: { status: DueStatus; noticeDate: string }, today: string) {
+  return (due.status === "upcoming" || due.status === "due") && due.noticeDate <= today && daysBetween(due.noticeDate, today) <= 7;
+}
+
+function dueRowTone(due: { status: DueStatus; noticeDate: string }, today: string) {
+  if (due.status === "overdue") return "overdue";
+  if (due.status === "partially_paid") return "partial";
+  if (due.status === "due") return "due";
+  if (isFreshNotice(due, today)) return "fresh";
+  if (due.status === "paid" || due.status === "covered" || due.status === "cancelled") return "settled";
+  return "upcoming";
+}
+
 export function LeaseDuesPanel({ financial, tenantScope = false }: { financial: LeaseFinancialDetail; tenantScope?: boolean }) {
   const t = useCopy();
+  const today = new Date().toISOString().slice(0, 10);
   const dues = financial.dues.filter((due) => due.kind !== "adjustment" || due.adjustmentXaf > 0);
+  const overdueDues = dues.filter((due) => due.status === "overdue");
+  const overdueXaf = overdueDues.reduce((sum, due) => sum + dueBreakdown(due).remainingXaf, 0);
   return <Card className="dues-card" id="echeances">
     <div className="section-heading"><div><p className="eyebrow">{t("Échéances", "Dues")}</p><h2>{tenantScope ? t("Ventilation des échéances", "Due breakdown") : t("Échéances", "Dues")}</h2></div><CalendarClock size={22} /></div>
+    {overdueDues.length ? <div className="due-alert" role="alert"><strong>{t(`${overdueDues.length} échéance(s) en retard · ${money(overdueXaf)}`, `${overdueDues.length} overdue due(s) · ${money(overdueXaf)}`)}</strong><span>{t(`La plus ancienne date du ${shortDate(overdueDues.reduce((min, due) => due.dueDate < min ? due.dueDate : min, overdueDues[0].dueDate))}.`, `The oldest is from ${shortDate(overdueDues.reduce((min, due) => due.dueDate < min ? due.dueDate : min, overdueDues[0].dueDate))}.`)}</span></div> : null}
     {dues.length ? <div className="financial-table" role="table">
       <div className="financial-table__head" role="row"><span>{t("Période", "Period")}</span><span>{t("Date limite", "Due date")}</span><span>{t("Loyer", "Rent")}</span><span>{t("Charges", "Charges")}</span><span>{t("Total", "Total")}</span><span>{t("Restant", "Remaining")}</span><span>{t("État", "Status")}</span></div>
-      {dues.map((due) => { const breakdown = dueBreakdown(due); const deposit = due.kind === "deposit"; return <div className={`financial-table__row${deposit ? " financial-table__row--deposit" : ""}`} role="row" key={due.id}>
+      {dues.map((due) => { const breakdown = dueBreakdown(due); const deposit = due.kind === "deposit"; const tone = dueRowTone(due, today); const late = due.status === "overdue" ? daysBetween(due.dueDate, today) : 0; const fresh = isFreshNotice(due, today); return <div className={`financial-table__row financial-table__row--${tone}${deposit ? " financial-table__row--deposit" : ""}`} role="row" key={due.id}>
         <span data-label={deposit ? t("Nature", "Type") : t("Période", "Period")}><strong>{deposit ? t("Dépôt de garantie", "Security deposit") : `${shortDate(due.periodStart)} → ${shortDate(due.periodEnd)}`}</strong><small>{due.reference}</small></span>
-        <span data-label={t("Date limite", "Due date")}>{shortDate(due.dueDate)}<small>{t(`Avis prévu le ${shortDate(due.noticeDate)}`, `Notice scheduled for ${shortDate(due.noticeDate)}`)}</small></span>
+        <span data-label={t("Date limite", "Due date")}>{shortDate(due.dueDate)}{late > 0 ? <small className="due-late">{t(`${late} jour(s) de retard`, `${late} day(s) late`)}</small> : fresh ? <small className="due-fresh">{t("Nouvelle échéance", "New due")}</small> : <small>{due.noticeDate <= today ? t(`Avis émis le ${shortDate(due.noticeDate)}`, `Notice issued ${shortDate(due.noticeDate)}`) : t(`Avis prévu le ${shortDate(due.noticeDate)}`, `Notice scheduled for ${shortDate(due.noticeDate)}`)}</small>}</span>
         <span data-label={t("Loyer", "Rent")} className="financial-value">{deposit ? "—" : money(due.rentXaf)}</span>
         <span data-label={t("Charges", "Charges")} className="financial-value">{deposit ? "—" : money(due.recurringChargesXaf)}</span>
         <span data-label={t("Total", "Total")} className="financial-value">{money(breakdown.totalXaf)}</span>
