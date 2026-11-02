@@ -5618,3 +5618,23 @@ a.admin-control-card:focus-visible { border-color: var(--brand-gold); }
 
 @keyframes kjora-pulse { 50% { opacity: .35; transform: scale(.82); } }
 @media (prefers-reduced-motion: reduce) { .loading-mark { animation: none; } }
+
+/* UX — états d'échéance plus visibles : retard en rouge plein, nouvelle échéance en bleu,
+   échéance à régler en ambre, échéances réglées atténuées. */
+.financial-table__row { border-inline-start: 4px solid transparent; }
+.financial-table__row--overdue { background: color-mix(in srgb, var(--danger-soft) 70%, var(--surface)) !important; border-inline-start-color: var(--danger); }
+.financial-table__row--overdue .badge--danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.financial-table__row--overdue .financial-value:nth-of-type(6) { color: var(--danger); font-weight: 760; }
+.financial-table__row--partial { border-inline-start-color: var(--warning); }
+.financial-table__row--due { background: color-mix(in srgb, var(--due-soft) 60%, var(--surface)) !important; border-inline-start-color: var(--due); }
+.financial-table__row--fresh { background: color-mix(in srgb, var(--info-soft) 70%, var(--surface)) !important; border-inline-start-color: var(--info); }
+.financial-table__row--settled { opacity: 0.72; }
+.financial-table__row--settled:hover { opacity: 1; }
+.financial-table__row small.due-late { color: var(--danger); font-weight: 760; }
+.financial-table__row small.due-fresh { color: var(--info); font-weight: 760; }
+.due-alert { background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-inline-start: 4px solid var(--danger); border-radius: 12px; color: var(--danger); display: grid; gap: 2px; margin-block-end: 12px; padding: 10px 14px; }
+.due-alert span { color: var(--text); font-size: 0.78rem; }
+.lease-closing-card { border-inline-start: 4px solid var(--brand-blue, var(--info)); }
+.lease-closing-card .lease-money-grid strong.is-due { color: var(--danger); }
+.lease-closing-card .lease-money-grid strong.is-credit { color: var(--success); }
+.demo-meta__warning { color: var(--warning); font-weight: 720; }

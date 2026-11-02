@@ -25,7 +25,7 @@ export default async function DashboardPage({
     <DashboardOperationalView
       activity={activity}
       dashboard={dashboard}
-      greetingName={getUserGreetingName(context.user.userMetadata)}
+      greetingName={getUserGreetingName(context.user.userMetadata, context.user.email)}
       organizationName={organization.name}
       period={period}
     />
