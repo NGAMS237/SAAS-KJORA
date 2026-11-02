@@ -1,4 +1,5 @@
 import { isSameOrigin } from "@/core/security/same-origin";
+import { checkRateLimit, clientKey } from "@/core/security/rate-limit";
 import { NextResponse } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
 import { loadAnyMembershipOrganization } from "@/core/organization/load-organization-context";
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
   const authorization = await getActiveAuthorization();
   if (!authorization) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  {
+    const limit = checkRateLimit(clientKey(request, "support", authorization.userId), 5, 600000);
+    if (!limit.allowed) return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "retry-after": String(limit.retryAfterSeconds) } });
   }
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;

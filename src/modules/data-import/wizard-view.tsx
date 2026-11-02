@@ -18,6 +18,7 @@ import type {
 } from "@/modules/data-import/model";
 import { IMPORT_TARGET_FIELDS, REQUIRED_TARGET_FIELDS } from "@/modules/data-import/model";
 import { buildCommitPayload, type FinalizedRowInput } from "@/modules/data-import/commit-payload";
+import { applyStartDateOverrides, checkLeaseStart } from "@/modules/data-import/lease-start";
 
 const FIELD_LABELS: Record<ImportTargetField, string> = {
   property_name: "Nom du bien",
@@ -68,6 +69,7 @@ export function DataImportWizardView() {
   const [file, setFile] = useState<File | null>(null);
   const [companionFile, setCompanionFile] = useState<File | null>(null);
   const [propertyName, setPropertyName] = useState("");
+  const [startDateOverrides, setStartDateOverrides] = useState<Map<number, string>>(new Map());
   const [migrationAsOfDate, setMigrationAsOfDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
   const [mappingDraft, setMappingDraft] = useState<ColumnMapping[]>([]);
@@ -133,7 +135,7 @@ export function DataImportWizardView() {
         row: r.normalized,
         duplicateResolutions: resolutions.get(r.rowNumber) ?? {},
       }));
-      const rows = buildCommitPayload(finalized);
+      const rows = buildCommitPayload(applyStartDateOverrides(finalized, startDateOverrides));
       const response = await fetch("/api/data-import/commit", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -309,7 +311,27 @@ export function DataImportWizardView() {
           <div className="section-heading"><div><h2>Aperçu final</h2></div></div>
           <p>{importableRowCount} ligne(s) seront importées sur {preview.totalRows}. Aucune donnée n&apos;a encore été enregistrée.</p>
           <p className="field-help">Un mouvement d&apos;ouverture (jamais un faux paiement) sera créé pour chaque bail ayant une dette, un crédit ou un dépôt déjà partiellement payé.</p>
-          <button className="button button--primary" disabled={busy} onClick={handleCommit}>Confirmer l&apos;import</button>
+          <div className="page-stack">
+            {preview.rows.filter((r) => !skippedRows.has(r.rowNumber) && r.normalized.lease.startDate).map((r) => {
+              const startDate = startDateOverrides.get(r.rowNumber) ?? r.normalized.lease.startDate ?? "";
+              const check = checkLeaseStart(r.normalized.lease, startDate);
+              const debt = r.normalized.lease.openingSituation.kind === "debt" ? r.normalized.lease.openingSituation.amountXaf : 0;
+              return (
+                <div className="list-row" key={r.rowNumber}>
+                  <div className="list-row__body">
+                    <strong>Ligne {r.rowNumber} · {r.normalized.tenant.fullName ?? "Locataire"}</strong>
+                    <label className="field">
+                      <span>Date de début du bail</span>
+                      <input type="date" value={startDate} onChange={(event) => setStartDateOverrides((current) => new Map(current).set(r.rowNumber, event.target.value))} />
+                    </label>
+                    <small>{check.elapsedPeriods} échéance(s) seront créées{debt > 0 ? ` ; la dette d’ouverture de ${debt.toLocaleString("fr-CA")} XAF restera sur les plus récentes` : ""}.</small>
+                    {check.debtExceeds ? <small role="alert">La dette dépasse le total des échéances depuis cette date : choisissez une date de début plus ancienne.</small> : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button className="button button--primary" disabled={busy || preview.rows.some((r) => !skippedRows.has(r.rowNumber) && r.normalized.lease.startDate && checkLeaseStart(r.normalized.lease, startDateOverrides.get(r.rowNumber) ?? r.normalized.lease.startDate).debtExceeds)} onClick={handleCommit}>Confirmer l&apos;import</button>
         </Card>
       ) : null}
 
@@ -327,7 +349,7 @@ export function DataImportWizardView() {
           ) : (
             <p>Ce fichier avait déjà été importé précédemment : aucune donnée n&apos;a été dupliquée.</p>
           )}
-          <button className="button button--secondary" onClick={() => { setStep(1); setFile(null); setCompanionFile(null); setPropertyName(""); setPreview(null); setCommitResult(null); setSkippedRows(new Set()); setResolutions(new Map()); }}>Importer un autre fichier</button>
+          <button className="button button--secondary" onClick={() => { setStep(1); setFile(null); setCompanionFile(null); setPropertyName(""); setPreview(null); setCommitResult(null); setSkippedRows(new Set()); setResolutions(new Map()); setStartDateOverrides(new Map()); }}>Importer un autre fichier</button>
         </Card>
       ) : null}
     </div>

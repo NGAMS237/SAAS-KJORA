@@ -1,4 +1,5 @@
 import { isSameOrigin } from "@/core/security/same-origin";
+import { checkRateLimit, clientKey } from "@/core/security/rate-limit";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { parseEntitlementError, entitlementErrorResponse } from "@/core/entitlements/server";
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { authorization, status } = await requireActiveCapability("data_import.manage");
   if (!authorization) return NextResponse.json({ error: "forbidden" }, { status });
+  {
+    const limit = checkRateLimit(clientKey(request, "import-commit", authorization.userId), 10, 600000);
+    if (!limit.allowed) return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "retry-after": String(limit.retryAfterSeconds) } });
+  }
 
   let body: Record<string, unknown>;
   try {
