@@ -1,27 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import nextConfig, { buildContentSecurityPolicy } from "../next.config.ts";
+import { SECURITY_HEADERS, buildContentSecurityPolicy } from "../src/core/security/http-headers.ts";
 
-async function allHeaders() {
-  const rules = await nextConfig.headers!();
-  return rules;
-}
+// Ce test n'importe jamais next.config.ts : l'hébergeur peut remplacer ce fichier
+// au moment de la compilation, et le typecheck de `next build` échouerait.
 
-test("tous les chemins reçoivent les en-têtes de sécurité", async () => {
-  const rules = await allHeaders();
-  const rule = rules.find((r) => r.source === "/:path*");
-  assert.ok(rule, "règle /:path*");
-  const names = rule.headers.map((h) => h.key.toLowerCase());
-  for (const expected of [
-    "x-content-type-options",
-    "x-frame-options",
-    "referrer-policy",
-    "permissions-policy",
-    "strict-transport-security",
-    "cross-origin-opener-policy",
-    "content-security-policy-report-only",
-  ]) {
+test("les en-têtes de sécurité attendus sont définis", () => {
+  const names = SECURITY_HEADERS.map((h) => h.key.toLowerCase());
+  for (const expected of ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "strict-transport-security", "cross-origin-opener-policy"]) {
     assert.ok(names.includes(expected), `manque ${expected}`);
   }
 });
@@ -34,7 +22,12 @@ test("la CSP interdit objets, base étrangère et cadres externes", () => {
   assert.match(csp, /frame-ancestors 'self'/);
 });
 
-test("l'entrée du service worker conserve ses en-têtes", async () => {
-  const rules = await allHeaders();
-  assert.ok(rules.some((r) => r.source === "/sw.js"));
+test("next.config.ts applique les en-têtes partout et garde le service worker", () => {
+  const config = readFileSync("next.config.ts", "utf8");
+  assert.match(config, /from "\.\/src\/core\/security\/http-headers"/);
+  assert.match(config, /source: "\/:path\*"/);
+  assert.match(config, /\.\.\.SECURITY_HEADERS/);
+  assert.match(config, /Content-Security-Policy-Report-Only/);
+  assert.match(config, /source: "\/sw\.js"/);
+  assert.doesNotMatch(config, /^export (function|const)/m);
 });
