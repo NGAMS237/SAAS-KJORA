@@ -39,3 +39,33 @@ test("recherche", () => {
   assert.equal(matchesSearch(row({}), "zzz"), false);
   assert.equal(matchesSearch(row({}), "  "), true);
 });
+
+import { attachBalances, summarizeByTenant } from "../src/modules/finance/overview.ts";
+
+test("le solde cumulé est porté par la dernière échéance exigible, avec le report", () => {
+  const rows = [
+    row({ dueId: "a", dueDate: "2026-10-01", remainingXaf: 27000 }),
+    row({ dueId: "b", dueDate: "2026-11-01", remainingXaf: 27000 }),
+    row({ dueId: "c", dueDate: "2026-12-01", status: "upcoming", remainingXaf: 27000 }),
+  ];
+  const out = attachBalances(rows, { t: 249000 }, "2026-11-12");
+  assert.equal(out.find((item) => item.dueId === "b")?.balanceXaf, 249000);
+  assert.equal(out.find((item) => item.dueId === "b")?.carriedXaf, 222000);
+  assert.equal(out.find((item) => item.dueId === "a")?.balanceXaf, null);
+  assert.equal(out.find((item) => item.dueId === "c")?.balanceXaf, null);
+});
+
+test("vue par locataire triée par dette, avec retards et prochaine échéance", () => {
+  const rows = [
+    row({ tenantId: "t1", tenantName: "Charles", dueDate: "2026-11-01", remainingXaf: 27000 }),
+    row({ tenantId: "t1", tenantName: "Charles", dueId: "x", dueDate: "2026-10-01", remainingXaf: 27000 }),
+    row({ tenantId: "t1", tenantName: "Charles", dueId: "y", dueDate: "2026-12-01", status: "upcoming" }),
+    row({ tenantId: "t2", tenantName: "Alice", dueDate: "2026-11-01", status: "paid", remainingXaf: 0 }),
+  ];
+  const list = summarizeByTenant(rows, { t1: 249000, t2: 0 }, "2026-11-12");
+  assert.deepEqual(list.map((item) => item.tenantName), ["Charles", "Alice"]);
+  assert.equal(list[0].overdueCount, 2);
+  assert.equal(list[0].oldestOverdue, "2026-10-01");
+  assert.equal(list[0].nextDue, "2026-12-01");
+  assert.equal(list[1].debtXaf, 0);
+});
