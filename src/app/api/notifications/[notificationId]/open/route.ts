@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getPublicRequestOrigin } from "@/core/routing/public-origin";
 import { getActiveAuthorization, isOrganizationActive } from "@/core/authorization/server";
 import { ROUTE_CONNEXION, ROUTE_SUSPENDED } from "@/core/routing/context-resolver";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
@@ -22,7 +23,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function redirectTo(request: NextRequest, path: string) {
-  const response = NextResponse.redirect(new URL(path, request.url), 303);
+  const response = NextResponse.redirect(new URL(path, getPublicRequestOrigin(request)), 303);
   response.headers.set("cache-control", "private, no-store");
   return response;
 }

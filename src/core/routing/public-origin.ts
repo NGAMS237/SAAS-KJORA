@@ -7,8 +7,10 @@
  */
 export function getPublicRequestOrigin(request: {
   headers: Headers;
-  nextUrl: URL;
+  nextUrl?: URL;
+  url?: string;
 }) {
+  const requestUrl = request.nextUrl ?? new URL(request.url ?? "http://localhost");
   const forwardedHost = request.headers.get("x-forwarded-host")
     ?.split(",", 1)[0]
     ?.trim()
@@ -16,11 +18,11 @@ export function getPublicRequestOrigin(request: {
 
   if (
     forwardedHost === "kjorapp.com" ||
-    request.nextUrl.hostname === "kjorapp.com" ||
-    request.nextUrl.hostname === "0.0.0.0"
+    requestUrl.hostname === "kjorapp.com" ||
+    requestUrl.hostname === "0.0.0.0"
   ) {
     return "https://kjorapp.com";
   }
 
-  return request.nextUrl.origin;
+  return requestUrl.origin;
 }
