@@ -1,5 +1,5 @@
 import { getActiveAuthorization } from "@/core/authorization/server";
-import { listDuesForOverview } from "@/modules/finance/server";
+import { listDuesForOverview, listTenantAmountsDue } from "@/modules/finance/server";
 import { DuesOverviewView } from "@/modules/finance/dues-overview-view";
 import { dueBreakdown } from "@/modules/finance/model";
 import type { DueOverviewRow } from "@/modules/finance/overview";
@@ -14,10 +14,11 @@ function scalar(value: string | string[] | undefined) {
 export default async function DuesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [authorization, query] = await Promise.all([getActiveAuthorization(), searchParams]);
   if (!authorization?.capabilities.includes("due.view")) return <MissingTenancyResource leases />;
-  const [dues, leases, tenants] = await Promise.all([
+  const [dues, leases, tenants, amountsDue] = await Promise.all([
     listDuesForOverview(authorization.organizationId),
     listLeases(authorization.organizationId),
     listTenants(authorization.organizationId),
+    listTenantAmountsDue(authorization.organizationId).catch(() => ({} as Record<string, number>)),
   ]);
   const leaseById = new Map(leases.map((lease) => [lease.id, lease]));
   const contactById = new Map(tenants.map((tenant) => [tenant.id, { phone: tenant.phone ?? null, email: tenant.email ?? null }]));
@@ -44,5 +45,5 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     scopeLabel = rows[0]?.tenantName ?? "ce locataire";
   }
   const today = new Date().toISOString().slice(0, 10);
-  return <DuesOverviewView canManage={authorization.capabilities.includes("lease.manage")} canRecord={authorization.capabilities.includes("payment.record")} rows={rows} scopeLabel={scopeLabel} today={today} />;
+  return <DuesOverviewView amountsDue={amountsDue} canManage={authorization.capabilities.includes("lease.manage")} canRecord={authorization.capabilities.includes("payment.record")} rows={rows} scopeLabel={scopeLabel} today={today} />;
 }

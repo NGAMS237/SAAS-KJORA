@@ -7,7 +7,7 @@ import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
 import { buildWhatsAppUrl } from "@/modules/communications/manual-whatsapp";
 import { buildMailtoUrl, firstName, formatXaf, normalizeTenantPhone, renderTemplate, templateByKey } from "@/modules/communications/message-templates";
 import type { DueStatus } from "./model";
-import { DUE_FILTERS, countByFilter, daysLate, groupByMonth, matchesFilter, matchesSearch, sortRows, summarize, type DueFilter, type DueOverviewRow } from "./overview";
+import { DUE_FILTERS, attachBalances, countByFilter, daysLate, groupByMonth, matchesFilter, matchesSearch, sortRows, summarize, summarizeByTenant, type DueFilter, type DueOverviewRow, type DueOverviewRowWithBalance, type TenantSituation } from "./overview";
 
 const FILTER_LABELS: Record<DueFilter, string> = { all: "Toutes", overdue: "En retard", due: "À régler", upcoming: "À venir", settled: "Réglées" };
 const STATUS: Record<DueStatus, [string, "neutral" | "success" | "warning" | "danger" | "info" | "due"]> = {
@@ -57,15 +57,49 @@ function RowMenu({ row, canRecord, canManage, today }: { row: DueOverviewRow; ca
   );
 }
 
-export function DuesOverviewView({ rows, canRecord, canManage, scopeLabel, today }: { rows: DueOverviewRow[]; canRecord: boolean; canManage: boolean; scopeLabel: string | null; today: string }) {
+function TenantMenu({ item, canRecord, canManage }: { item: TenantSituation; canRecord: boolean; canManage: boolean }) {
+  const owes = item.debtXaf > 0;
+  const template = templateByKey("retard");
+  const message = renderTemplate(template.body, { prenom: firstName(item.tenantName), nom: item.tenantName, logement: item.unitLabel, du: formatXaf(item.debtXaf), total: formatXaf(item.monthlyXaf), signature: "Cordialement." });
+  const phone = normalizeTenantPhone(item.phone);
+  const whatsapp = owes && phone ? buildWhatsAppUrl(phone, message) : null;
+  const mail = owes && item.email ? buildMailtoUrl(item.email, template.subject, message) : null;
+  return (
+    <details className="row-menu">
+      <summary aria-label={`Actions pour ${item.tenantName}`}>⋯</summary>
+      <div className="row-menu__panel">
+        {canRecord && owes ? <Link href={`/app/paiements/nouveau?lease=${item.leaseId}&amount=${item.debtXaf}`}>Enregistrer un paiement</Link> : null}
+        {whatsapp ? <a href={whatsapp} rel="noopener noreferrer" target="_blank">Relancer par WhatsApp</a> : null}
+        {mail ? <a href={mail}>Écrire par e-mail</a> : null}
+        <Link href={`/app/echeances?tenant=${item.tenantId}`}>Voir ses échéances</Link>
+        <Link href={`/app/locataires/${item.tenantId}/etat-de-compte`}>État de compte</Link>
+        <Link href={`/app/locataires/${item.tenantId}`}>Voir le locataire</Link>
+        <Link href={`/app/locations/${item.leaseId}`}>Voir le bail</Link>
+        {canManage ? <Link href={`/app/locations/${item.leaseId}#changer-loyer`}>Modifier le loyer</Link> : null}
+        {owes && !phone ? <small>Pas de numéro WhatsApp reconnu pour ce locataire.</small> : null}
+      </div>
+    </details>
+  );
+}
+
+const PAGE_SIZES = [30, 50, 100];
+
+export function DuesOverviewView({ rows: baseRows, amountsDue, canRecord, canManage, scopeLabel, today }: { rows: DueOverviewRow[]; amountsDue: Record<string, number>; canRecord: boolean; canManage: boolean; scopeLabel: string | null; today: string }) {
   const [filter, setFilter] = useState<DueFilter>("all");
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
+  const [property, setProperty] = useState("all");
+  const [mode, setMode] = useState<"echeances" | "locataires">("echeances");
+  const [limit, setLimit] = useState(30);
+  const rows = useMemo<DueOverviewRowWithBalance[]>(() => attachBalances(baseRows, amountsDue, today), [baseRows, amountsDue, today]);
+  const properties = useMemo(() => [...new Set(baseRows.map((row) => row.propertyName))].sort(), [baseRows]);
   const counts = useMemo(() => countByFilter(rows), [rows]);
   const months = useMemo(() => groupByMonth(rows).map((group) => ({ key: group.key, label: group.label })), [rows]);
-  const visible = useMemo(() => rows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query) && (month === "all" || row.dueDate.startsWith(month))), [rows, filter, query, month]);
+  const visible = useMemo(() => rows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query) && (month === "all" || row.dueDate.startsWith(month)) && (property === "all" || row.propertyName === property)), [rows, filter, query, month, property]);
   const totals = useMemo(() => summarize(visible), [visible]);
-  const groups = useMemo(() => groupByMonth(visible).map((group) => ({ ...group, rows: sortRows(group.rows) })), [visible]);
+  const limited = useMemo(() => sortRows(visible).slice(0, limit), [visible, limit]);
+  const groups = useMemo(() => groupByMonth(limited).map((group) => ({ ...group, rows: sortRows(group.rows) })), [limited]);
+  const situations = useMemo(() => summarizeByTenant(visible, amountsDue, today).filter((item) => filter === "overdue" ? item.overdueCount > 0 : filter === "due" ? item.debtXaf > 0 : true), [visible, amountsDue, today, filter]);
 
   return (
     <div className="page-stack">
@@ -78,22 +112,51 @@ export function DuesOverviewView({ rows, canRecord, canManage, scopeLabel, today
         <div className={totals.overdueCount ? "dues-totals__alert" : ""}><small>En retard</small><strong>{formatXaf(totals.overdueXaf)}</strong><span>{totals.overdueCount} échéance(s)</span></div>
       </div>
       <Card>
+        <div className="dues-modes" role="tablist" aria-label="Affichage">
+          <button aria-selected={mode === "echeances"} className={`dues-filter${mode === "echeances" ? " is-active" : ""}`} onClick={() => setMode("echeances")} role="tab" type="button">Par échéance</button>
+          <button aria-selected={mode === "locataires"} className={`dues-filter${mode === "locataires" ? " is-active" : ""}`} onClick={() => setMode("locataires")} role="tab" type="button">Par locataire</button>
+        </div>
         <div className="dues-toolbar">
           <div className="dues-filters" role="tablist" aria-label="Filtrer les échéances">
             {DUE_FILTERS.map((item) => <button aria-selected={filter === item} className={`dues-filter${filter === item ? " is-active" : ""}`} key={item} onClick={() => setFilter(item)} role="tab" type="button">{FILTER_LABELS[item]} <span>{counts[item]}</span></button>)}
           </div>
           <label className="dues-search"><Search aria-hidden="true" size={15} /><input aria-label="Rechercher" onChange={(event) => setQuery(event.target.value)} placeholder="Locataire, logement…" value={query} /></label>
+          <select aria-label="Bien" onChange={(event) => setProperty(event.target.value)} value={property}>
+            <option value="all">Tous les biens</option>
+            {properties.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
           <select aria-label="Mois" onChange={(event) => setMonth(event.target.value)} value={month}>
             <option value="all">Tous les mois</option>
             {months.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
           </select>
         </div>
-        {groups.length ? groups.map((group) => (
+        {mode === "locataires" ? (
+          situations.length ? (
+            <div className="table-scroll">
+              <table className="dues-table">
+                <thead><tr><th>Locataire</th><th>Logement</th><th className="num">Loyer</th><th className="num">Doit au total</th><th>Retards</th><th>Prochaine échéance</th><th><span className="sr-only">Actions</span></th></tr></thead>
+                <tbody>
+                  {situations.map((item) => (
+                    <tr className={`dues-row dues-row--${item.overdueCount > 0 ? "overdue" : item.debtXaf > 0 ? "due" : "settled"}`} key={item.tenantId}>
+                      <td data-label="Locataire"><Link href={`/app/locataires/${item.tenantId}`}>{item.tenantName}</Link></td>
+                      <td data-label="Logement">{item.unitLabel}<small>{item.propertyName}</small></td>
+                      <td className="num" data-label="Loyer">{formatXaf(item.monthlyXaf)}</td>
+                      <td className="num" data-label="Doit au total"><strong className={item.debtXaf > 0 ? "due-late" : ""}>{item.debtXaf > 0 ? formatXaf(item.debtXaf) : "À jour"}</strong></td>
+                      <td data-label="Retards">{item.overdueCount > 0 ? <>{item.overdueCount} échéance(s)<small>depuis le {shortDate(item.oldestOverdue ?? "")}</small></> : "—"}</td>
+                      <td data-label="Prochaine échéance">{item.nextDue ? shortDate(item.nextDue) : "—"}</td>
+                      <td className="dues-row__menu"><TenantMenu canManage={canManage} canRecord={canRecord} item={item} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <EmptyState icon={CalendarClock} title="Aucun locataire" description="Aucun locataire ne correspond à ces filtres." />
+        ) : groups.length ? groups.map((group) => (
           <section className="dues-group" key={group.key}>
             <h2 className="dues-group__title">{group.label}</h2>
             <div className="table-scroll">
               <table className="dues-table">
-                <thead><tr><th>Échéance</th><th>Logement</th><th>Locataire</th><th className="num">Montant</th><th className="num">Payé</th><th className="num">Reste</th><th>État</th><th><span className="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th>Échéance</th><th>Logement</th><th>Locataire</th><th className="num">Montant</th><th className="num">Payé</th><th className="num">Reste</th><th className="num">Solde</th><th>État</th><th><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {group.rows.map((row) => {
                     const late = daysLate(row, today);
@@ -105,6 +168,7 @@ export function DuesOverviewView({ rows, canRecord, canManage, scopeLabel, today
                         <td className="num" data-label="Montant">{formatXaf(row.totalXaf)}</td>
                         <td className="num" data-label="Payé">{formatXaf(row.paidXaf)}</td>
                         <td className="num" data-label="Reste"><strong>{formatXaf(row.remainingXaf)}</strong></td>
+                        <td className="num" data-label="Solde">{row.balanceXaf === null ? "—" : row.balanceXaf > 0 ? <><strong className="due-late">-{formatXaf(row.balanceXaf)}</strong>{row.carriedXaf > 0 ? <small>Report de solde : {formatXaf(row.carriedXaf)}</small> : null}</> : "À jour"}</td>
                         <td data-label="État"><Badge tone={STATUS[row.status][1]}>{STATUS[row.status][0]}</Badge>{late > 0 ? <small className="due-late">{late} jour(s) de retard</small> : null}</td>
                         <td className="dues-row__menu"><RowMenu canManage={canManage} canRecord={canRecord} row={row} today={today} /></td>
                       </tr>
@@ -115,6 +179,13 @@ export function DuesOverviewView({ rows, canRecord, canManage, scopeLabel, today
             </div>
           </section>
         )) : <EmptyState icon={CalendarClock} title="Aucune échéance" description="Aucune échéance ne correspond à ces filtres." />}
+        {mode === "echeances" && visible.length > 0 ? (
+          <div className="dues-footer">
+            <span>{Math.min(limit, visible.length)} sur {visible.length} échéance(s)</span>
+            <select aria-label="Lignes affichées" onChange={(event) => setLimit(Number(event.target.value))} value={limit}>{PAGE_SIZES.map((size) => <option key={size} value={size}>{size} lignes</option>)}</select>
+            {visible.length > limit ? <button className="button button--secondary" onClick={() => setLimit(limit + 50)} type="button">Afficher plus</button> : null}
+          </div>
+        ) : null}
       </Card>
     </div>
   );

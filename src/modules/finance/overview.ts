@@ -74,8 +74,8 @@ export function summarize(rows: DueOverviewRow[]): OverviewTotals {
   return totals;
 }
 
-export function groupByMonth(rows: DueOverviewRow[]): Array<{ key: string; label: string; rows: DueOverviewRow[] }> {
-  const groups = new Map<string, DueOverviewRow[]>();
+export function groupByMonth<T extends DueOverviewRow>(rows: T[]): Array<{ key: string; label: string; rows: T[] }> {
+  const groups = new Map<string, T[]>();
   for (const row of rows) {
     const key = monthKey(row.dueDate);
     groups.set(key, [...(groups.get(key) ?? []), row]);
@@ -84,7 +84,52 @@ export function groupByMonth(rows: DueOverviewRow[]): Array<{ key: string; label
 }
 
 // Ordre dans un mois : retards d'abord (les plus anciens en tête), puis à régler, puis le reste.
-export function sortRows(rows: DueOverviewRow[]): DueOverviewRow[] {
+export function sortRows<T extends DueOverviewRow>(rows: T[]): T[] {
   const rank = (row: DueOverviewRow) => row.status === "overdue" ? 0 : row.status === "partially_paid" ? 1 : row.status === "due" ? 2 : row.status === "upcoming" ? 3 : 4;
   return [...rows].sort((a, b) => rank(a) - rank(b) || a.dueDate.localeCompare(b.dueDate) || a.tenantName.localeCompare(b.tenantName));
+}
+
+// ---- Solde cumulé par locataire (même chiffre que « Doit X » dans la liste des locataires) ----
+
+export type DueOverviewRowWithBalance = DueOverviewRow & { balanceXaf: number | null; carriedXaf: number };
+
+// Le solde cumulé du locataire est porté par sa dernière échéance exigible ; le « report » est ce
+// qui vient des mois précédents. Les autres lignes du locataire n'affichent pas de solde.
+export function attachBalances(rows: DueOverviewRow[], amountDueByTenant: Record<string, number>, today: string): DueOverviewRowWithBalance[] {
+  const anchor = new Map<string, DueOverviewRow>();
+  for (const row of rows) {
+    if (row.status === "cancelled" || row.dueDate > today) continue;
+    const current = anchor.get(row.tenantId);
+    if (!current || row.dueDate > current.dueDate) anchor.set(row.tenantId, row);
+  }
+  return rows.map((row) => {
+    const isAnchor = anchor.get(row.tenantId)?.dueId === row.dueId;
+    const debt = amountDueByTenant[row.tenantId] ?? 0;
+    return { ...row, balanceXaf: isAnchor ? debt : null, carriedXaf: isAnchor ? Math.max(0, debt - row.remainingXaf) : 0 };
+  });
+}
+
+export type TenantSituation = {
+  tenantId: string; leaseId: string; tenantName: string; unitLabel: string; propertyName: string;
+  monthlyXaf: number; debtXaf: number; overdueCount: number; oldestOverdue: string | null; nextDue: string | null;
+  phone: string | null; email: string | null;
+};
+
+// Une ligne par locataire (bail le plus récent), triée par dette décroissante.
+export function summarizeByTenant(rows: DueOverviewRow[], amountDueByTenant: Record<string, number>, today: string): TenantSituation[] {
+  const byTenant = new Map<string, DueOverviewRow[]>();
+  for (const row of rows) if (row.kind !== "deposit") byTenant.set(row.tenantId, [...(byTenant.get(row.tenantId) ?? []), row]);
+  const out: TenantSituation[] = [];
+  for (const [tenantId, items] of byTenant) {
+    const latest = [...items].sort((a, b) => b.dueDate.localeCompare(a.dueDate))[0];
+    const overdue = items.filter((row) => row.status === "overdue");
+    const upcoming = items.filter((row) => row.dueDate >= today && !isSettled(row.status)).sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+    out.push({
+      tenantId, leaseId: latest.leaseId, tenantName: latest.tenantName, unitLabel: latest.unitLabel, propertyName: latest.propertyName,
+      monthlyXaf: latest.totalXaf, debtXaf: amountDueByTenant[tenantId] ?? 0, overdueCount: overdue.length,
+      oldestOverdue: overdue.length ? overdue.map((row) => row.dueDate).sort()[0] : null, nextDue: upcoming?.dueDate ?? null,
+      phone: latest.phone, email: latest.email,
+    });
+  }
+  return out.sort((a, b) => b.debtXaf - a.debtXaf || a.tenantName.localeCompare(b.tenantName));
 }

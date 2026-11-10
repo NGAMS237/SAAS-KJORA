@@ -5680,3 +5680,6 @@ a.admin-control-card:focus-visible { border-color: var(--brand-gold); }
   .dues-table td::before { content: attr(data-label); color: var(--muted, #667085); text-align: start; }
   .dues-row__menu { justify-content: flex-end; }
 }
+.dues-modes { display: flex; gap: 6px; margin-bottom: 12px; }
+.dues-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted, #667085); font-size: 0.85rem; }
+.dues-table .due-late { color: var(--danger); }
