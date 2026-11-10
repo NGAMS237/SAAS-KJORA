@@ -1,4 +1,5 @@
 import { isSameOrigin } from "@/core/security/same-origin";
+import { getPublicRequestOrigin } from "@/core/routing/public-origin";
 import { NextResponse } from "next/server";
 import { requireActiveCapability } from "@/core/authorization/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     });
     const invitation = result.data?.[0] as { access_id?: string; invitation_id?: string; invitation_email?: string; invitation_language?: string; invitation_token?: string } | undefined;
     if (result.error || !invitation?.access_id || !invitation.invitation_id || !invitation.invitation_email || !invitation.invitation_token) return error("invitation_rejected", 400);
-    const invitationUrl = new URL("/portal/invitation", request.url); invitationUrl.searchParams.set("token", invitation.invitation_token); invitationUrl.searchParams.set("lang", invitation.invitation_language === "en" ? "en" : "fr");
+    const invitationUrl = new URL("/portal/invitation", getPublicRequestOrigin(request)); invitationUrl.searchParams.set("token", invitation.invitation_token); invitationUrl.searchParams.set("lang", invitation.invitation_language === "en" ? "en" : "fr");
     const sent = await sendTenantPortalInvitationEmail({ email: invitation.invitation_email, invitationUrl: invitationUrl.toString(), language: invitation.invitation_language === "en" ? "en" : "fr", organizationName: profile.data.name });
     if (!sent) { await supabase.rpc("revoke_tenant_portal_access", { target_access_id: invitation.access_id }); return error("email_delivery_failed", 502); }
     return NextResponse.json({ accessId: invitation.access_id }, { status: 201 });
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     const result = await supabase.rpc("resend_tenant_portal_invitation", { target_access_id: body.accessId });
     const invitation = result.data?.[0] as { access_id?: string; invitation_email?: string; invitation_language?: string; invitation_token?: string } | undefined;
     if (result.error || !invitation?.access_id || !invitation.invitation_email || !invitation.invitation_token) return error("invitation_rejected", 400);
-    const invitationUrl = new URL("/portal/invitation", request.url); invitationUrl.searchParams.set("token", invitation.invitation_token); invitationUrl.searchParams.set("lang", invitation.invitation_language === "en" ? "en" : "fr");
+    const invitationUrl = new URL("/portal/invitation", getPublicRequestOrigin(request)); invitationUrl.searchParams.set("token", invitation.invitation_token); invitationUrl.searchParams.set("lang", invitation.invitation_language === "en" ? "en" : "fr");
     const sent = await sendTenantPortalInvitationEmail({ email: invitation.invitation_email, invitationUrl: invitationUrl.toString(), language: invitation.invitation_language === "en" ? "en" : "fr", organizationName: profile.data.name });
     if (!sent) { await supabase.rpc("revoke_tenant_portal_access", { target_access_id: invitation.access_id }); return error("email_delivery_failed", 502); }
     return NextResponse.json({ accessId: invitation.access_id });

@@ -1,4 +1,5 @@
 import { isSameOrigin } from "@/core/security/same-origin";
+import { getPublicRequestOrigin } from "@/core/routing/public-origin";
 import { NextResponse } from "next/server";
 import { isInternalRole } from "@/core/authorization/capabilities";
 import { requireActiveCapability } from "@/core/authorization/server";
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       if (entitlementErr) return entitlementErrorResponse(entitlementErr);
     }
     if (error || !invitation?.invitation_id || !invitation.invitation_token) return jsonError("invitation_rejected", 400);
-    const invitationUrl = new URL("/invitation", request.url);
+    const invitationUrl = new URL("/invitation", getPublicRequestOrigin(request));
     invitationUrl.searchParams.set("token", invitation.invitation_token);
     const sent = await sendMembershipInvitationEmail({
       email: body.email.trim().toLowerCase(),
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
     ) {
       return jsonError("invitation_rejected", 400);
     }
-    const invitationUrl = new URL("/invitation", request.url);
+    const invitationUrl = new URL("/invitation", getPublicRequestOrigin(request));
     invitationUrl.searchParams.set("token", invitation.invitation_token);
     const sent = await sendMembershipInvitationEmail({
       email: invitation.invitation_email,
