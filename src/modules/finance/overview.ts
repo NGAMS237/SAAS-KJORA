@@ -93,20 +93,30 @@ export function sortRows<T extends DueOverviewRow>(rows: T[]): T[] {
 
 export type DueOverviewRowWithBalance = DueOverviewRow & { balanceXaf: number | null; carriedXaf: number };
 
-// Le solde cumulé du locataire est porté par sa dernière échéance exigible ; le « report » est ce
-// qui vient des mois précédents. Les autres lignes du locataire n'affichent pas de solde.
+// Solde courant par locataire, ligne par ligne : pour chaque échéance déjà exigible (hors dépôt et
+// annulées), somme des restes dus jusqu'à cette échéance incluse. La dernière ligne porte le chiffre
+// officiel (même valeur que « Doit X » dans la liste des locataires), qui tient compte des crédits.
+// Le « report » d'une ligne est le solde de la ligne précédente du même locataire.
 export function attachBalances(rows: DueOverviewRow[], amountDueByTenant: Record<string, number>, today: string): DueOverviewRowWithBalance[] {
-  const anchor = new Map<string, DueOverviewRow>();
+  const byTenant = new Map<string, DueOverviewRow[]>();
   for (const row of rows) {
-    if (row.status === "cancelled" || row.dueDate > today) continue;
-    const current = anchor.get(row.tenantId);
-    if (!current || row.dueDate > current.dueDate) anchor.set(row.tenantId, row);
+    if (row.status === "cancelled" || row.kind === "deposit" || row.dueDate > today) continue;
+    byTenant.set(row.tenantId, [...(byTenant.get(row.tenantId) ?? []), row]);
   }
-  return rows.map((row) => {
-    const isAnchor = anchor.get(row.tenantId)?.dueId === row.dueId;
-    const debt = amountDueByTenant[row.tenantId] ?? 0;
-    return { ...row, balanceXaf: isAnchor ? debt : null, carriedXaf: isAnchor ? Math.max(0, debt - row.remainingXaf) : 0 };
-  });
+  const computed = new Map<string, { balanceXaf: number; carriedXaf: number }>();
+  for (const [tenantId, items] of byTenant) {
+    const ordered = [...items].sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.periodStart.localeCompare(b.periodStart) || a.dueId.localeCompare(b.dueId));
+    let running = 0;
+    ordered.forEach((row, index) => {
+      const previous = running;
+      running += row.remainingXaf;
+      const isLast = index === ordered.length - 1;
+      const balanceXaf = isLast ? (amountDueByTenant[tenantId] ?? running) : running;
+      const carriedXaf = isLast ? Math.max(0, balanceXaf - row.remainingXaf) : previous;
+      computed.set(row.dueId, { balanceXaf, carriedXaf });
+    });
+  }
+  return rows.map((row) => ({ ...row, balanceXaf: computed.get(row.dueId)?.balanceXaf ?? null, carriedXaf: computed.get(row.dueId)?.carriedXaf ?? 0 }));
 }
 
 export type TenantSituation = {
