@@ -42,7 +42,7 @@ test("recherche", () => {
 
 import { attachBalances, summarizeByTenant } from "../src/modules/finance/overview.ts";
 
-test("le solde cumulé est porté par la dernière échéance exigible, avec le report", () => {
+test("le solde courant s'accumule ligne par ligne et la dernière ligne porte le chiffre officiel", () => {
   const rows = [
     row({ dueId: "a", dueDate: "2026-10-01", remainingXaf: 27000 }),
     row({ dueId: "b", dueDate: "2026-11-01", remainingXaf: 27000 }),
@@ -51,8 +51,26 @@ test("le solde cumulé est porté par la dernière échéance exigible, avec le 
   const out = attachBalances(rows, { t: 249000 }, "2026-11-12");
   assert.equal(out.find((item) => item.dueId === "b")?.balanceXaf, 249000);
   assert.equal(out.find((item) => item.dueId === "b")?.carriedXaf, 222000);
-  assert.equal(out.find((item) => item.dueId === "a")?.balanceXaf, null);
+  assert.equal(out.find((item) => item.dueId === "a")?.balanceXaf, 27000);
+  assert.equal(out.find((item) => item.dueId === "a")?.carriedXaf, 0);
   assert.equal(out.find((item) => item.dueId === "c")?.balanceXaf, null);
+});
+
+test("solde courant : report = solde de la ligne précédente, dépôts et mois futurs exclus", () => {
+  const rows = [
+    row({ dueId: "a", dueDate: "2026-09-01", periodStart: "2026-09-01", remainingXaf: 10000 }),
+    row({ dueId: "b", dueDate: "2026-10-01", periodStart: "2026-10-01", remainingXaf: 0, status: "paid" }),
+    row({ dueId: "c", dueDate: "2026-11-01", periodStart: "2026-11-01", remainingXaf: 30000 }),
+    row({ dueId: "d", dueDate: "2026-08-01", kind: "deposit", remainingXaf: 50000 }),
+  ];
+  const out = attachBalances(rows, { t: 40000 }, "2026-11-12");
+  const by = (id: string) => out.find((item) => item.dueId === id)!;
+  assert.equal(by("a").balanceXaf, 10000);
+  assert.equal(by("b").balanceXaf, 10000);
+  assert.equal(by("b").carriedXaf, 10000);
+  assert.equal(by("c").balanceXaf, 40000);
+  assert.equal(by("c").carriedXaf, 10000);
+  assert.equal(by("d").balanceXaf, null);
 });
 
 test("vue par locataire triée par dette, avec retards et prochaine échéance", () => {

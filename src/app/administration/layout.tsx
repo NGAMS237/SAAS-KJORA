@@ -22,10 +22,9 @@ export const revalidate = 0;
  * Trois réponses distinctes, délibérément différenciées :
  *
  *   • pas de session      → redirection vers la connexion ;
- *   • session sans droit  → page de connexion administrateur dédiée
- *                           (/connexion/administration), sans aucun droit
- *                           accordé : l'utilisateur voit qu'il doit changer de
- *                           compte, au lieu d'un 404 déroutant ;
+ *   • session sans droit  → 404, et non 403 : un utilisateur légitime de
+ *                           l'application n'a pas à apprendre qu'une console
+ *                           d'administration existe à cette adresse ;
  *   • vérification en échec → 404 également. Un incident technique ne doit
  *                           jamais ouvrir l'accès par défaut.
  *
@@ -37,14 +36,8 @@ export default async function AdministrationLayout({ children }: { children: Rea
 
   if (!decision.allowed) {
     if (decision.reason === "unauthenticated") {
-      redirect("/connexion/administration?next=/administration");
+      redirect("/connexion?next=/administration");
     }
-    // Session valide sans droit plateforme : page de connexion dédiée plutôt qu'un 404 muet.
-    // Le droit n'est jamais accordé ici ; seule la console elle-même (et ses RPC) autorise.
-    if (decision.reason === "not_platform_admin") {
-      redirect("/connexion/administration?reason=not-admin");
-    }
-    // Vérification en échec : refus fermé (404), jamais d'accès par défaut.
     notFound();
   }
 
