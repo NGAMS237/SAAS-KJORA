@@ -66,8 +66,8 @@ test("le contexte serveur du handoff est fermé, bilingue et tolère un nom vide
 });
 
 test("le handoff manuel est bilingue, encodé et ne promet aucun envoi", () => {
-  const fr = buildManualWhatsAppMessage({ phoneE164: "+237699001122", displayName: "Locataire Démo", language: "fr", documentType: "rent_receipt", periodStart: "2026-09-01", periodEnd: "2026-09-30" });
-  const en = buildManualWhatsAppMessage({ phoneE164: "+15145550100", displayName: "Demo Tenant", language: "en", documentType: "due_notice", periodStart: null, periodEnd: null });
+  const fr = buildManualWhatsAppMessage({ phoneE164: "+237699001122", displayName: "Locataire Démo", civility: null, amountXaf: null, dueDate: null, language: "fr", documentType: "rent_receipt", periodStart: "2026-09-01", periodEnd: "2026-09-30" });
+  const en = buildManualWhatsAppMessage({ phoneE164: "+15145550100", displayName: "Demo Tenant", civility: null, amountXaf: null, dueDate: null, language: "en", documentType: "due_notice", periodStart: null, periodEnd: null });
   assert.match(fr, /portail locataire KJORA sécurisé/); assert.match(en, /secure KJORA tenant portal/);
   assert.doesNotMatch(`${fr}${en}`, /sent|delivered|read|envoyé|livré|lu/i);
   assert.equal(buildWhatsAppUrl("not-phone", fr), null);
@@ -136,4 +136,42 @@ test("le centre de contrôle distingue WhatsApp manuel, future API, site et supp
   const view = read("../src/modules/platform-admin/operations-view.tsx");
   for (const key of ["commercial_site", "whatsapp_manual", "whatsapp_api", "support"]) { assert.match(readiness, new RegExp(`"${key}"`)); assert.match(view, new RegExp(`${key}:`)); }
   assert.match(readiness, /whatsapp_api: configured\("configured_disabled"/);
+});
+
+test("le message WhatsApp manuel porte la civilité quand elle est renseignée", () => {
+  const base = { phoneE164: "+237699001122", displayName: "Charles Ekoto", amountXaf: null, dueDate: null, language: "fr" as const, documentType: "rent_receipt" as const, periodStart: null, periodEnd: null };
+  assert.match(buildManualWhatsAppMessage({ ...base, civility: "M." }), /^Bonjour M\. Charles Ekoto,/);
+  assert.match(buildManualWhatsAppMessage({ ...base, civility: "Mme" }), /^Bonjour Mme Charles Ekoto,/);
+  assert.match(buildManualWhatsAppMessage({ ...base, civility: null }), /^Bonjour Charles Ekoto,/);
+  assert.match(buildManualWhatsAppMessage({ ...base, civility: "Mme", language: "en" }), /^Hello Ms Charles Ekoto,/);
+  assert.equal(normalizeManualWhatsAppContext({ ...base, civility: "Dr" })?.civility, null);
+  assert.equal(normalizeManualWhatsAppContext({ ...base, civility: "Mme" })?.civility, "Mme");
+});
+
+test("le message WhatsApp manuel indique le montant et le lien du portail pour télécharger le PDF", () => {
+  const base = { phoneE164: "+237699001122", displayName: "Charles Ekoto", civility: "M." as const, language: "fr" as const, periodStart: "2026-11-01", periodEnd: "2026-11-30", amountXaf: null, dueDate: null };
+  const url = "https://kjorapp.com/portal/recus/";
+  const receipt = buildManualWhatsAppMessage({ ...base, documentType: "payment_receipt", amountXaf: 60000 }, url);
+  assert.match(receipt, /^Bonjour M\. Charles Ekoto, nous avons bien reçu votre paiement de 60.000 XAF/);
+  assert.ok(receipt.endsWith(": https://kjorapp.com/portal/recus/"));
+  assert.match(receipt, /Consultez et téléchargez le PDF dans votre portail locataire KJORA sécurisé/);
+  const notice = buildManualWhatsAppMessage({ ...base, documentType: "due_notice", amountXaf: 19000, dueDate: "2026-11-05" }, "https://kjorapp.com/portal/loyers/");
+  assert.match(notice, /19.000 XAF à régler avant le 05\/11\/2026/);
+  assert.match(buildManualWhatsAppMessage({ ...base, documentType: "rent_receipt", amountXaf: 32000 }, url), /quittance de loyer.* de 32.000 XAF est disponible/);
+  assert.match(buildManualWhatsAppMessage({ ...base, documentType: "account_statement", amountXaf: 5000 }, url), /solde : 5.000 XAF/);
+  const en = buildManualWhatsAppMessage({ ...base, language: "en", documentType: "payment_receipt", amountXaf: 60000 }, url);
+  assert.match(en, /^Hello Mr Charles Ekoto, we received your payment of 60.000 XAF/);
+  assert.match(en, /Consult and download the PDF in your secure KJORA tenant portal: https:\/\/kjorapp\.com\/portal\/recus\//);
+  // Pas de lien : phrase terminée proprement, aucune URL inventée ni lien non https.
+  assert.doesNotMatch(buildManualWhatsAppMessage({ ...base, documentType: "payment_receipt", amountXaf: 1 }, "javascript:alert(1)"), /javascript/);
+  assert.doesNotMatch(`${receipt}${notice}${en}`, /sent|delivered|read|envoyé|livré|\blu\b/i);
+  assert.equal(normalizeManualWhatsAppContext({ ...base, documentType: "payment_receipt", amountXaf: -5 })?.amountXaf, null);
+  assert.equal(normalizeManualWhatsAppContext({ ...base, documentType: "payment_receipt", amountXaf: 12000 })?.amountXaf, 12000);
+});
+
+test("la connexion du portail ne boucle pas pour un compte connecté sans accès portail", () => {
+  const page = read("../src/app/(portal-auth)/portal/connexion/page.tsx");
+  // Le renvoi vers /portal/auth/complete ne se fait qu'après le cas « portal-access-required ».
+  assert.ok(page.indexOf('params.reason === "portal-access-required"') < page.indexOf("if (signedIn) redirect(nextPath)"));
+  assert.ok(page.includes('action="/auth/signout?scope=portal"'));
 });

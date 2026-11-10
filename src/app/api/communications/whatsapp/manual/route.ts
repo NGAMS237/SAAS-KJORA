@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildManualWhatsAppMessage, buildWhatsAppUrl, normalizeManualWhatsAppContext } from "@/modules/communications/manual-whatsapp";
 import { UUID_PATTERN } from "@/modules/properties/model";
+import { getPublicRequestOrigin } from "@/core/routing/public-origin";
 
 export const dynamic = "force-dynamic";
 const privateResponse = (body: unknown, init?: ResponseInit) => NextResponse.json(body, { ...init, headers: { ...init?.headers, "Cache-Control": "private, no-store" } });
@@ -19,7 +20,10 @@ export async function POST(request: Request) {
   }
   const context = normalizeManualWhatsAppContext(data);
   if (!context) return privateResponse({ error: "handoff_unavailable" }, { status: 409 });
-  const url = buildWhatsAppUrl(context.phoneE164, buildManualWhatsAppMessage(context));
+  // Reçus et quittances : page « Mes reçus » du portail ; avis et états de compte : page « Mes loyers ».
+  const portalPath = context.documentType === "payment_receipt" || context.documentType === "rent_receipt" ? "/portal/recus/" : "/portal/loyers/";
+  const portalUrl = `${getPublicRequestOrigin(request)}${portalPath}`;
+  const url = buildWhatsAppUrl(context.phoneE164, buildManualWhatsAppMessage(context, portalUrl));
   if (!url) return privateResponse({ error: "handoff_unavailable" }, { status: 409 });
   return privateResponse({ url, notice: context.language === "en" ? "WhatsApp was opened. KJORA cannot confirm that the message was sent." : "WhatsApp a été ouvert. KJORA ne peut pas confirmer que le message a été envoyé." });
 }
