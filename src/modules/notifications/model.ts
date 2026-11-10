@@ -110,6 +110,7 @@ export function resolveNotificationDestination(
   const paymentsForLease = canViewPayments
     ? leaseId ? `/app/paiements?lease=${leaseId}` : tenantId ? `/app/paiements?tenant=${tenantId}` : null
     : null;
+  const duesForLease = !canViewPayments ? null : leaseId ? `/app/echeances?lease=${leaseId}` : tenantId ? `/app/echeances?tenant=${tenantId}` : null;
 
   let href: string | null;
   switch (result.notification_type) {
@@ -119,7 +120,7 @@ export function resolveNotificationDestination(
       href = document ?? tenantDocuments ?? lease;
       break;
     case "payment_overdue":
-      href = paymentsForLease ?? statement ?? lease;
+      href = duesForLease ?? paymentsForLease ?? statement ?? lease;
       break;
     case "low_credit":
       href = statement ?? paymentsForLease ?? lease;

@@ -12,6 +12,7 @@ import {
   LifeBuoy,
   ReceiptText,
   Settings,
+  CalendarClock,
   MessagesSquare,
   Users,
   WalletCards,
@@ -38,6 +39,7 @@ export const internalSecondaryNavigation: NavigationItem[] = [
   // D-142 — Documents est une vue transversale des documents déjà émis par les
   // modules existants. Aucun stockage ni moteur documentaire parallèle.
   { href: "/app/documents", label: "Documents", icon: FileCheck2 },
+  { href: "/app/echeances", label: "Échéances", icon: CalendarClock, requiredCapability: "due.view" },
   { href: "/app/messages", label: "Messages", icon: MessagesSquare, requiredCapability: "tenant.view" },
   { href: "/app/equipe", label: "Équipe", icon: Users, requiredCapability: "member.view" },
   // ALIGN-03 — reste accessible même compte bloqué : c'est d'ici que ça se résout.

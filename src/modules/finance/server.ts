@@ -133,3 +133,17 @@ export async function listTenantAmountsDue(organizationId: string): Promise<Reco
   for (const row of (result.data ?? []) as Array<{ tenant_id: string; amount_due_xaf: number | string }>) out[row.tenant_id] = Number(row.amount_due_xaf);
   return out;
 }
+
+// Toutes les échéances de l'organisation pour le tableau « Échéances ».
+export async function listDuesForOverview(organizationId: string): Promise<Array<DueSummary & { tenantId: string }>> {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase
+    .from("dues_with_status")
+    .select(`${DUE_COLUMNS}, tenant_id`)
+    .eq("organization_id", organizationId)
+    .neq("kind", "adjustment")
+    .order("due_date", { ascending: false })
+    .limit(2000);
+  if (result.error) throw result.error;
+  return ((result.data ?? []) as unknown as Array<DueRow & { tenant_id: string }>).map((row) => ({ ...due(row), tenantId: row.tenant_id }));
+}
