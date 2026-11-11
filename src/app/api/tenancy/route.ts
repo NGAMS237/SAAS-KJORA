@@ -14,6 +14,7 @@ type TenancyAction =
   | "activate_lease"
   | "end_lease"
   | "schedule_rent_change"
+  | "correct_rent"
   | "set_contract_dates";
 
 function sameOrigin(request: Request) {
@@ -154,6 +155,28 @@ export async function POST(request: Request) {
       return mutationError(error);
     }
     return NextResponse.json({ termsId: data }, { status: 201 });
+  }
+  if (action === "correct_rent") {
+    const baseRent = Number(body.baseRentXaf);
+    const charges = Number(body.recurringChargesXaf ?? 0);
+    if (typeof body.leaseId !== "string" || !UUID_PATTERN.test(body.leaseId)) return jsonError("invalid_payload", 400);
+    if (!Number.isSafeInteger(baseRent) || baseRent <= 0 || !Number.isSafeInteger(charges) || charges < 0) return jsonError("invalid_rent_amounts", 400);
+    const fromDate = typeof body.fromDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.fromDate) ? body.fromDate : null;
+    const { data, error } = await supabase.rpc("correct_lease_rent", {
+      target_lease_id: body.leaseId,
+      target_base_rent_xaf: baseRent,
+      target_recurring_charges_xaf: charges,
+      target_apply_to_open_dues: body.applyToOpenDues === true,
+      target_from_date: fromDate,
+      target_dry_run: body.dryRun !== false,
+    });
+    if (error) {
+      if (error.message?.includes("scheduled_change_exists")) return jsonError("scheduled_change_exists", 409);
+      if (error.message?.includes("correction_below_paid")) return jsonError("correction_below_paid", 409);
+      if (error.message?.includes("lease_not_active")) return jsonError("lease_not_active", 409);
+      return mutationError(error);
+    }
+    return NextResponse.json({ result: data });
   }
   if (action === "set_contract_dates") {
     const date = (value: unknown) => (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
