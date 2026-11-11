@@ -13,7 +13,7 @@ import {
 } from "@/core/legal/legal-facts";
 
 export const metadata = {
-  title: "Mentions légales — Kjora",
+  title: "Mentions légales",
   description: "Informations légales relatives au service Kjora.",
 };
 

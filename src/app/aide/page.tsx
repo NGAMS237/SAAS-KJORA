@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PublicFooter } from "@/core/ui/public-footer";
 
 export const metadata = {
-  title: "Aide — Kjora",
+  title: "Aide",
   description: "Résoudre un problème de connexion à Kjora.",
 };
 
@@ -16,8 +16,8 @@ export default function AidePage() {
         <p className="eyebrow">Aide</p>
         <h1>Un problème pour vous connecter ?</h1>
         <p className="auth-intro">
-          Kjora fonctionne sans mot de passe. Vous recevez par email un lien sécurisé, valable un court
-          moment et utilisable une seule fois.
+          Kjora fonctionne sans mot de passe. Vous recevez par email un lien sécurisé et, selon l’écran, un code à saisir ; les deux sont
+          valables un court moment et utilisables une seule fois.
         </p>
 
         <div className="aide-bloc">
