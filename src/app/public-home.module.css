@@ -45,6 +45,7 @@
 .desktopNav a:hover { color: var(--terra); }
 .desktopNav a:hover::after, .desktopNav a:focus-visible::after { transform: translateX(-50%) scaleX(1); }
 .navActions { align-items: center; display: flex; gap: 10px; }
+.navSignIn { background: var(--paper) !important; border: 1px solid rgb(22 59 50 / 0.25) !important; color: var(--forest) !important; }
 .language { border: 1px solid rgb(22 59 50 / 0.25); border-radius: 999px; color: var(--forest); font-size: 0.78rem; font-weight: 850; padding: 9px 11px; text-decoration: none; }
 .mobileMenu { display: none; position: relative; }
 .mobileMenu summary { border: 1px solid rgb(22 59 50 / 0.25); border-radius: 999px; cursor: pointer; font-size: 0.82rem; font-weight: 800; list-style: none; padding: 10px 14px; }
@@ -58,7 +59,7 @@
 .heroMedia { z-index: -2; }
 .heroImage { animation: heroDrift 16s ease-in-out infinite alternate; object-fit: cover; object-position: center 48%; transform: scale(1.01) translateX(0.5%); }
 .heroShade { background: radial-gradient(circle at 74% 38%, transparent 0 15%, rgb(8 31 26 / 0.1) 48%, rgb(8 31 26 / 0.34) 100%), linear-gradient(90deg, rgb(8 31 26 / 0.94) 0%, rgb(8 31 26 / 0.78) 42%, rgb(8 31 26 / 0.16) 75%, rgb(8 31 26 / 0.05) 100%), linear-gradient(0deg, rgb(8 31 26 / 0.5), transparent 52%); z-index: -1; }
-.heroContent { animation: contentIn 700ms 120ms both; display: flex; flex-direction: column; justify-content: center; min-height: inherit; padding: clamp(46px, 6vw, 78px) max(24px, calc((100vw - 1240px) / 2)); width: min(740px, 61vw); }
+.heroContent { animation: contentIn 700ms 120ms both; display: flex; flex-direction: column; justify-content: center; min-height: inherit; padding: clamp(46px, 6vw, 78px) 24px clamp(46px, 6vw, 78px) max(24px, calc((100vw - 1240px) / 2)); width: min(100%, calc(max(24px, calc((100vw - 1240px) / 2)) + 740px)); }
 .eyebrow { color: var(--terra); font-size: 0.75rem; font-weight: 850; letter-spacing: 0.14em; margin: 0 0 18px; text-transform: uppercase; }
 .hero .eyebrow, .securitySection .eyebrow, .finalCta .eyebrow { color: #f1b796; }
 .hero h1 { color: var(--paper); font-family: var(--font-display); font-size: clamp(3rem, 5.55vw, 5.45rem); letter-spacing: -0.065em; line-height: 0.95; margin: 0; max-width: 730px; text-wrap: balance; }
@@ -71,7 +72,7 @@
 .proofBar article { align-items: flex-start; display: flex; gap: 14px; padding: 28px clamp(18px, 3vw, 36px); }
 .proofBar article + article { border-left: 1px solid rgb(22 59 50 / 0.12); }
 .proofBar article > span { align-items: center; background: var(--sage); border-radius: 50%; color: var(--forest); display: inline-flex; flex: 0 0 auto; font-weight: 900; height: 32px; justify-content: center; width: 32px; }
-.proofBar h2 { font-family: var(--font-display); font-size: 1.08rem; margin: 1px 0 6px; }
+.proofBar h2 { color: var(--navy); font-family: var(--font-display); font-size: 1.08rem; margin: 1px 0 6px; }
 .proofBar p { color: #587068; font-size: 0.88rem; line-height: 1.5; margin: 0; }
 
 .section { margin-inline: auto; max-width: 1240px; padding: clamp(76px, 9vw, 126px) 24px; scroll-margin-top: 86px; }
@@ -88,6 +89,7 @@
 
 .featureSection { background: var(--forest-deep); color: var(--paper); max-width: none; padding-inline: max(24px, calc((100vw - 1240px) / 2)); }
 .featureSection .sectionIntro { margin-bottom: 48px; }
+.featureSection .sectionIntro h2 { color: var(--paper); }
 .featureSection .eyebrow { color: #f1b796; }
 .featureGrid { display: grid; gap: 1px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .featureGrid article { background: #123b32; min-height: 240px; padding: clamp(26px, 3vw, 40px); transition: background-color 180ms ease, transform 180ms ease; }
@@ -240,3 +242,17 @@
   .home *, .home *::before, .home *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
   .heroImage, .heroContent { animation: none; transform: none; }
 }
+
+/* Le site public garde ses couleurs quel que soit le thème sombre de l'application : les boutons
+   secondaires posés sur fond clair restent lisibles (texte sombre sur papier). */
+.planGrid article :global(.button--secondary), .partnerSection :global(.button--secondary) { background: var(--paper); border: 1px solid rgb(22 59 50 / 0.3); color: var(--forest); }
+/* Prix : FCFA en grand, dollar canadien en petit. */
+.planPrices p.priceMain { align-items: baseline; display: flex; gap: 6px; padding: 16px 0 2px; }
+.planPrices p.priceMain strong { font-size: clamp(1.7rem, 2.2vw, 2.1rem); white-space: nowrap; word-spacing: 0.08em; }
+.planPrices p.priceMain small { white-space: nowrap; }
+.planPrices p.priceMain span { flex-basis: 100%; }
+.planPrices p.priceZone { color: #526b63; font-size: 0.74rem; padding: 0 0 12px; }
+.featuredPlan .planPrices p.priceZone { color: rgb(255 253 248 / 0.76); }
+.planPrices p.priceCad { border-top: 1px solid rgb(22 59 50 / 0.1); color: #687b75; display: block; font-size: 0.72rem; padding: 10px 0 12px; }
+.planPrices p.priceCad strong { color: inherit; font-family: inherit; font-size: inherit; letter-spacing: 0; }
+.featuredPlan .planPrices p.priceCad { border-color: rgb(255 253 248 / 0.14); color: rgb(255 253 248 / 0.72); }
