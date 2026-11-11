@@ -162,6 +162,16 @@ export async function listTenants(organizationId: string): Promise<TenantSummary
   }));
 }
 
+// Civilité (M. / Mme) par locataire — lecture directe, soumise aux mêmes règles d'accès que la fiche locataire.
+export async function listTenantCivilities(organizationId: string): Promise<Record<string, "M." | "Mme" | null>> {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.from("tenants").select("id, civility").eq("organization_id", organizationId);
+  if (result.error) throw result.error;
+  const out: Record<string, "M." | "Mme" | null> = {};
+  for (const row of (result.data ?? []) as Array<{ id: string; civility: "M." | "Mme" | null }>) out[row.id] = row.civility ?? null;
+  return out;
+}
+
 export async function getTenantDetail(organizationId: string, tenantId: string): Promise<TenantDetail | null> {
   const supabase = await createSupabaseServerClient();
   const [tenantResult, privateResult, leases] = await Promise.all([
