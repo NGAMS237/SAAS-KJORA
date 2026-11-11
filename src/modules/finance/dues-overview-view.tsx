@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { CalendarClock, Search } from "lucide-react";
 import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
-import { buildWhatsAppUrl } from "@/modules/communications/manual-whatsapp";
-import { buildMailtoUrl, firstName, formatXaf, normalizeTenantPhone, renderTemplate, templateByKey } from "@/modules/communications/message-templates";
+import { formatXaf, normalizeTenantPhone } from "@/modules/communications/message-templates";
+import { DuesDrawer, type DrawerState } from "./dues-drawers";
+import { paymentDrawerHref } from "./reminder";
 import type { DueStatus } from "./model";
 import { DUE_FILTERS, attachBalances, countByFilter, daysLate, groupByMonth, matchesFilter, matchesSearch, sortRows, summarize, summarizeByTenant, type DueFilter, type DueOverviewRow, type DueOverviewRowWithBalance, type TenantSituation } from "./overview";
 
@@ -28,55 +30,66 @@ function tone(row: DueOverviewRow) {
   return "upcoming";
 }
 
-function RowMenu({ row, canRecord, canManage, today }: { row: DueOverviewRow; canRecord: boolean; canManage: boolean; today: string }) {
-  const open = row.remainingXaf > 0 && row.status !== "cancelled";
-  const template = templateByKey(row.status === "overdue" ? "retard" : "rappel_avant");
-  const message = renderTemplate(template.body, {
-    prenom: firstName(row.tenantName), nom: row.tenantName, logement: row.unitLabel, du: formatXaf(row.remainingXaf),
-    total: formatXaf(row.totalXaf), jour: String(Number(row.dueDate.slice(8, 10))), signature: "Cordialement.",
-  });
+type OpenDrawer = (state: DrawerState) => void;
+
+// Lien « normal » (clic droit, Ctrl/Cmd+clic, ouverture dans un nouvel onglet : tout fonctionne) qui,
+// sur un simple clic, ouvre le tiroir au lieu de quitter la page.
+function DrawerLink({ href, state, open, children }: { href: string; state: DrawerState; open: OpenDrawer; children: ReactNode }) {
+  function onClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    (event.currentTarget.closest("details") as HTMLDetailsElement | null)?.removeAttribute("open");
+    open(state);
+  }
+  return <a href={href} onClick={onClick}>{children}</a>;
+}
+
+function pageState(title: string, subtitle: string, href: string): DrawerState {
+  return { type: "page", title, subtitle, href };
+}
+
+function ReminderButton({ label, state, open }: { label: string; state: DrawerState; open: OpenDrawer }) {
+  return <button onClick={(event) => { (event.currentTarget.closest("details") as HTMLDetailsElement | null)?.removeAttribute("open"); open(state); }} type="button">{label}</button>;
+}
+
+function RowMenu({ row, canRecord, canManage, today, open, civility, totalDue }: { row: DueOverviewRow; canRecord: boolean; canManage: boolean; today: string; open: OpenDrawer; civility: "M." | "Mme" | null; totalDue: number }) {
+  const canPay = row.remainingXaf > 0 && row.status !== "cancelled";
   const phone = normalizeTenantPhone(row.phone);
-  const whatsapp = open && phone ? buildWhatsAppUrl(phone, message) : null;
-  const mail = open && row.email ? buildMailtoUrl(row.email, template.subject, message) : null;
+  const who = `${row.tenantName} · ${row.unitLabel}`;
   void today;
+  const payHref = paymentDrawerHref(row.leaseId, row.remainingXaf);
   return (
     <details className="row-menu">
       <summary aria-label={`Actions pour ${row.tenantName}`}>⋯</summary>
       <div className="row-menu__panel">
-        {canRecord && open ? <Link href={`/app/paiements/nouveau?lease=${row.leaseId}&amount=${row.remainingXaf}`}>Enregistrer un paiement</Link> : null}
-        {whatsapp ? <a href={whatsapp} rel="noopener noreferrer" target="_blank">{row.status === "overdue" ? "Relancer par WhatsApp" : "Rappeler par WhatsApp"}</a> : null}
-        {mail ? <a href={mail}>Écrire par e-mail</a> : null}
-        <Link href={`/app/locations/${row.leaseId}#documents`}>Avis, reçus et quittances</Link>
-        <Link href={`/app/locataires/${row.tenantId}/etat-de-compte`}>État de compte</Link>
-        <Link href={`/app/locataires/${row.tenantId}`}>Voir le locataire</Link>
-        <Link href={`/app/locations/${row.leaseId}`}>Voir le bail</Link>
-        {canManage ? <Link href={`/app/locations/${row.leaseId}#changer-loyer`}>Modifier le loyer</Link> : null}
-        {open && !phone ? <small>Pas de numéro WhatsApp reconnu pour ce locataire.</small> : null}
+        {canRecord && canPay ? <DrawerLink href={payHref} open={open} state={pageState("Enregistrer un paiement", who, payHref)}>Enregistrer un paiement</DrawerLink> : null}
+        {canPay ? <ReminderButton label={row.status === "overdue" ? "Relancer (WhatsApp, e-mail)" : "Rappeler (WhatsApp, e-mail)"} open={open} state={{ type: "reminder", title: row.status === "overdue" ? "Relancer le locataire" : "Rappeler le locataire", subtitle: who, target: { tenantName: row.tenantName, civility, unitLabel: row.unitLabel, phone: row.phone, email: row.email, status: row.status, dueDate: row.dueDate, totalDueXaf: totalDue, rowRemainingXaf: row.remainingXaf, rowTotalXaf: row.totalXaf } }} /> : null}
+        <DrawerLink href={`/app/locations/${row.leaseId}#documents`} open={open} state={pageState("Avis, reçus et quittances", who, `/app/locations/${row.leaseId}#documents`)}>Avis, reçus et quittances</DrawerLink>
+        <DrawerLink href={`/app/locataires/${row.tenantId}/etat-de-compte`} open={open} state={pageState("État de compte", who, `/app/locataires/${row.tenantId}/etat-de-compte`)}>État de compte</DrawerLink>
+        <DrawerLink href={`/app/locataires/${row.tenantId}`} open={open} state={pageState("Fiche du locataire", who, `/app/locataires/${row.tenantId}`)}>Voir le locataire</DrawerLink>
+        <DrawerLink href={`/app/locations/${row.leaseId}`} open={open} state={pageState("Bail", who, `/app/locations/${row.leaseId}`)}>Voir le bail</DrawerLink>
+        {canManage ? <DrawerLink href={`/app/locations/${row.leaseId}#changer-loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${row.leaseId}#changer-loyer`)}>Modifier le loyer</DrawerLink> : null}
+        {canPay && !phone && !row.email ? <small>Ni numéro WhatsApp ni e-mail connus : le message pourra être copié.</small> : null}
       </div>
     </details>
   );
 }
 
-function TenantMenu({ item, canRecord, canManage }: { item: TenantSituation; canRecord: boolean; canManage: boolean }) {
+function TenantMenu({ item, canRecord, canManage, open, civility }: { item: TenantSituation; canRecord: boolean; canManage: boolean; open: OpenDrawer; civility: "M." | "Mme" | null }) {
   const owes = item.debtXaf > 0;
-  const template = templateByKey("retard");
-  const message = renderTemplate(template.body, { prenom: firstName(item.tenantName), nom: item.tenantName, logement: item.unitLabel, du: formatXaf(item.debtXaf), total: formatXaf(item.monthlyXaf), signature: "Cordialement." });
-  const phone = normalizeTenantPhone(item.phone);
-  const whatsapp = owes && phone ? buildWhatsAppUrl(phone, message) : null;
-  const mail = owes && item.email ? buildMailtoUrl(item.email, template.subject, message) : null;
+  const who = `${item.tenantName} · ${item.unitLabel}`;
+  const payHref = paymentDrawerHref(item.leaseId, item.debtXaf);
   return (
     <details className="row-menu">
       <summary aria-label={`Actions pour ${item.tenantName}`}>⋯</summary>
       <div className="row-menu__panel">
-        {canRecord && owes ? <Link href={`/app/paiements/nouveau?lease=${item.leaseId}&amount=${item.debtXaf}`}>Enregistrer un paiement</Link> : null}
-        {whatsapp ? <a href={whatsapp} rel="noopener noreferrer" target="_blank">Relancer par WhatsApp</a> : null}
-        {mail ? <a href={mail}>Écrire par e-mail</a> : null}
+        {canRecord && owes ? <DrawerLink href={payHref} open={open} state={pageState("Enregistrer un paiement", who, payHref)}>Enregistrer un paiement</DrawerLink> : null}
+        {owes ? <ReminderButton label="Relancer (WhatsApp, e-mail)" open={open} state={{ type: "reminder", title: "Relancer le locataire", subtitle: who, target: { tenantName: item.tenantName, civility, unitLabel: item.unitLabel, phone: item.phone, email: item.email, status: item.overdueCount > 0 ? "overdue" : "due", dueDate: item.nextDue ?? item.oldestOverdue ?? "2000-01-01", totalDueXaf: item.debtXaf, rowRemainingXaf: item.debtXaf, rowTotalXaf: item.monthlyXaf } }} /> : null}
         <Link href={`/app/echeances?tenant=${item.tenantId}`}>Voir ses échéances</Link>
-        <Link href={`/app/locataires/${item.tenantId}/etat-de-compte`}>État de compte</Link>
-        <Link href={`/app/locataires/${item.tenantId}`}>Voir le locataire</Link>
-        <Link href={`/app/locations/${item.leaseId}`}>Voir le bail</Link>
-        {canManage ? <Link href={`/app/locations/${item.leaseId}#changer-loyer`}>Modifier le loyer</Link> : null}
-        {owes && !phone ? <small>Pas de numéro WhatsApp reconnu pour ce locataire.</small> : null}
+        <DrawerLink href={`/app/locataires/${item.tenantId}/etat-de-compte`} open={open} state={pageState("État de compte", who, `/app/locataires/${item.tenantId}/etat-de-compte`)}>État de compte</DrawerLink>
+        <DrawerLink href={`/app/locataires/${item.tenantId}`} open={open} state={pageState("Fiche du locataire", who, `/app/locataires/${item.tenantId}`)}>Voir le locataire</DrawerLink>
+        <DrawerLink href={`/app/locations/${item.leaseId}`} open={open} state={pageState("Bail", who, `/app/locations/${item.leaseId}`)}>Voir le bail</DrawerLink>
+        {canManage ? <DrawerLink href={`/app/locations/${item.leaseId}#changer-loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${item.leaseId}#changer-loyer`)}>Modifier le loyer</DrawerLink> : null}
       </div>
     </details>
   );
@@ -84,7 +97,12 @@ function TenantMenu({ item, canRecord, canManage }: { item: TenantSituation; can
 
 const PAGE_SIZES = [30, 50, 100];
 
-export function DuesOverviewView({ rows: baseRows, amountsDue, canRecord, canManage, scopeLabel, today }: { rows: DueOverviewRow[]; amountsDue: Record<string, number>; canRecord: boolean; canManage: boolean; scopeLabel: string | null; today: string }) {
+export function DuesOverviewView({ rows: baseRows, amountsDue, civilities = {}, canRecord, canManage, scopeLabel, today }: { rows: DueOverviewRow[]; amountsDue: Record<string, number>; civilities?: Record<string, "M." | "Mme" | null>; canRecord: boolean; canManage: boolean; scopeLabel: string | null; today: string }) {
+  const router = useRouter();
+  const [drawer, setDrawer] = useState<DrawerState | null>(null);
+  const [drawerKey, setDrawerKey] = useState(0);
+  const openDrawer = useCallback((state: DrawerState) => { setDrawerKey((key) => key + 1); setDrawer(state); }, []);
+  const closeDrawer = useCallback((changed: boolean) => { setDrawer(null); if (changed) router.refresh(); }, [router]);
   const [filter, setFilter] = useState<DueFilter>("all");
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
@@ -103,7 +121,7 @@ export function DuesOverviewView({ rows: baseRows, amountsDue, canRecord, canMan
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Finances" title="Échéances" description="Toutes les échéances en un seul tableau. Le menu ⋯ de chaque ligne donne les actions : paiement, relance, documents." action={canRecord ? <Link className="button button--primary" href="/app/paiements/nouveau">Enregistrer un paiement</Link> : undefined} />
+      <PageHeader eyebrow="Finances" title="Échéances" description="Toutes les échéances en un seul tableau. Le menu ⋯ de chaque ligne donne les actions : paiement, relance, documents." action={canRecord ? <Link className="button button--primary" href="/app/paiements/nouveau" onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return; event.preventDefault(); openDrawer({ type: "page", title: "Enregistrer un paiement", href: "/app/paiements/nouveau" }); }}>Enregistrer un paiement</Link> : undefined} />
       {scopeLabel ? <Card muted><p>Filtré sur : <strong>{scopeLabel}</strong>. <Link href="/app/echeances">Voir toutes les échéances</Link></p></Card> : null}
       <div className="dues-totals">
         <div><small>Attendu</small><strong>{formatXaf(totals.expectedXaf)}</strong></div>
@@ -144,7 +162,7 @@ export function DuesOverviewView({ rows: baseRows, amountsDue, canRecord, canMan
                       <td className="num" data-label="Doit au total"><strong className={item.debtXaf > 0 ? "due-late" : ""}>{item.debtXaf > 0 ? formatXaf(item.debtXaf) : "À jour"}</strong></td>
                       <td data-label="Retards">{item.overdueCount > 0 ? <>{item.overdueCount} échéance(s)<small>depuis le {shortDate(item.oldestOverdue ?? "")}</small></> : "—"}</td>
                       <td data-label="Prochaine échéance">{item.nextDue ? shortDate(item.nextDue) : "—"}</td>
-                      <td className="dues-row__menu"><TenantMenu canManage={canManage} canRecord={canRecord} item={item} /></td>
+                      <td className="dues-row__menu"><TenantMenu canManage={canManage} canRecord={canRecord} civility={civilities[item.tenantId] ?? null} item={item} open={openDrawer} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -170,7 +188,7 @@ export function DuesOverviewView({ rows: baseRows, amountsDue, canRecord, canMan
                         <td className="num" data-label="Reste"><strong>{formatXaf(row.remainingXaf)}</strong></td>
                         <td className="num" data-label="Solde">{row.balanceXaf === null ? "—" : row.balanceXaf > 0 ? <><strong className="due-late">-{formatXaf(row.balanceXaf)}</strong>{row.carriedXaf > 0 ? <small>Report de solde : {formatXaf(row.carriedXaf)}</small> : null}</> : "À jour"}</td>
                         <td data-label="État"><Badge tone={STATUS[row.status][1]}>{STATUS[row.status][0]}</Badge>{late > 0 ? <small className="due-late">{late} jour(s) de retard</small> : null}</td>
-                        <td className="dues-row__menu"><RowMenu canManage={canManage} canRecord={canRecord} row={row} today={today} /></td>
+                        <td className="dues-row__menu"><RowMenu canManage={canManage} canRecord={canRecord} civility={civilities[row.tenantId] ?? null} open={openDrawer} row={row} today={today} totalDue={amountsDue[row.tenantId] ?? row.remainingXaf} /></td>
                       </tr>
                     );
                   })}
@@ -187,6 +205,7 @@ export function DuesOverviewView({ rows: baseRows, amountsDue, canRecord, canMan
           </div>
         ) : null}
       </Card>
+      <DuesDrawer key={drawerKey} onClose={closeDrawer} state={drawer} />
     </div>
   );
 }

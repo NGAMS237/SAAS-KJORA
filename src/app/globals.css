@@ -5683,3 +5683,44 @@ a.admin-control-card:focus-visible { border-color: var(--brand-gold); }
 .dues-modes { display: flex; gap: 6px; margin-bottom: 12px; }
 .dues-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted, #667085); font-size: 0.85rem; }
 .dues-table .due-late { color: var(--danger); }
+
+/* Tiroir latéral (actions des Échéances) — panneau à droite sur ordinateur, feuille du bas sur mobile */
+.side-drawer { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: flex-end; align-items: stretch; }
+.side-drawer__backdrop { position: absolute; inset: 0; border: 0; padding: 0; background: rgb(10 20 30 / 0.45); cursor: default; animation: drawer-fade .18s ease-out both; }
+.side-drawer__panel { position: relative; display: flex; flex-direction: column; width: min(620px, 100vw); height: 100dvh; background: var(--surface); color: var(--text); box-shadow: -12px 0 40px rgb(0 0 0 / 0.22); outline: none; animation: drawer-in .22s cubic-bezier(.2,.8,.2,1) both; }
+.side-drawer__header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.side-drawer__titles { flex: 1; min-width: 0; }
+.side-drawer__titles h2 { margin: 0; font-size: 1.05rem; }
+.side-drawer__titles p { margin: 2px 0 0; font-size: .85rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-drawer__body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.side-drawer__frame { position: relative; flex: 1; min-height: 0; display: flex; }
+.side-drawer__frame iframe { flex: 1; width: 100%; border: 0; background: var(--surface); }
+.side-drawer__loading { position: absolute; top: 12px; left: 0; right: 0; margin: 0; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: .9rem; color: var(--text-muted); pointer-events: none; }
+.side-drawer__loading .spin { animation: drawer-spin 1s linear infinite; }
+.side-drawer__success { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--success-soft, #e3f4e8); color: var(--success, #1f6b3a); border-bottom: 1px solid var(--border); }
+.side-drawer__success span { flex: 1; font-weight: 600; }
+.drawer-stack { display: grid; gap: 14px; padding: 16px; align-content: start; }
+.drawer-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.drawer-facts > div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.drawer-facts small { color: var(--text-muted); }
+.drawer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.drawer-actions .button { display: inline-flex; align-items: center; gap: 6px; }
+.drawer-stack textarea { width: 100%; resize: vertical; }
+.row-menu__panel button { text-align: left; padding: 9px 12px; border: 0; border-radius: 9px; background: transparent; color: inherit; font: inherit; font-size: .9rem; cursor: pointer; }
+.row-menu__panel button:hover { background: var(--info-soft); }
+@keyframes drawer-in { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes drawer-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawer-spin { to { transform: rotate(360deg); } }
+@media (max-width: 640px) {
+  .side-drawer { align-items: flex-end; }
+  .side-drawer__panel { width: 100vw; height: 92dvh; border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgb(0 0 0 / 0.25); animation-name: drawer-up; }
+  @keyframes drawer-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) { .side-drawer__panel, .side-drawer__backdrop { animation: none; } }
+
+/* Page /app affichée dans le tiroir : on ne garde que le contenu (ni menu, ni en-tête, ni barre du bas) */
+html.is-embedded .desktop-rail, html.is-embedded .mobile-header, html.is-embedded .mobile-bottom-nav,
+html.is-embedded .shell-utility-bar, html.is-embedded .mobile-drawer, html.is-embedded .restricted-org-banner { display: none !important; }
+html.is-embedded .app-shell { padding-left: 0 !important; }
+html.is-embedded .shell-content { min-height: 0 !important; padding: 16px !important; }
+html.is-embedded .page-stack { max-width: none; }
