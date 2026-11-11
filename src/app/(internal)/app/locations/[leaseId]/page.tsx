@@ -14,6 +14,7 @@ import { listScheduledRentTerms } from "@/modules/tenancy/rent-terms";
 import { earliestRentChangeDate } from "@/modules/tenancy/rent-dates";
 import { getLeaseContractDates } from "@/modules/tenancy/contract-dates";
 import { LeaseTermsCard } from "@/modules/tenancy/lease-terms-card";
+import { RentCorrectionCard } from "@/modules/tenancy/rent-correction-card";
 import { RentChangeCard } from "@/modules/tenancy/rent-change-card";
 
 export default async function LeasePage({ params, searchParams }: { params: Promise<{ leaseId: string }>; searchParams: Promise<{ initialReceived?: string }> }) {
@@ -44,6 +45,7 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
   const scheduledRent = lease.status === "active" ? await listScheduledRentTerms(authorization.organizationId, leaseId) : [];
   return <><LeaseDetailView lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />
     <LeaseTermsCard canManage={authorization.capabilities.includes("lease.manage")} contract={contractDates} terms={{ leaseId: lease.id, status: lease.status, startDate: lease.startDate, endDate: lease.endDate ?? null, baseRentXaf: lease.baseRentXaf, recurringChargesXaf: lease.recurringChargesXaf, securityDepositXaf: lease.securityDepositXaf, dueDay: lease.dueDay, billingFrequency: lease.billingFrequency }} />
+    {lease.status === "active" ? <RentCorrectionCard canManage={authorization.capabilities.includes("lease.manage")} currentBaseRentXaf={lease.baseRentXaf} currentChargesXaf={lease.recurringChargesXaf} leaseId={lease.id} /> : null}
     {lease.status === "active" ? <RentChangeCard canManage={authorization.capabilities.includes("lease.manage")} currentBaseRentXaf={lease.baseRentXaf} currentChargesXaf={lease.recurringChargesXaf} earliestDate={earliestRentChangeDate(financial?.dues ?? [])} leaseId={lease.id} scheduled={scheduledRent} /> : null}
     {coTenants.available ? <LeaseCoTenantsCard canManage={authorization.capabilities.includes("lease.manage")} candidates={options.tenants} holderTenantId={lease.tenantId} items={coTenants.items} leaseId={lease.id} /> : null}
     {hasContractRbac ? <ContractEntryLink currentPlan={contractEntitlementError?.plan ?? "decouverte"} entitled={!contractEntitlementError} leaseId={lease.id} /> : null}</>;

@@ -42,3 +42,13 @@ test("adresse de paiement et détection du paiement enregistré", () => {
   assert.equal(isPaymentRecordedPath("/app/paiements/nouveau"), false);
   assert.equal(isPaymentRecordedPath("/app/paiements/"), false);
 });
+
+test("le mode tiroir repose sur un attribut data-embedded (une classe sur <html> est effacée par React)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const marker = readFileSync(new URL("../src/core/shell/embedded-marker.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
+  assert.match(marker, /setAttribute\('data-embedded','1'\)/);
+  assert.doesNotMatch(marker, /classList/);
+  assert.match(css, /html\[data-embedded\] \.mobile-bottom-nav/);
+  assert.doesNotMatch(css, /html\.is-embedded/);
+});

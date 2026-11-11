@@ -5719,8 +5719,8 @@ a.admin-control-card:focus-visible { border-color: var(--brand-gold); }
 @media (prefers-reduced-motion: reduce) { .side-drawer__panel, .side-drawer__backdrop { animation: none; } }
 
 /* Page /app affichée dans le tiroir : on ne garde que le contenu (ni menu, ni en-tête, ni barre du bas) */
-html.is-embedded .desktop-rail, html.is-embedded .mobile-header, html.is-embedded .mobile-bottom-nav,
-html.is-embedded .shell-utility-bar, html.is-embedded .mobile-drawer, html.is-embedded .restricted-org-banner { display: none !important; }
-html.is-embedded .app-shell { padding-left: 0 !important; }
-html.is-embedded .shell-content { min-height: 0 !important; padding: 16px !important; }
-html.is-embedded .page-stack { max-width: none; }
+html[data-embedded] .desktop-rail, html[data-embedded] .mobile-header, html[data-embedded] .mobile-bottom-nav,
+html[data-embedded] .shell-utility-bar, html[data-embedded] .mobile-drawer, html[data-embedded] .restricted-org-banner { display: none !important; }
+html[data-embedded] .app-shell { padding-left: 0 !important; }
+html[data-embedded] .shell-content { min-height: 0 !important; padding: 16px !important; }
+html[data-embedded] .page-stack { max-width: none; }

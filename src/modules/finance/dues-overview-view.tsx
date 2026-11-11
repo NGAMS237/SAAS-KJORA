@@ -68,7 +68,7 @@ function RowMenu({ row, canRecord, canManage, today, open, civility, totalDue }:
         <DrawerLink href={`/app/locataires/${row.tenantId}/etat-de-compte`} open={open} state={pageState("État de compte", who, `/app/locataires/${row.tenantId}/etat-de-compte`)}>État de compte</DrawerLink>
         <DrawerLink href={`/app/locataires/${row.tenantId}`} open={open} state={pageState("Fiche du locataire", who, `/app/locataires/${row.tenantId}`)}>Voir le locataire</DrawerLink>
         <DrawerLink href={`/app/locations/${row.leaseId}`} open={open} state={pageState("Bail", who, `/app/locations/${row.leaseId}`)}>Voir le bail</DrawerLink>
-        {canManage ? <DrawerLink href={`/app/locations/${row.leaseId}#changer-loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${row.leaseId}#changer-loyer`)}>Modifier le loyer</DrawerLink> : null}
+        {canManage ? <DrawerLink href={`/app/locations/${row.leaseId}/loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${row.leaseId}/loyer`)}>Modifier le loyer</DrawerLink> : null}
         {canPay && !phone && !row.email ? <small>Ni numéro WhatsApp ni e-mail connus : le message pourra être copié.</small> : null}
       </div>
     </details>
@@ -89,7 +89,7 @@ function TenantMenu({ item, canRecord, canManage, open, civility }: { item: Tena
         <DrawerLink href={`/app/locataires/${item.tenantId}/etat-de-compte`} open={open} state={pageState("État de compte", who, `/app/locataires/${item.tenantId}/etat-de-compte`)}>État de compte</DrawerLink>
         <DrawerLink href={`/app/locataires/${item.tenantId}`} open={open} state={pageState("Fiche du locataire", who, `/app/locataires/${item.tenantId}`)}>Voir le locataire</DrawerLink>
         <DrawerLink href={`/app/locations/${item.leaseId}`} open={open} state={pageState("Bail", who, `/app/locations/${item.leaseId}`)}>Voir le bail</DrawerLink>
-        {canManage ? <DrawerLink href={`/app/locations/${item.leaseId}#changer-loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${item.leaseId}#changer-loyer`)}>Modifier le loyer</DrawerLink> : null}
+        {canManage ? <DrawerLink href={`/app/locations/${item.leaseId}/loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${item.leaseId}/loyer`)}>Modifier le loyer</DrawerLink> : null}
       </div>
     </details>
   );
