@@ -8,7 +8,7 @@ import {
 } from "@/core/legal/legal-facts";
 
 export const metadata = {
-  title: "Sécurité — Kjora",
+  title: "Sécurité",
   description: "Les mesures de sécurité réellement en place dans Kjora.",
 };
 

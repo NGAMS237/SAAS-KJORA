@@ -20,7 +20,7 @@ export default async function PortalLoginPage({ searchParams }: { searchParams: 
       <p className="eyebrow">{t("Espace locataire sécurisé", "Secure tenant space")}</p>
       <h1>{t("Aucun accès locataire pour ce compte.", "No tenant access for this account.")}</h1>
       <p className="form-feedback form-feedback--error" role="alert">{t("Vous êtes connecté, mais cet accès portail n’est pas actif ou n’est plus autorisé. Reconnectez-vous avec l’adresse e-mail invitée par votre bailleur.", "You are signed in, but this portal access is not active or is no longer authorized. Sign in again with the email address your landlord invited.")}</p>
-      <form action="/auth/signout?scope=portal" method="post"><button className="button button--primary" type="submit">{t("Changer de compte", "Switch account")}</button></form>
+      <div className="demo-form-actions"><form action="/auth/signout?scope=portal" method="post"><button className="button button--primary" type="submit">{t("Changer de compte", "Switch account")}</button></form><Link className="button button--secondary" href="/app">{t("Aller à mon espace propriétaire", "Go to my owner space")}</Link></div>
     </section></main>;
   }
   if (signedIn) redirect(nextPath);

@@ -3,7 +3,7 @@ import { PublicFooter } from "@/core/ui/public-footer";
 import { FORMULATION_CANONIQUE } from "@/core/legal/legal-facts";
 
 export const metadata = {
-  title: "Contact — Kjora",
+  title: "Contact",
   description: "Joindre l’équipe Kjora.",
 };
 

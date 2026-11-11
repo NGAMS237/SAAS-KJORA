@@ -11,7 +11,7 @@ import {
 } from "@/core/legal/legal-facts";
 
 export const metadata = {
-  title: "Confidentialité — Kjora",
+  title: "Confidentialité",
   description: "Quelles données Kjora traite, pourquoi, où elles sont stockées et combien de temps.",
 };
 
