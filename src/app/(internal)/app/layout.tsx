@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { InternalShell } from "@/core/shell/internal-shell";
+import { EmbeddedMarker } from "@/core/shell/embedded-marker";
 import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { PinLockProvider } from "@/core/security/pin-lock-provider";
 import { AuthCompletedTracker } from "@/core/analytics/auth-completed-tracker";
@@ -51,6 +52,7 @@ export default async function InternalLayout({ children }: { children: ReactNode
     <PinLockProvider userId={context.user.id}>
       {/* ALIGN-02 §16 — auth_completed est émis une fois par session de navigateur */}
       <AuthCompletedTracker />
+      <EmbeddedMarker />
       <InternalShell
         activeOrganization={context.activeOrganization}
         organizations={context.organizations}
