@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { degrees, PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { FinancialDocumentRecord, FinancialDocumentType } from "@/modules/documents/model";
 
 const INK = rgb(19 / 255, 37 / 255, 58 / 255);
@@ -74,7 +74,12 @@ export type DocumentBranding = {
   displayName: string | null; representative: string | null; phone: string | null; email: string | null;
   address: string | null; paymentInstructions: string | null; noticeFooter: string | null; receiptFooter: string | null;
   logoDataUrl: string | null; signatureDataUrl: string | null;
+  // Fiche bailleur unique : civilité et cachet (généré, image importée ou aucun) et où l'apposer.
+  civility?: "M." | "Mme" | null; stampMode?: StampMode; stampDataUrl?: string | null;
+  stampOnContracts?: boolean; stampOnReceipts?: boolean; stampOnNotices?: boolean;
 };
+
+export type StampMode = "generated" | "image" | "none";
 
 // Contexte de rendu : informations du bailleur, civilité du locataire et arriéré à la date d'édition.
 // Tout est facultatif : sans contexte, le document reste complet (nom de l'Organization du snapshot).
@@ -84,7 +89,8 @@ export type DocumentRenderContext = {
   arrearsXaf?: number;
 };
 
-type Images = { logo: Awaited<ReturnType<PDFDocument["embedPng"]>> | null; signature: Awaited<ReturnType<PDFDocument["embedPng"]>> | null };
+type EmbeddedImage = Awaited<ReturnType<PDFDocument["embedPng"]>>;
+type Images = { logo: EmbeddedImage | null; signature: EmbeddedImage | null; stamp?: EmbeddedImage | null };
 
 const MONTHS_FR = ["JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"];
 const MONTHS_EN = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
@@ -122,7 +128,7 @@ function centerText(page: PDFPage, value: string, y: number, size: number, font:
   page.drawText(safe, { x: (PAGE.width - font.widthOfTextAtSize(safe, size)) / 2, y, size, font, color });
 }
 
-async function embedImage(pdf: PDFDocument, dataUrl: string | null | undefined) {
+export async function embedImage(pdf: PDFDocument, dataUrl: string | null | undefined) {
   if (!dataUrl) return null;
   const match = /^data:image\/(png|jpeg);base64,(.+)$/.exec(dataUrl);
   if (!match) return null;
@@ -141,7 +147,7 @@ function tenantDisplayName(document: FinancialDocumentRecord, context: DocumentR
   return context.tenantCivility ? `${context.tenantCivility} ${name}` : name;
 }
 
-function drawHeader(page: PDFPage, bold: PDFFont, regular: PDFFont, document: FinancialDocumentRecord, context: DocumentRenderContext = {}, images: Images = { logo: null, signature: null }) {
+function drawHeader(page: PDFPage, bold: PDFFont, regular: PDFFont, document: FinancialDocumentRecord, context: DocumentRenderContext = {}, images: Images = { logo: null, signature: null, stamp: null }) {
   const s = document.snapshot;
   const fr = document.language === "fr";
   const top = PAGE.height - PAGE.margin;
@@ -222,7 +228,7 @@ function columnTitle(page: PDFPage, bold: PDFFont, x: number, width: number, y: 
   page.drawLine({ start: { x, y: y - 7 }, end: { x: x + width, y: y - 7 }, thickness: .45, color: LINE });
 }
 
-function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, document: FinancialDocumentRecord, context: DocumentRenderContext = {}, images: Images = { logo: null, signature: null }) {
+function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, document: FinancialDocumentRecord, context: DocumentRenderContext = {}, images: Images = { logo: null, signature: null, stamp: null }) {
   const s = document.snapshot;
   const fr = document.language === "fr";
   const currency = typeof s.currency === "string" ? s.currency : "XAF";
@@ -349,8 +355,45 @@ function drawStandardBody(page: PDFPage, regular: PDFFont, bold: PDFFont, docume
     page.drawImage(images.signature, { x: signX + (170 - images.signature.width * scale) / 2, y: signY + 6, width: images.signature.width * scale, height: images.signature.height * scale });
   }
   page.drawLine({ start: { x: signX, y: signY }, end: { x: signX + 170, y: signY }, thickness: .5, color: LINE });
+  if (stampWanted(document.type, b)) drawDocumentStamp(page, regular, bold, signX - 120, signY + 14, b, images.stamp ?? null, landlordName(document, context));
   const signLabel = `${landlordName(document, context)}${fr ? " - le bailleur" : " - landlord"}`;
   page.drawText(text(signLabel).slice(0, 48), { x: signX + (170 - bold.widthOfTextAtSize(text(signLabel).slice(0, 48), 8.5)) / 2, y: signY - 13, size: 8.5, font: bold, color: INK });
+}
+
+// Le cachet n'apparaît sur les avis / quittances que si le bailleur l'a demandé dans sa fiche.
+function stampWanted(type: FinancialDocumentType, branding: DocumentBranding | null | undefined) {
+  if (!branding || (branding.stampMode ?? "generated") === "none") return false;
+  if (type === "due_notice") return branding.stampOnNotices === true;
+  if (type === "rent_receipt" || type === "payment_receipt") return branding.stampOnReceipts === true;
+  return false;
+}
+
+const STAMP_RED = rgb(163 / 255, 35 / 255, 28 / 255);
+
+// Cachet : image importée (tampon scanné) ou cachet ovale rouge généré à partir de la fiche bailleur.
+export function drawStampMark(page: PDFPage, regular: PDFFont, bold: PDFFont, centerX: number, centerY: number, input: {
+  mode: StampMode; image: EmbeddedImage | null; company: string; contact: string;
+}) {
+  if (input.mode === "image" && input.image) {
+    const scale = Math.min(150 / input.image.width, 80 / input.image.height, 1);
+    const width = input.image.width * scale; const height = input.image.height * scale;
+    page.drawImage(input.image, { x: centerX - width / 2, y: centerY - height / 2, width, height, opacity: .92 });
+    return;
+  }
+  page.drawEllipse({ x: centerX, y: centerY, xScale: 74, yScale: 32, rotate: degrees(-7), borderColor: STAMP_RED, borderWidth: 1.5 });
+  page.drawEllipse({ x: centerX, y: centerY, xScale: 67, yScale: 25, rotate: degrees(-7), borderColor: STAMP_RED, borderWidth: .5 });
+  const company = text(input.company).toUpperCase().slice(0, 28);
+  const contact = text(input.contact).slice(0, 34);
+  page.drawText(company, { x: centerX - bold.widthOfTextAtSize(company, 8) / 2, y: centerY + 4, size: 8, font: bold, color: STAMP_RED });
+  if (contact) page.drawText(contact, { x: centerX - regular.widthOfTextAtSize(contact, 6.5) / 2, y: centerY - 9, size: 6.5, font: regular, color: STAMP_RED });
+}
+
+function drawDocumentStamp(page: PDFPage, regular: PDFFont, bold: PDFFont, centerX: number, centerY: number, branding: DocumentBranding | null | undefined, image: EmbeddedImage | null, fallbackName: string) {
+  drawStampMark(page, regular, bold, centerX, centerY, {
+    mode: branding?.stampMode ?? "generated", image,
+    company: branding?.displayName || fallbackName,
+    contact: branding?.phone || branding?.address || "",
+  });
 }
 
 function drawStatement(pdf: PDFDocument, regular: PDFFont, bold: PDFFont, document: FinancialDocumentRecord, context: DocumentRenderContext, images: Images) {
@@ -396,7 +439,11 @@ export async function generateFinancialDocumentPdf(document: FinancialDocumentRe
   pdf.setModificationDate(new Date(`${document.issuedOn}T12:00:00Z`));
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const images: Images = { logo: await embedImage(pdf, context.branding?.logoDataUrl), signature: await embedImage(pdf, context.branding?.signatureDataUrl) };
+  const images: Images = {
+    logo: await embedImage(pdf, context.branding?.logoDataUrl),
+    signature: await embedImage(pdf, context.branding?.signatureDataUrl),
+    stamp: context.branding?.stampMode === "image" ? await embedImage(pdf, context.branding?.stampDataUrl) : null,
+  };
   if (document.type === "account_statement") drawStatement(pdf, regular, bold, document, context, images);
   else {
     const page = pdf.addPage([PAGE.width, PAGE.height]);

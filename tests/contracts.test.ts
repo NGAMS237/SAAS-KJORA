@@ -93,12 +93,21 @@ test("un succès affiche un message de confirmation explicite, une erreur reste 
 
 // 4. Civilité/prénom/nom facultatifs pour l'identité individuelle du cachet
 // (bailleur) — additifs, ne remplacent jamais le champ "Nom" déjà affiché.
-test("les réglages du cachet exposent civilité/prénom/nom facultatifs, sans jamais écraser le Nom déjà renseigné",()=>{
-  assert.match(settingsView,/Civilité \(facultatif\)/);
-  assert.match(settingsView,/Prénom\(s\) \(facultatif\)/);
-  assert.match(settingsView,/Nom\(s\) \(facultatif\)/);
-  assert.match(settingsView,/current\.name\.trim\(\)\?current\.name:/);
+// Fiche bailleur unique : le cachet des contrats est alimenté par « Mes informations bailleur » (plus de double saisie).
+const bailleurMigration=readFileSync(new URL("../supabase/migrations/20261113090000_bailleur_unique_cachet.sql",import.meta.url),"utf8");
+const brandingForm=readFileSync(new URL("../src/modules/documents/branding-form.tsx",import.meta.url),"utf8");
+test("les réglages contrats renvoient vers la fiche bailleur unique",()=>{
+  assert.match(settingsView,/\/app\/parametres\/documents/);
+  assert.match(settingsView,/plus de double saisie/i);
 });
-test("le champ Nom du cachet reste le seul réellement affiché, avec une aide qui l'explique",()=>{
-  assert.match(settingsView,/Champ réellement affiché sur le cachet/);
+test("la fiche bailleur alimente le cachet des contrats sans écraser les valeurs existantes par du vide",()=>{
+  assert.match(bailleurMigration,/insert into public\.organization_contract_settings/i);
+  assert.match(bailleurMigration,/stamp_name = coalesce\(excluded\.stamp_name, c\.stamp_name\)/i);
+  assert.match(bailleurMigration,/stamp_mode in \('generated', 'image', 'none'\)/i);
+});
+test("la fiche bailleur propose civilité, signature dessinée, cachet généré ou importé et son emplacement",()=>{
+  assert.match(brandingForm,/Civilité du représentant/);
+  assert.match(brandingForm,/Dessiner ma signature/);
+  assert.match(brandingForm,/Mon tampon \(image\)/);
+  assert.match(brandingForm,/stampOnContracts[\s\S]*stampOnReceipts[\s\S]*stampOnNotices/);
 });

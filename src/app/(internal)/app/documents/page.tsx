@@ -8,6 +8,7 @@ import { FinancialDocumentsPanel, MonthEndPreviewPanel } from "@/modules/documen
 import { listLeases } from "@/modules/tenancy/server";
 import { getLeaseContracts } from "@/modules/contracts/server";
 import { PageHeader, Card, EmptyState } from "@/core/ui/ui";
+import { RecordTabs, type RecordTab } from "@/core/ui/record-tabs";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // =============================================================================
@@ -95,28 +96,25 @@ export default async function DocumentsPage({ searchParams }: {
         description="Tous les documents déjà émis pour votre organisation, réunis au même endroit. Ils restent également accessibles depuis leur contexte d’origine."
       />
 
-      {canViewFinancialDocuments ? (
-        <><MonthEndPreviewPanel
-          emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"}
-          invalidMonth={monthSelection.invalid}
-          preview={monthEnd}
-          selectedMonth={monthSelection.selectedMonth}
-        /><FinancialDocumentsPanel
+      <RecordTabs initial={query.month ? "fin-de-mois" : undefined} label="Sections des documents" tabs={[
+        { id: "financiers", label: "Documents financiers", count: documents.length || undefined, content: canViewFinancialDocuments ? <FinancialDocumentsPanel
           canShare={authorization.capabilities.includes("receipt.share")}
           documents={documents}
           emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"}
-        /></>
-      ) : (
-        <Card>
+          filterable
+        /> : <Card>
           <EmptyState
             title="Documents financiers non accessibles"
             description="Votre rôle ne donne pas accès aux reçus, quittances et avis de cette organisation."
           />
-        </Card>
-      )}
-
-      {canViewContracts ? (
-        <Card>
+        </Card> },
+        ...(canViewFinancialDocuments ? [{ id: "fin-de-mois", label: "Fin de mois", content: <MonthEndPreviewPanel
+          emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"}
+          invalidMonth={monthSelection.invalid}
+          preview={monthEnd}
+          selectedMonth={monthSelection.selectedMonth}
+        /> }] : []),
+        ...(canViewContracts ? [{ id: "contrats", label: "Contrats", count: contracts.length || undefined, content: (<Card>
           <div className="section-heading">
             <div>
               <p className="eyebrow">Contrats</p>
@@ -154,8 +152,8 @@ export default async function DocumentsPage({ searchParams }: {
               description="Les contrats générés depuis une location apparaîtront ici, avec leur état de signature."
             />
           )}
-        </Card>
-      ) : null}
+        </Card>) }] : []),
+      ] satisfies RecordTab[]} />
     </div>
   );
 }

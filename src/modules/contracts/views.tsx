@@ -118,6 +118,7 @@ export function InternalContractView({ leaseId, templates, contracts, selected, 
         <p>Modèle figé v{selected.templateVersion} · {selected.language.toUpperCase()}</p>
         <div className="contract-preview">{sections.map((section)=><section key={section.key}><h3>{section.title}</h3><p>{section.body}</p></section>)}</div>
         {selected.contentSha256 ? <small className="contract-hash">Empreinte SHA-256 : {selected.contentSha256}</small> : null}
+        {selected.status !== "cancelled" ? <div className="demo-form-actions"><a className="button button--secondary" href={`/api/contracts/${selected.id}/preview`} rel="noopener" target="_blank">Aperçu PDF (logo, signature, cachet)</a><Link className="button button--secondary" href="/app/parametres/documents">Mes informations bailleur</Link></div> : null}
       </Card>
       {notice ? <p className="form-feedback" role="status">{notice}</p> : null}
       {selected.status === "draft" ? <button className="button button--primary" disabled={busy} onClick={()=>run("validate")}>{pendingAction==="validate" ? ACTION_LABELS.validate.pending : ACTION_LABELS.validate.idle}</button> : null}
