@@ -9,3 +9,7 @@ export function nextPeriodPreview(input: { nextPeriodStart: string; dueDay: numb
   const notice = new Date(due.getTime() - input.generateDueDaysBefore * 86_400_000);
   return { periodStart: iso(start), periodEnd: iso(end), dueDate: iso(due), noticeDate: iso(notice), totalXaf: input.totalXaf };
 }
+
+export function isoDaysFromNow(days: number, now: Date = new Date()) {
+  return iso(new Date(now.getTime() + days * 86_400_000));
+}
