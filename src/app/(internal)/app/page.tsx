@@ -4,6 +4,7 @@ import { PinSetupPrompt } from "@/core/security/pin-controls";
 import { dashboardPeriod } from "@/modules/operations/model";
 import { getOperationalDashboard, getOrganizationActivity } from "@/modules/operations/server";
 import { DashboardOperationalView } from "@/modules/operations/views";
+import { DashboardFocus } from "@/modules/operations/dashboard-focus";
 
 export default async function DashboardPage({
   searchParams,
@@ -21,7 +22,9 @@ export default async function DashboardPage({
       ? getOrganizationActivity(organization.id, { createdAt: null, id: null }, 5)
       : Promise.resolve([]),
   ]);
+  const canSeeFinance = organization.capabilities.includes("due.view") && organization.capabilities.includes("tenant.view");
   return <>
+    {canSeeFinance ? <DashboardFocus organizationId={organization.id} /> : null}
     <DashboardOperationalView
       activity={activity}
       dashboard={dashboard}

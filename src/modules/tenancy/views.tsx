@@ -14,6 +14,7 @@ import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
 import type { LeaseFinancialDetail, TenantFinancialDetail, TenantFinancialPosition } from "@/modules/finance/model";
 import { LeaseDuesPanel, RecentLedgerCard, TenantFinancialSummary } from "@/modules/finance/views";
 import { normalizeTenantPhone } from "@/modules/communications/message-templates";
+import { RecordTabs, type RecordTab } from "@/core/ui/record-tabs";
 import { PaymentHistoryPanel } from "@/modules/payments/views";
 import type { PaymentSummary } from "@/modules/payments/model";
 import type { FinancialDocumentSummary } from "@/modules/documents/model";
@@ -188,12 +189,26 @@ function tenantPayload(form: FormData) {
 export function TenantsView({ tenants, canManage, amountsDue = {} }: { tenants: TenantSummary[]; canManage: boolean; amountsDue?: Record<string, number> }) {
   const t = useCopy();
   const [query, setQuery] = useState("");
-  const filtered = useMemo(() => filterTenants(tenants, query), [tenants, query]);
+  const [segment, setSegment] = useState<"all" | "late" | "current" | "no_email">("all");
+  const lateCount = tenants.filter((tenant) => (amountsDue[tenant.id] ?? 0) > 0).length;
+  const filtered = useMemo(() => filterTenants(tenants, query).filter((tenant) =>
+    segment === "late" ? (amountsDue[tenant.id] ?? 0) > 0
+      : segment === "current" ? (amountsDue[tenant.id] ?? 0) <= 0
+        : segment === "no_email" ? !tenant.email : true), [tenants, query, segment, amountsDue]);
   const missingEmailCount = useMemo(() => tenants.filter((tenant) => !tenant.email).length, [tenants]);
+  const segments: Array<[typeof segment, string, number]> = [
+    ["all", t("Tous", "All"), tenants.length],
+    ["late", t("En retard", "Late"), lateCount],
+    ["current", t("À jour", "Up to date"), tenants.length - lateCount],
+    ["no_email", t("Sans e-mail", "No email"), missingEmailCount],
+  ];
   return <div className="page-stack resource-index-v2 tenancy-index-v2">
     <PageHeader eyebrow={t("Relations locatives", "Tenancy")} title={t("Locataires", "Tenants")} description={t("Dossiers réels liés à l’organisation active, sans accès portail automatique.", "Live records linked to the active Organization, without automatic portal access.")} action={canManage ? <Link className="button button--primary" href="/app/locataires/nouveau"><UserRoundPlus size={17} />{t("Ajouter", "Add")}</Link> : undefined} />
     <LiveDataNotice />
     {missingEmailCount > 0 ? <p className="live-data-notice" role="status">{t(`${missingEmailCount} locataire(s) n’ont pas d’adresse e-mail : ils ne recevront ni avis d’échéance, ni rappel, ni reçu par courriel.`, `${missingEmailCount} tenant(s) have no email address: they will not receive due notices, reminders or receipts by email.`)}</p> : null}
+    <div className="list-kpis">
+      {segments.map(([key, label, count]) => <button aria-pressed={segment === key} className={`list-kpi${segment === key ? " list-kpi--active" : ""}${key === "late" && count > 0 ? " list-kpi--danger" : ""}`} key={key} onClick={() => setSegment(key)} type="button"><small>{label}</small><strong>{count}</strong></button>)}
+    </div>
     <label className="demo-search"><Search size={18} /><span className="sr-only">{t("Rechercher", "Search")}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Nom, téléphone ou email", "Name, phone or email")} /></label>
     {filtered.length ? <div className="demo-card-grid">{filtered.map((tenant) => <Link className="demo-resource-card" href={`/app/locataires/${tenant.id}`} key={tenant.id}><span className="demo-resource-card__icon"><UserRound size={22} /></span><div><h2>{tenant.fullName}</h2><p>{tenant.phone ?? tenant.email}</p><div className="demo-meta">{(amountsDue[tenant.id] ?? 0) > 0 ? <Badge tone="danger">{t(`Doit ${money(amountsDue[tenant.id])}`, `Owes ${money(amountsDue[tenant.id])}`)}</Badge> : tenant.currentLease && tenant.id in amountsDue ? <Badge tone="success">{t("À jour", "Up to date")}</Badge> : null}{!tenant.email ? <span className="demo-meta__warning">{t("E-mail manquant", "Email missing")}</span> : null}<span>{tenant.currentLease ? `${tenant.currentLease.propertyName} · ${tenant.currentLease.unitLabel}` : t("Aucun bail actif", "No active lease")}</span></div></div><ChevronRight size={20} /></Link>)}</div> : <Card><EmptyState icon={UserRound} title={query ? t("Aucun résultat", "No results") : t("Aucun locataire", "No tenants")} description={query ? t("Modifiez la recherche.", "Change your search.") : t("Ajoutez le premier dossier locataire.", "Add the first tenant record.")} action={canManage && !query ? <Link className="button button--primary" href="/app/locataires/nouveau">{t("Ajouter un locataire", "Add tenant")}</Link> : undefined} /></Card>}
   </div>;
@@ -269,21 +284,17 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
       {message ? <p className="form-feedback" role="status">{message}</p> : null}
       {editing ? <Card><form className="form-stack" onSubmit={submit}><TenantFields autoFocusEmail={focusEmail} tenant={tenant} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
 
-      <nav className="record-tabs" aria-label={t("Sections du dossier locataire", "Tenant record sections")}>
-        <a aria-current="page" href="#profil">{t("Profil", "Profile")}</a>
-        {financial ? <a href="#releve">{t("Relevé", "Statement")}</a> : null}
-        <a href="#location-actuelle">{t("Location actuelle", "Current lease")}</a>
-        <a href="#historique">{t("Historique", "History")}</a>
-        {payments ? <a href="#paiements">{t("Paiements", "Payments")}</a> : null}
-        {documents ? <a href="#documents">{t("Documents", "Documents")}</a> : null}
-        {canManagePortal ? <a href="#portail">{t("Portail", "Portal")}</a> : null}
-        <a href="#notes">{t("Notes", "Notes")}</a>
-      </nav>
-
       {financial ? <TenantFinancialSummary tenantId={tenant.id} financial={financial} /> : null}
-      {financial ? <RecentLedgerCard financial={financial} tenantId={tenant.id} /> : null}
-      {financial ? <LeaseDuesPanel financial={financial} tenantScope /> : null}
-
+      <RecordTabs label={t("Sections du dossier locataire", "Tenant record sections")} tabs={[
+        ...(financial ? [{ id: "releve", label: t("Relevé", "Statement"), content: <RecentLedgerCard financial={financial} limit={60} tenantId={tenant.id} /> },
+          { id: "echeances", label: t("Échéances", "Dues"), count: financial.dues.filter((due) => due.status === "overdue" || due.status === "partially_paid").length || undefined, content: <LeaseDuesPanel financial={financial} tenantScope /> }] : []),
+        ...(payments ? [{ id: "paiements", label: t("Paiements", "Payments"), count: payments.length || undefined, content: <>
+      {payments ? <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={current?.id} /> : null}
+        </> }] : []),
+        ...(documents ? [{ id: "documents", label: t("Documents", "Documents"), count: documents.length || undefined, content: <>
+      {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
+        </> }] : []),
+        { id: "profil", label: t("Profil et location", "Profile and lease"), content: <>
       <div className="tenant-record-grid">
         <Card id="profil" className="tenant-record-card">
           <div className="section-heading"><div><p className="eyebrow">{t("Profil", "Profile")}</p><h2>{t("Coordonnées et identité", "Contact and identity")}</h2></div><UserRound size={21} /></div>
@@ -304,24 +315,25 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
         </Card>
       </div>
       {canManage ? <Card><div className="section-heading"><div><p className="eyebrow">WhatsApp</p><h2>{t("Préférences du locataire","Tenant preferences")}</h2></div></div><TenantWhatsAppPreferencesForm tenantId={tenant.id}/></Card> : null}
-
       <Card id="historique" className="tenant-history-card">
         <div className="section-heading"><div><p className="eyebrow">{t("Historique", "History")}</p><h2>{t("Locations", "Leases")}</h2></div><History size={21} /></div>
         {tenant.leases.length ? <div className="demo-list">{tenant.leases.map((lease) => <Link className="demo-list-row" href={`/app/locations/${lease.id}`} key={lease.id}><span className="demo-list-row__icon"><Home size={19} /></span><div><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.startDate}{lease.endDate ? ` → ${lease.endDate}` : ""}</span></div>{statusBadge(lease.status, t)}<ChevronRight size={18} /></Link>)}</div> : <EmptyState title={t("Aucune location", "No leases")} description={t("Le dossier est prêt à être relié à une Unit.", "The record is ready to be linked to a Unit.")} />}
       </Card>
-
-      {payments ? <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={current?.id} /> : null}
-      {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
+        </> },
+        ...(canManagePortal ? [{ id: "portail", label: t("Portail", "Portal"), content: <>
       {canManagePortal ? <TenantPortalAccessManagement
         email={tenant.email}
         leases={tenant.leases.map((lease) => ({ id: lease.id, label: `${lease.propertyName} · ${lease.unitLabel}`, status: lease.status }))}
         status={portalAccess}
         tenantId={tenant.id}
       /> : null}
-
+        </> }] : []),
+        { id: "notes", label: t("Notes", "Notes"), content: <>
       <div className="future-module-grid">
         <Card id="notes" className="future-module-card tenant-notes-card"><span className="future-module-card__icon"><StickyNote size={20} /></span><div><strong>{t("Notes internes", "Internal notes")}</strong><span>{tenant.internalNotes ?? t("Aucune note interne enregistrée.", "No internal note recorded.")}</span></div><Badge tone="neutral">{t("Interne", "Internal")}</Badge></Card>
       </div>
+        </> },
+      ]} />
     </div>
   );
 }
@@ -428,7 +440,7 @@ function LeasePaymentTermsCard({ lease, canManage }: { lease: LeaseSummary; canM
   </Card>;
 }
 
-export function LeaseDetailView({ lease, options, canManage, financial, tenantFinancial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled, initialReceivedXaf = 0 }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null; tenantFinancial: TenantFinancialPosition | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean; initialReceivedXaf?: number }) {
+export function LeaseDetailView({ lease, options, canManage, financial, tenantFinancial, payments, canRecordPayment, documents, canShareDocuments, emailDeliveryEnabled, initialReceivedXaf = 0, extraTabs = [] }: { lease: LeaseSummary; options: LeaseOptions; canManage: boolean; financial: LeaseFinancialDetail | null; tenantFinancial: TenantFinancialPosition | null; payments: PaymentSummary[] | null; canRecordPayment: boolean; documents: FinancialDocumentSummary[] | null; canShareDocuments: boolean; emailDeliveryEnabled: boolean; initialReceivedXaf?: number; extraTabs?: RecordTab[] }) {
   const t = useCopy();
   const { language } = usePreferences();
   const router = useRouter();
@@ -505,23 +517,17 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
       <LiveDataNotice />
       {message ? <p className="form-feedback form-feedback--error" role="alert">{message}</p> : null}
       {editing ? <Card><form className="form-stack" onSubmit={update}><LeaseFields value={draft} options={options} onChange={setDraft} /><div className="demo-form-actions"><button className="button button--primary" disabled={busy} type="submit">{t("Enregistrer", "Save")}</button><button className="button button--secondary" onClick={() => setEditing(false)} type="button">{t("Annuler", "Cancel")}</button></div></form></Card> : null}
+
+
+      {tenantFinancial ? <TenantFinancialSummary tenantId={lease.tenantId} financial={tenantFinancial} /> : null}
+      <RecordTabs label={t("Sections de la location", "Lease sections")} tabs={[
+        { id: "informations", label: t("Informations", "Information"), content: <>
       {/* CONTRATS-UX-PILOTE-01 — payment_terms n'est PAS verrouillé par
           active_lease_terms_immutable : contrairement au reste des
           conditions du bail, il reste éditable même une fois la location
           active. Affiché uniquement dans ce cas pour éviter un doublon avec
           le champ déjà présent dans LeaseFields (brouillon, ci-dessus). */}
       {lease.status === "active" ? <LeasePaymentTermsCard lease={lease} canManage={canManage} /> : null}
-
-      <nav className="record-tabs" aria-label={t("Sections de la location", "Lease sections")}>
-        <a aria-current="page" href="#informations">{t("Informations", "Information")}</a>
-        {financial ? <a href="#echeances">{t("Échéances", "Dues")}</a> : null}
-        {payments ? <a href="#paiements">{t("Paiements", "Payments")}</a> : null}
-        {documents ? <a href="#documents">{t("Documents", "Documents")}</a> : null}
-        <span>{t("Activité · à venir", "Activity · coming later")}</span>
-      </nav>
-
-      {tenantFinancial ? <TenantFinancialSummary tenantId={lease.tenantId} financial={tenantFinancial} /> : null}
-
       <Card className="lease-contract-card" id="informations">
         <div className="section-heading">
           <div><p className="eyebrow">{t("Informations", "Information")}</p><h2>{t("Conditions contractuelles", "Contract terms")}</h2></div>
@@ -557,9 +563,12 @@ export function LeaseDetailView({ lease, options, canManage, financial, tenantFi
         {closingBlock}
         <p className="field-help">{t("Enregistrez les derniers paiements reçus depuis « Paiements ». Le remboursement du dépôt et les retenues se règlent hors de KJORA pour l’instant.", "Record the last payments received from “Payments”. Deposit refunds and deductions are handled outside KJORA for now.")}</p>
       </Card> : null}
-      {financial ? <LeaseDuesPanel financial={financial} /> : null}
-      {payments ? <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={lease.id} /> : null}
-      {documents ? <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> : null}
+        </> },
+        ...(financial ? [{ id: "echeances", label: t("Échéances", "Dues"), count: financial.dues.filter((due) => due.status === "overdue" || due.status === "partially_paid").length || undefined, content: <LeaseDuesPanel financial={financial} /> }] : []),
+        ...(payments ? [{ id: "paiements", label: t("Paiements", "Payments"), count: payments.length || undefined, content: <PaymentHistoryPanel payments={payments} documents={documents ?? []} canRecord={canRecordPayment} leaseId={lease.id} /> }] : []),
+        ...(documents ? [{ id: "documents", label: t("Documents", "Documents"), count: documents.length || undefined, content: <FinancialDocumentsPanel canShare={canShareDocuments} documents={documents} emailDeliveryEnabled={emailDeliveryEnabled} /> }] : []),
+        ...extraTabs,
+      ]} />
 
       {ending ? <div className="confirmation-modal" role="presentation"><button aria-label={t("Fermer", "Close")} className="confirmation-modal__backdrop" onClick={() => setEnding(false)} type="button" /><section aria-labelledby="end-lease-title" aria-modal="true" className="confirmation-modal__panel" role="dialog"><div className="confirmation-modal__header"><div><p className="eyebrow">{t("Action sensible", "Sensitive action")}</p><h2 id="end-lease-title">{t("Terminer la location", "End lease")}</h2></div><button aria-label={t("Fermer", "Close")} className="icon-button" onClick={() => setEnding(false)} type="button"><X size={18} /></button></div><div className="confirmation-modal__warning"><CircleAlert size={21} /><p>{t("La fin de la location libérera l’unité à partir de la date effective. L’historique du bail restera protégé.", "Ending the lease will free the Unit from the effective date. Lease history remains protected.")}</p></div><label className="field"><span>{t("Date de sortie effective", "Effective end date")}</span><input min={lease.startDate} type="date" value={endedOn} onChange={(event) => setEndedOn(event.target.value)} required /></label><label className="field"><span>{t("Motif (facultatif)", "Reason (optional)")}</span><textarea maxLength={500} placeholder={t("Ex. départ convenu avec le locataire", "E.g. departure agreed with the tenant")} rows={3} value={endReason} onChange={(event) => setEndReason(event.target.value)} /></label><div className="confirmation-modal__summary"><strong>{lease.propertyName} · {lease.unitLabel}</strong><span>{lease.tenantName}</span><span>{t("Conséquence : unité libérée, bail figé en historique. Les échéances après la date de sortie sont annulées ; celles déjà émises restent dues.", "Consequence: Unit freed, lease locked in history. Dues after the end date are cancelled; dues already issued remain payable.")}</span>{lease.exitProrationMode === "none" ? <span>{t("Sans prorata de sortie, la période en cours reste due en entier.", "Without exit proration, the current period remains fully due.")}</span> : null}</div>{closingBlock ? <div className="lease-closing-card"><p className="eyebrow">{t("Situation à ce jour", "Position today")}</p>{closingBlock}</div> : null}<div className="demo-form-actions"><button className="button button--secondary" disabled={busy} onClick={() => setEnding(false)} type="button">{t("Annuler", "Cancel")}</button><button className="button button--danger" disabled={busy || !endedOn} onClick={endLease} type="button">{busy ? t("Clôture…", "Ending…") : t("Confirmer la fin", "Confirm end")}</button></div></section></div> : null}
 
