@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 
-export type RecordTab = { id: string; label: string; content: ReactNode };
+export type RecordTab = { id: string; label: string; content: ReactNode; count?: number };
 
 function subscribe(callback: () => void) {
   window.addEventListener("hashchange", callback);
@@ -26,7 +26,7 @@ export function RecordTabs({ tabs, label }: { tabs: RecordTab[]; label: string }
     <div className="record-tabs-v2">
       <div aria-label={label} className="record-tabs-v2__bar" role="tablist">
         {tabs.map((tab) => (
-          <button aria-controls={`panel-${tab.id}`} aria-selected={tab.id === active} className={`record-tabs-v2__tab${tab.id === active ? " record-tabs-v2__tab--active" : ""}`} id={`tab-${tab.id}`} key={tab.id} onClick={() => setChosen(tab.id)} role="tab" type="button">{tab.label}</button>
+          <button aria-controls={`panel-${tab.id}`} aria-selected={tab.id === active} className={`record-tabs-v2__tab${tab.id === active ? " record-tabs-v2__tab--active" : ""}`} id={`tab-${tab.id}`} key={tab.id} onClick={() => { setChosen(tab.id); try { window.history.replaceState(null, "", `#${tab.id}`); } catch { /* sans effet */ } }} role="tab" type="button">{tab.label}{tab.count ? <span className="record-tabs-v2__count">{tab.count}</span> : null}</button>
         ))}
       </div>
       {tabs.map((tab) => (

@@ -5773,3 +5773,26 @@ html[data-embedded] .page-stack { max-width: none; }
 .quick-add__menu a { align-items: center; border-radius: 10px; color: var(--text); display: flex; font-size: 0.88rem; font-weight: 650; gap: 10px; padding: 10px 12px; text-decoration: none; }
 .quick-add__menu a:hover, .quick-add__menu a:focus-visible { background: var(--surface-muted); }
 @media (min-width: 980px) { .app-shell--internal .shell-content { padding-top: 78px; } }
+.record-tabs-v2__count { background: var(--surface-muted); border-radius: 999px; font-size: 0.72rem; margin-left: 6px; padding: 1px 7px; }
+.record-tabs-v2__tab--active .record-tabs-v2__count { background: var(--brand-gold); color: #17201c; }
+/* Refonte — chiffres cliquables en tête de liste */
+.list-kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.list-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); cursor: pointer; font: inherit; padding: 12px 14px; text-align: left; }
+.list-kpi small { color: var(--text-muted); display: block; font-size: 0.78rem; font-weight: 700; }
+.list-kpi strong { font-size: 1.5rem; }
+.list-kpi--danger strong { color: var(--danger); }
+.list-kpi--active { border-color: var(--brand-gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-gold) 35%, transparent); }
+/* Refonte — accueil : à relancer + agenda */
+.dashboard-focus { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); margin-bottom: var(--space-5); }
+.focus-list { display: grid; }
+.focus-row { align-items: center; border-bottom: 1px solid var(--border); display: grid; gap: 12px; grid-template-columns: 1fr auto auto; padding: 10px 0; }
+.focus-row--agenda { grid-template-columns: 1fr auto; }
+.focus-row a:not(.button), .focus-row > span { color: var(--text); display: grid; text-decoration: none; }
+.focus-row small { color: var(--text-muted); font-size: 0.8rem; }
+.focus-more { color: var(--brand-gold); font-weight: 750; margin-top: 10px; text-decoration: none; }
+.financial-value.is-due { color: var(--financial-negative); }
+/* Correctif — étiquette de statut lisible dans l'en-tête de la fiche locataire */
+.tenant-profile-hero__lease .badge { display: inline-flex !important; font-size: 0.75rem !important; padding: 3px 10px !important; }
+.tenant-profile-hero__lease .badge--success { background: #dcefe4 !important; color: #1f6b4a !important; }
+.tenant-profile-hero__lease .badge--warning { background: #f6ead5 !important; color: #8a5a00 !important; }
+.tenant-profile-hero__lease .badge--neutral { background: #e6ecef !important; color: #36454f !important; }

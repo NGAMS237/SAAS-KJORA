@@ -17,7 +17,7 @@ import { LeaseTermsCard } from "@/modules/tenancy/lease-terms-card";
 import { RentCorrectionCard } from "@/modules/tenancy/rent-correction-card";
 import { RentChangeCard } from "@/modules/tenancy/rent-change-card";
 import { NextPeriodCard } from "@/modules/tenancy/next-period-card";
-import { RecordTabs, type RecordTab } from "@/core/ui/record-tabs";
+import type { RecordTab } from "@/core/ui/record-tabs";
 
 export default async function LeasePage({ params, searchParams }: { params: Promise<{ leaseId: string }>; searchParams: Promise<{ initialReceived?: string }> }) {
   const [{ leaseId }, query] = await Promise.all([params, searchParams]);
@@ -46,8 +46,7 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
   const coTenants = await listLeaseCoTenants(authorization.organizationId, leaseId);
   const scheduledRent = lease.status === "active" ? await listScheduledRentTerms(authorization.organizationId, leaseId) : [];
   const nextStart = earliestRentChangeDate(financial?.dues ?? []);
-  const tabs: RecordTab[] = [
-    { id: "resume", label: "Résumé", content: <LeaseDetailView lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} /> },
+  const extraTabs: RecordTab[] = [
     { id: "conditions", label: "Loyer et conditions", content: <>
       <LeaseTermsCard canManage={authorization.capabilities.includes("lease.manage")} contract={contractDates} terms={{ leaseId: lease.id, status: lease.status, startDate: lease.startDate, endDate: lease.endDate ?? null, baseRentXaf: lease.baseRentXaf, recurringChargesXaf: lease.recurringChargesXaf, securityDepositXaf: lease.securityDepositXaf, dueDay: lease.dueDay, billingFrequency: lease.billingFrequency }} />
       {lease.status === "active" && lease.billingFrequency === "monthly" ? <NextPeriodCard dueDay={lease.dueDay} generateDueDaysBefore={lease.generateDueDaysBefore} nextPeriodStart={nextStart} totalXaf={lease.baseRentXaf + lease.recurringChargesXaf} /> : null}
@@ -55,10 +54,7 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
       {lease.status === "active" ? <RentChangeCard canManage={authorization.capabilities.includes("lease.manage")} currentBaseRentXaf={lease.baseRentXaf} currentChargesXaf={lease.recurringChargesXaf} earliestDate={earliestRentChangeDate(financial?.dues ?? [])} leaseId={lease.id} scheduled={scheduledRent} /> : null}
     </> },
   ];
-  if (coTenants.available) tabs.push({ id: "colocataires", label: "Colocataires", content: <LeaseCoTenantsCard canManage={authorization.capabilities.includes("lease.manage")} candidates={options.tenants} holderTenantId={lease.tenantId} items={coTenants.items} leaseId={lease.id} /> });
-  if (hasContractRbac) tabs.push({ id: "contrat", label: "Contrat", content: <ContractEntryLink currentPlan={contractEntitlementError?.plan ?? "decouverte"} entitled={!contractEntitlementError} leaseId={lease.id} /> });
-  return <div className="page-stack">
-    <div className="record-title"><p className="eyebrow">Location</p><strong>{lease.unitLabel} · {lease.tenantName}</strong><span>{lease.propertyName}</span></div>
-    <RecordTabs label="Sections de la location" tabs={tabs} />
-  </div>;
+  if (coTenants.available) extraTabs.push({ id: "colocataires", label: "Colocataires", content: <LeaseCoTenantsCard canManage={authorization.capabilities.includes("lease.manage")} candidates={options.tenants} holderTenantId={lease.tenantId} items={coTenants.items} leaseId={lease.id} /> });
+  if (hasContractRbac) extraTabs.push({ id: "contrat", label: "Contrat", content: <ContractEntryLink currentPlan={contractEntitlementError?.plan ?? "decouverte"} entitled={!contractEntitlementError} leaseId={lease.id} /> });
+  return <LeaseDetailView extraTabs={extraTabs} lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />;
 }
