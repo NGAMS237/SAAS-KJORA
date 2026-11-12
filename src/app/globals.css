@@ -5796,3 +5796,5 @@ html[data-embedded] .page-stack { max-width: none; }
 .tenant-profile-hero__lease .badge--success { background: #dcefe4 !important; color: #1f6b4a !important; }
 .tenant-profile-hero__lease .badge--warning { background: #f6ead5 !important; color: #8a5a00 !important; }
 .tenant-profile-hero__lease .badge--neutral { background: #e6ecef !important; color: #36454f !important; }
+.list-alert { align-items: center; background: var(--warning-soft); border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent); border-radius: var(--radius-control); color: var(--text); display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 10px 14px; }
+.list-alert__action { background: none; border: 0; color: var(--brand-gold); cursor: pointer; font: inherit; font-weight: 800; }

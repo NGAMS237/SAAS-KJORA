@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ListAlert, ListKpis } from "@/core/ui/list-kpis";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
@@ -89,7 +90,19 @@ export function PropertiesView({
 }) {
   const t = useCopy();
   const [query, setQuery] = useState("");
-  const filtered = useMemo(() => filterProperties(properties, query), [properties, query]);
+  const [segment, setSegment] = useState<"all" | "vacant" | "full" | "empty">("all");
+  const filtered = useMemo(() => filterProperties(properties, query).filter((property) =>
+    segment === "vacant" ? property.vacantCount > 0
+      : segment === "full" ? property.unitCount > 0 && property.vacantCount === 0
+        : segment === "empty" ? property.unitCount === 0 : true), [properties, query, segment]);
+  const totalUnits = properties.reduce((sum, property) => sum + property.unitCount, 0);
+  const vacantUnits = properties.reduce((sum, property) => sum + property.vacantCount, 0);
+  const segments = [
+    { key: "all" as const, label: t("Biens", "Properties"), count: properties.length },
+    { key: "full" as const, label: t("Logements loués", "Units let"), count: totalUnits - vacantUnits },
+    { key: "vacant" as const, label: t("Logements vacants", "Vacant units"), count: vacantUnits, danger: true },
+    { key: "empty" as const, label: t("Biens sans logement", "Properties without units"), count: properties.filter((property) => property.unitCount === 0).length, danger: true },
+  ];
   return (
     <div className="page-stack resource-index-v2">
       <PageHeader
@@ -102,6 +115,8 @@ export function PropertiesView({
         action={canManage ? <Link className="button button--primary" href="/app/biens/nouveau"><Plus size={17} />{t("Ajouter un bien", "Add property")}</Link> : undefined}
       />
       <LiveDataNotice />
+      {vacantUnits > 0 ? <ListAlert actionLabel={t("Voir", "View")} onAction={() => setSegment("vacant")}>{t(`${vacantUnits} logement(s) vacant(s) : pensez à les relouer.`, `${vacantUnits} vacant unit(s) to re-let.`)}</ListAlert> : null}
+      <ListKpis active={segment} label={t("Filtrer les biens", "Filter properties")} onChange={setSegment} segments={segments} />
       <label className="demo-search">
         <Search aria-hidden="true" size={18} />
         <span className="sr-only">{t("Rechercher", "Search")}</span>
