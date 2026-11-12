@@ -7,6 +7,7 @@ import { Bell, BellRing, CheckCheck, Download, Eye, Printer, ExternalLink, FileC
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Card, EmptyState } from "@/core/ui/ui";
 import { SideDrawer } from "@/core/ui/side-drawer";
+import { ListAlert, ListKpis } from "@/core/ui/list-kpis";
 import { ManualWhatsAppButton } from "@/modules/communications/manual-whatsapp-button";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
 import type { MonthEndPreview } from "@/modules/documents/month-end";
@@ -275,15 +276,43 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
   </div>;
 }
 
-export function FinancialDocumentsPanel({ documents, canShare, emailDeliveryEnabled, id = "documents" }: {
-  documents: FinancialDocumentSummary[]; canShare: boolean; emailDeliveryEnabled: boolean; id?: string;
+type DocumentSegment = "all" | "review" | "ready" | "sent" | "invalidated";
+type DocumentTypeFilter = "all" | FinancialDocumentSummary["type"];
+
+export function FinancialDocumentsPanel({ documents, canShare, emailDeliveryEnabled, id = "documents", filterable = false }: {
+  documents: FinancialDocumentSummary[]; canShare: boolean; emailDeliveryEnabled: boolean; id?: string; filterable?: boolean;
 }) {
   const t = useCopy();
+  const [segment, setSegment] = useState<DocumentSegment>("all");
+  const [type, setType] = useState<DocumentTypeFilter>("all");
+  const isReview = (document: FinancialDocumentSummary) => document.status !== "invalidated" && (document.reviewStatus ?? "approved") !== "approved";
+  const isSent = (document: FinancialDocumentSummary) => document.lastDelivery?.status === "sent" || document.lastDelivery?.status === "delivered";
+  const isReady = (document: FinancialDocumentSummary) => document.status !== "invalidated" && !isReview(document) && !isSent(document);
+  const bySegment = (document: FinancialDocumentSummary) => segment === "all" ? true : segment === "review" ? isReview(document)
+    : segment === "sent" ? isSent(document) : segment === "invalidated" ? document.status === "invalidated" : isReady(document);
+  const visible = filterable ? documents.filter((document) => bySegment(document) && (type === "all" || document.type === type)) : documents;
+  const reviewCount = documents.filter(isReview).length;
+  const typeOptions: Array<[DocumentTypeFilter, string]> = [
+    ["all", t("Tous les types", "All types")], ["due_notice", t("Avis d’échéance", "Due notices")],
+    ["rent_receipt", t("Quittances", "Rent receipts")], ["payment_receipt", t("Reçus", "Receipts")], ["account_statement", t("Relevés", "Statements")],
+  ];
   return <Card className="documents-card" id={id}>
     <div className="section-heading"><div><p className="eyebrow">{t("Documents", "Documents")}</p><h2>{t("Documents financiers", "Financial documents")}</h2></div><FileText size={22} /></div>
-    <p>{t("PDF privés, versionnés et rattachés à leur contexte financier réel.", "Private, versioned PDFs linked to their real financial context.")}</p>
-    {documents.length ? <div className="document-list">{documents.map((document) => <DocumentRow canShare={canShare} document={document} emailDeliveryEnabled={emailDeliveryEnabled} key={document.id} />)}</div>
-      : <EmptyState icon={FileText} title={t("Aucun document", "No documents")} description={t("Les documents apparaissent au fil des reçus, quittances et avis émis. Rien n’est généré rétroactivement.", "Documents appear as receipts, rent receipts and notices are issued. Nothing is generated retroactively.")} />}
+    {filterable ? <>
+      {reviewCount > 0 ? <ListAlert actionLabel={t("Voir", "View")} onAction={() => setSegment("review")}>{t(`${reviewCount} document(s) à approuver avant envoi.`, `${reviewCount} document(s) awaiting approval.`)}</ListAlert> : null}
+      <ListKpis active={segment} label={t("Filtrer les documents", "Filter documents")} onChange={setSegment} segments={[
+        { key: "all", label: t("Tous", "All"), count: documents.length },
+        { key: "review", label: t("À approuver", "To approve"), count: reviewCount, danger: true },
+        { key: "ready", label: t("Prêts à envoyer", "Ready to send"), count: documents.filter(isReady).length },
+        { key: "sent", label: t("Envoyés", "Sent"), count: documents.filter(isSent).length },
+        { key: "invalidated", label: t("Invalidés", "Invalidated"), count: documents.filter((document) => document.status === "invalidated").length },
+      ]} />
+      <div className="finance-tabs" role="group" aria-label={t("Type de document", "Document type")}>
+        {typeOptions.map(([key, label]) => <button aria-pressed={type === key} className={`finance-tabs__item${type === key ? " finance-tabs__item--active" : ""}`} key={key} onClick={() => setType(key)} type="button">{label}</button>)}
+      </div>
+    </> : <p>{t("PDF privés, versionnés et rattachés à leur contexte financier réel.", "Private, versioned PDFs linked to their real financial context.")}</p>}
+    {visible.length ? <div className="document-list">{visible.map((document) => <DocumentRow canShare={canShare} document={document} emailDeliveryEnabled={emailDeliveryEnabled} key={document.id} />)}</div>
+      : <EmptyState icon={FileText} title={t("Aucun document", "No documents")} description={filterable && documents.length ? t("Aucun document ne correspond à ce filtre.", "No document matches this filter.") : t("Les documents apparaissent au fil des reçus, quittances et avis émis. Rien n’est généré rétroactivement.", "Documents appear as receipts, rent receipts and notices are issued. Nothing is generated retroactively.")} />}
   </Card>;
 }
 

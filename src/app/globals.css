@@ -5798,3 +5798,26 @@ html[data-embedded] .page-stack { max-width: none; }
 .tenant-profile-hero__lease .badge--neutral { background: #e6ecef !important; color: #36454f !important; }
 .list-alert { align-items: center; background: var(--warning-soft); border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent); border-radius: var(--radius-control); color: var(--text); display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 10px 14px; }
 .list-alert__action { background: none; border: 0; color: var(--brand-gold); cursor: pointer; font: inherit; font-weight: 800; }
+
+/* Fiche bailleur unique : signature dessinée, cachet (généré / image / aucun) et où l'apposer. */
+.signature-pad canvas { background: #fff; border: 1px dashed var(--border-strong, var(--border)); border-radius: var(--radius-control); display: block; height: auto; max-width: 100%; touch-action: none; width: 100%; }
+.stamp-mode { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.stamp-mode button { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; color: var(--text); cursor: pointer; font: inherit; font-size: .85rem; font-weight: 600; padding: 6px 12px; }
+.stamp-mode button.is-active { background: var(--brand-ink, var(--text)); border-color: var(--brand-ink, var(--text)); color: var(--surface); }
+.stamp-preview { --stamp-red: #a3231c; align-content: center; background: color-mix(in srgb, var(--stamp-red) 6%, transparent); border: 3px double var(--stamp-red); border-radius: 50% / 42%; color: var(--stamp-red); display: grid; gap: 2px; justify-items: center; letter-spacing: .04em; margin: 8px auto 14px; min-height: 96px; padding: 12px 18px; text-align: center; transform: rotate(-7deg); width: min(240px, 100%); }
+.stamp-preview strong { font-size: .9rem; }
+.stamp-preview span { font-size: .72rem; opacity: .85; }
+.stamp-targets { border: 1px solid var(--border); border-radius: var(--radius-control); display: grid; gap: 8px; margin: 0 0 10px; padding: 10px 12px; }
+.stamp-targets legend { color: var(--text-muted); font-size: .8rem; font-weight: 700; padding: 0 4px; }
+.stamp-targets label { align-items: center; display: flex; gap: 8px; font-size: .9rem; }
+
+/* Onglet Contrat de la location : frise de signature. */
+.contract-timeline { counter-reset: step; display: grid; gap: 0; list-style: none; margin: 0 0 var(--space-4, 16px); padding: 0; }
+.contract-timeline li { border-left: 2px solid var(--border); color: var(--text-muted); padding: 0 0 14px 18px; position: relative; }
+.contract-timeline li::before { background: var(--surface); border: 2px solid var(--border); border-radius: 50%; content: ""; height: 12px; left: -7px; position: absolute; top: 3px; width: 12px; }
+.contract-timeline li.is-done { border-left-color: var(--success, #2f7d4f); color: var(--text); }
+.contract-timeline li.is-done::before { background: var(--success, #2f7d4f); border-color: var(--success, #2f7d4f); }
+.contract-timeline li.is-current { color: var(--text); font-weight: 700; }
+.contract-timeline li.is-current::before { border-color: var(--brand-gold, #c8892f); }
+.contract-timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.contract-timeline small { color: var(--text-muted); display: block; font-weight: 400; }

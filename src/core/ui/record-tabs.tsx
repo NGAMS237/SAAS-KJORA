@@ -12,7 +12,7 @@ function subscribe(callback: () => void) {
 // Onglets d'une fiche (location, locataire…). Tous les panneaux restent rendus (les formulaires gardent
 // leur état) ; seul le panneau actif est visible. Un lien vers une ancre (#corriger-loyer) ouvre
 // automatiquement le bon onglet.
-export function RecordTabs({ tabs, label }: { tabs: RecordTab[]; label: string }) {
+export function RecordTabs({ tabs, label, initial }: { tabs: RecordTab[]; label: string; initial?: string }) {
   const hash = useSyncExternalStore(subscribe, () => window.location.hash.slice(1), () => "");
   const [chosen, setChosen] = useState<string | null>(null);
   const fromHash = (() => {
@@ -21,7 +21,7 @@ export function RecordTabs({ tabs, label }: { tabs: RecordTab[]; label: string }
     if (typeof document === "undefined") return null;
     return document.getElementById(hash)?.closest<HTMLElement>("[data-tab-panel]")?.dataset.tabPanel ?? null;
   })();
-  const active = chosen ?? fromHash ?? tabs[0]?.id;
+  const active = chosen ?? fromHash ?? (initial && tabs.some((tab) => tab.id === initial) ? initial : tabs[0]?.id);
   return (
     <div className="record-tabs-v2">
       <div aria-label={label} className="record-tabs-v2__bar" role="tablist">

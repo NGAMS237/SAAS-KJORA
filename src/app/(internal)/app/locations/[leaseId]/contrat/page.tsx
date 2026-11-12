@@ -4,6 +4,7 @@ import { getActiveAuthorization } from "@/core/authorization/server";
 import { requirePlanFeature } from "@/core/entitlements/server";
 import { loadOrganizationContext } from "@/core/organization/load-organization-context";
 import { parseContractId } from "@/modules/contracts/model";
+import { getDocumentBranding } from "@/modules/documents/branding-server";
 import { getContractStampSettings, getContractTemplates, getLeaseContract, getLeaseContracts } from "@/modules/contracts/server";
 import { InternalContractView } from "@/modules/contracts/views";
 import { UUID_PATTERN } from "@/modules/properties/model";
@@ -35,6 +36,7 @@ export default async function ContractPage({ params, searchParams }: { params:Pr
     getContractTemplates(authorization.organizationId),getLeaseContracts(authorization.organizationId,leaseId),
     getLeaseDetail(authorization.organizationId,leaseId),getContractStampSettings(authorization.organizationId),loadOrganizationContext(),
   ]);
+  const {branding}=await getDocumentBranding(authorization.organizationId);
   const contractId=parseContractId(query.contract); const selected=contractId?await getLeaseContract(authorization.organizationId,contractId):null;
   if(selected&&selected.leaseId!==leaseId) notFound();
   // AFRICA-CONTRACTS-PERFORMANCE-01 — AXE B : la clause « Modalités de
@@ -50,7 +52,7 @@ export default async function ContractPage({ params, searchParams }: { params:Pr
   // inventée à sa place.
   const previewSnapshot = {
     organization: { name: activeOrganization?.name, currency: activeOrganization?.currencyCode },
-    lessor: { displayName: stampSettings.company || activeOrganization?.name, phone: stampSettings.phone, address: stampSettings.address },
+    lessor: { displayName: branding.displayName || stampSettings.company || activeOrganization?.name, phone: branding.phone || stampSettings.phone, address: branding.address || stampSettings.address },
     tenant: { name: leaseDetail?.tenantName },
     property: { name: leaseDetail?.propertyName },
     unit: { label: leaseDetail?.unitLabel },

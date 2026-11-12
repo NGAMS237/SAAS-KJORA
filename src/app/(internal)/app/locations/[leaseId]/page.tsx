@@ -7,7 +7,7 @@ import { getLeaseDetail, getLeaseOptions } from "@/modules/tenancy/server";
 import { LeaseDetailView, MissingTenancyResource } from "@/modules/tenancy/views";
 import { getPayments } from "@/modules/payments/server";
 import { getFinancialDocuments } from "@/modules/documents/server";
-import { ContractEntryLink } from "@/modules/contracts/entry-link";
+import { LeaseContractTab } from "@/modules/contracts/lease-tab";
 import { listLeaseCoTenants } from "@/modules/tenancy/co-tenants";
 import { LeaseCoTenantsCard } from "@/modules/tenancy/co-tenants-card";
 import { listScheduledRentTerms } from "@/modules/tenancy/rent-terms";
@@ -55,6 +55,6 @@ export default async function LeasePage({ params, searchParams }: { params: Prom
     </> },
   ];
   if (coTenants.available) extraTabs.push({ id: "colocataires", label: "Colocataires", content: <LeaseCoTenantsCard canManage={authorization.capabilities.includes("lease.manage")} candidates={options.tenants} holderTenantId={lease.tenantId} items={coTenants.items} leaseId={lease.id} /> });
-  if (hasContractRbac) extraTabs.push({ id: "contrat", label: "Contrat", content: <ContractEntryLink currentPlan={contractEntitlementError?.plan ?? "decouverte"} entitled={!contractEntitlementError} leaseId={lease.id} /> });
+  if (hasContractRbac) extraTabs.push({ id: "contrat", label: "Contrat", content: <LeaseContractTab currentPlan={contractEntitlementError?.plan ?? "decouverte"} entitled={!contractEntitlementError} leaseId={lease.id} organizationId={authorization.organizationId} /> });
   return <LeaseDetailView extraTabs={extraTabs} lease={lease} options={options} canManage={authorization.capabilities.includes("lease.manage")} financial={financial} tenantFinancial={tenantFinancial} payments={payments} canRecordPayment={authorization.capabilities.includes("payment.record")} documents={documents} canShareDocuments={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} initialReceivedXaf={initialReceivedXaf} />;
 }

@@ -18,6 +18,12 @@ export function parseDocumentBranding(value: unknown): DocumentBranding | null {
     email: str(v.email, 160), address: str(v.address, 240), paymentInstructions: str(v.paymentInstructions, 500),
     noticeFooter: str(v.noticeFooter, 300), receiptFooter: str(v.receiptFooter, 300),
     logoDataUrl: image(v.logoDataUrl), signatureDataUrl: image(v.signatureDataUrl),
+    civility: v.civility === "M." || v.civility === "Mme" ? v.civility : null,
+    stampMode: v.stampMode === "image" || v.stampMode === "none" ? v.stampMode : "generated",
+    stampDataUrl: image(v.stampDataUrl),
+    stampOnContracts: v.stampOnContracts !== false,
+    stampOnReceipts: v.stampOnReceipts === true,
+    stampOnNotices: v.stampOnNotices === true,
   };
 }
 

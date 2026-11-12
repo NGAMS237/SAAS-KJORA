@@ -7,6 +7,8 @@ import {
   type ContractSignatureEvidence, type ContractStampSettings, type ContractTemplateSummary, type ContractTemplateVersion, type LeaseContract,
 } from "@/modules/contracts/model";
 import { generateContractPdf } from "@/modules/contracts/pdf";
+import type { DocumentBranding } from "@/modules/documents/pdf";
+import { parseDocumentBranding } from "@/modules/documents/render-context";
 
 function templateFromRow(row: Record<string, unknown>): ContractTemplateSummary {
   return { id: String(row.template_id), name: String(row.name), language: row.language === "en" ? "en" : "fr",
@@ -98,11 +100,24 @@ export function hashContractContent(contract: LeaseContract, sections = prepared
   return createHash("sha256").update(canonical).digest("hex");
 }
 
+// Fiche bailleur pour le PDF (logo, signature, cachet importé) — tolérant : sans elle, rendu historique.
+export async function loadContractBranding(contractId: string, accessId: string | null = null): Promise<DocumentBranding | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.rpc("get_contract_render_branding", { target_contract_id: contractId, target_portal_access_id: accessId });
+    return result.error ? null : parseDocumentBranding(result.data);
+  } catch { return null; }
+}
+
+export async function renderContractPreviewPdf(contract: LeaseContract) {
+  return generateContractPdf(contract, await loadContractBranding(contract.id));
+}
+
 export async function materializeContract(contract: LeaseContract, accessId: string | null) {
   const supabase = await createSupabaseServerClient();
   if (contract.finalStoragePath) return contract.finalStoragePath;
   if (contract.status !== "tenant_signed") throw new Error("contract_not_ready_for_finalization");
-  const bytes = await generateContractPdf(contract);
+  const bytes = await generateContractPdf(contract, await loadContractBranding(contract.id, accessId));
   const storagePath = `${contract.organizationId}/${contract.id}/v1/final.pdf`;
   const upload = await supabase.storage.from("contract-documents").upload(storagePath, bytes, {
     contentType: "application/pdf", cacheControl: "31536000", upsert: false,
