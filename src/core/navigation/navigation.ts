@@ -12,7 +12,6 @@ import {
   LifeBuoy,
   ReceiptText,
   Settings,
-  CalendarClock,
   MessagesSquare,
   Users,
   WalletCards,
@@ -24,23 +23,27 @@ export type NavigationItem = {
   icon: LucideIcon;
   exact?: boolean;
   requiredCapability?: Capability;
+  // Autres chemins qui allument cette entrée (ex. Finances regroupe Échéances et Paiements).
+  alsoActive?: string[];
+  // Présent dans la barre du bas sur mobile (5 entrées au maximum).
+  mobile?: boolean;
 };
 
+// Refonte — menu en deux blocs : l'essentiel, puis « Plus ».
 export const internalPrimaryNavigation: NavigationItem[] = [
-  { href: "/app", label: "Accueil", icon: LayoutDashboard, exact: true },
+  { href: "/app", label: "Accueil", icon: LayoutDashboard, exact: true, mobile: true },
+  { href: "/app/locataires", label: "Locataires", icon: Users, requiredCapability: "tenant.view", mobile: true },
+  { href: "/app/locations", label: "Locations", icon: KeyRound, requiredCapability: "lease.view", alsoActive: ["/app/baux"], mobile: true },
   { href: "/app/biens", label: "Biens", icon: Building2, requiredCapability: "property.view" },
-  { href: "/app/locataires", label: "Locataires", icon: Users, requiredCapability: "tenant.view" },
-  { href: "/app/locations", label: "Locations", icon: KeyRound, requiredCapability: "lease.view" },
-  { href: "/app/paiements", label: "Paiements", icon: CreditCard, requiredCapability: "payment.view" },
-  { href: "/app/activite", label: "Activité", icon: Activity, requiredCapability: "activity.view" },
-];
-
-export const internalSecondaryNavigation: NavigationItem[] = [
+  { href: "/app/finances", label: "Finances", icon: WalletCards, requiredCapability: "due.view", alsoActive: ["/app/echeances", "/app/paiements"], mobile: true },
   // D-142 — Documents est une vue transversale des documents déjà émis par les
   // modules existants. Aucun stockage ni moteur documentaire parallèle.
   { href: "/app/documents", label: "Documents", icon: FileCheck2 },
-  { href: "/app/echeances", label: "Échéances", icon: CalendarClock, requiredCapability: "due.view" },
-  { href: "/app/messages", label: "Messages", icon: MessagesSquare, requiredCapability: "tenant.view" },
+  { href: "/app/messages", label: "Messages", icon: MessagesSquare, requiredCapability: "tenant.view", mobile: true },
+];
+
+export const internalSecondaryNavigation: NavigationItem[] = [
+  { href: "/app/activite", label: "Activité", icon: Activity, requiredCapability: "activity.view" },
   { href: "/app/equipe", label: "Équipe", icon: Users, requiredCapability: "member.view" },
   // ALIGN-03 — reste accessible même compte bloqué : c'est d'ici que ça se résout.
   { href: "/app/billing", label: "Abonnement", icon: CreditCard, requiredCapability: "billing.view" },

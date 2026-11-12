@@ -11,6 +11,7 @@ import type {
   NotificationSummary,
 } from "@/modules/documents/model";
 import { generateFinancialDocumentPdf } from "@/modules/documents/pdf";
+import { loadDocumentRenderContext } from "@/modules/documents/render-context";
 import { isNotificationType } from "@/modules/notifications/model";
 
 type DocumentRow = {
@@ -111,7 +112,7 @@ export async function getFinancialDocument(organizationId: string, documentId: s
 export async function materializeFinancialDocument(document: FinancialDocumentRecord) {
   const supabase = await createSupabaseServerClient();
   if (document.storagePath) return document.storagePath;
-  const bytes = await generateFinancialDocumentPdf(document);
+  const bytes = await generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id));
   if (document.status === "invalidated") return { bytes } as const;
   const storagePath = `${document.organizationId}/${document.id}/v1.pdf`;
   const upload = await supabase.storage.from("financial-documents").upload(storagePath, bytes, {
@@ -130,7 +131,8 @@ export async function materializeFinancialDocument(document: FinancialDocumentRe
 }
 
 export async function renderFinancialDocumentPreview(document: FinancialDocumentRecord) {
-  return generateFinancialDocumentPdf(document);
+  const supabase = await createSupabaseServerClient();
+  return generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id));
 }
 
 export async function createFinancialDocumentSignedUrl(storagePath: string) {

@@ -69,7 +69,7 @@ export function RentCorrectionCard({ leaseId, currentBaseRentXaf, currentCharges
             <input checked={applyOpen} onChange={(e) => { setApplyOpen(e.target.checked); setPreview(null); }} type="checkbox" />
             <span>Recalculer aussi les échéances déjà émises (ajustements tracés, rien n’est effacé)</span>
           </label>
-          {applyOpen ? <p className="field-help">Attention : cela change le « reste dû » du locataire. Pour un locataire importé de Rentila, vérifiez d’abord l’aperçu : la dette de départ avait été validée avec l’ancien montant.</p> : null}
+          {applyOpen ? <p className="field-help">Attention : cela change le « reste dû » du locataire. Si sa dette de départ a été importée ou validée avec l’ancien montant, vérifiez d’abord l’aperçu.</p> : null}
           <div className="demo-form-actions">
             <button className="button button--secondary" disabled={busy || (unchanged && !applyOpen)} type="submit">Voir l’aperçu</button>
           </div>

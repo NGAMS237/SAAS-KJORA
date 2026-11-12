@@ -46,7 +46,7 @@ export default async function InternalLayout({ children }: { children: ReactNode
   ]);
   const paymentAttention = (dashboard?.overdueCount ?? 0) + (dashboard?.partialCount ?? 0);
   const navigationBadges = {
-    ...(paymentAttention > 0 ? { "/app/paiements": { count: paymentAttention, tone: "danger" as const } } : {}),
+    ...(paymentAttention > 0 ? { "/app/finances": { count: paymentAttention, tone: "danger" as const } } : {}),
   };
   return (
     <PinLockProvider userId={context.user.id}>
