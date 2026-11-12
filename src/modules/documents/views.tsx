@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Bell, BellRing, CheckCheck, Download, ExternalLink, FileCheck2, FileClock, FileText, Mail, Send, TriangleAlert, X } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
+import { Bell, BellRing, CheckCheck, Download, Eye, Printer, ExternalLink, FileCheck2, FileClock, FileText, Mail, Send, TriangleAlert, X } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Card, EmptyState } from "@/core/ui/ui";
+import { SideDrawer } from "@/core/ui/side-drawer";
 import { ManualWhatsAppButton } from "@/modules/communications/manual-whatsapp-button";
 import type { FinancialDocumentSummary, NotificationSummary } from "@/modules/documents/model";
 import type { MonthEndPreview } from "@/modules/documents/month-end";
@@ -170,6 +171,24 @@ function deliveryStatusLabel(delivery: NonNullable<FinancialDocumentSummary["las
   }
 }
 
+// Aperçu du document dans un tiroir : on voit le PDF avant de le télécharger ou de l'envoyer.
+function DocumentPreviewDrawer({ document, href, downloadHref, onClose, actions }: {
+  document: FinancialDocumentSummary; href: string; downloadHref: string | null; onClose: () => void; actions: ReactNode;
+}) {
+  const t = useCopy();
+  const frame = useRef<HTMLIFrameElement>(null);
+  return <SideDrawer onClose={onClose} open subtitle={`${document.reference} · ${shortDate(document.issuedOn)}`} title={documentLabel(document, t)}>
+    <div className="document-preview">
+      <iframe ref={frame} src={href} title={t("Aperçu du document", "Document preview")} />
+      <div className="drawer-actions">
+        {downloadHref ? <a className="button button--primary" href={downloadHref} rel="noopener" target="_blank"><Download size={15} />{t("Télécharger le PDF", "Download PDF")}</a> : null}
+        {actions}
+        <button className="button button--secondary" onClick={() => { try { frame.current?.contentWindow?.print(); } catch { window.open(href, "_blank", "noopener"); } }} type="button"><Printer size={15} />{t("Imprimer", "Print")}</button>
+      </div>
+    </div>
+  </SideDrawer>;
+}
+
 function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
   document: FinancialDocumentSummary; canShare: boolean; emailDeliveryEnabled: boolean;
 }) {
@@ -178,6 +197,7 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [modal, setModal] = useState<"missing_email" | "unavailable" | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const downloadHref = `/api/financial-documents/${document.id}/download`;
   const previewHref = `${downloadHref}?preview=1`;
   const reviewStatus = document.reviewStatus ?? "approved";
@@ -237,6 +257,7 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
       {message ? <small role="status">{message}</small> : null}
     </div>
     <div className="document-row__actions">
+      <button className="button button--secondary" onClick={() => setPreviewOpen(true)} type="button"><Eye size={15} />{t("Aperçu", "Preview")}</button>
       <Link className="button button--secondary" href={reviewStatus === "approved" ? downloadHref : previewHref} prefetch={false} target="_blank"><Download size={15} />{reviewStatus === "approved" ? "PDF" : t("Prévisualiser", "Preview")}</Link>
       {canShare && reviewStatus !== "approved" ? <>
         <button className="button button--primary" disabled={busy} onClick={() => void review("approve")} type="button">{t("Approuver", "Approve")}</button>
@@ -245,6 +266,10 @@ function DocumentRow({ document, canShare, emailDeliveryEnabled }: {
       {canShare && reviewStatus === "approved" ? <button className="button button--secondary" disabled={busy || document.status === "invalidated"} onClick={onSendClick} type="button"><Send size={15} />{busy ? t("Envoi…", "Sending…") : t("Envoyer par email", "Send by email")}</button> : null}
       {canShare && reviewStatus === "approved" ? <ManualWhatsAppButton disabled={busy || document.status !== "ready"} documentId={document.id} /> : null}
     </div>
+    {previewOpen ? <DocumentPreviewDrawer actions={canShare && reviewStatus === "approved" ? <>
+        <button className="button button--secondary" disabled={busy || document.status === "invalidated"} onClick={onSendClick} type="button"><Send size={15} />{t("E-mail", "Email")}</button>
+        <ManualWhatsAppButton disabled={busy || document.status !== "ready"} documentId={document.id} />
+      </> : null} document={document} downloadHref={reviewStatus === "approved" ? downloadHref : null} href={previewHref} onClose={() => setPreviewOpen(false)} /> : null}
     {modal === "missing_email" ? <EmailMissingModal onClose={() => setModal(null)} tenantId={document.tenantId} /> : null}
     {modal === "unavailable" ? <EmailUnavailableModal downloadHref={downloadHref} onClose={() => setModal(null)} /> : null}
   </div>;

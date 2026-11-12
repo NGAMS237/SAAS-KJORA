@@ -5724,3 +5724,52 @@ html[data-embedded] .shell-utility-bar, html[data-embedded] .mobile-drawer, html
 html[data-embedded] .app-shell { padding-left: 0 !important; }
 html[data-embedded] .shell-content { min-height: 0 !important; padding: 16px !important; }
 html[data-embedded] .page-stack { max-width: none; }
+
+/* Refonte — informations bailleur (Paramètres › Documents) */
+.branding-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+.branding-grid .field { margin-top: var(--space-3); }
+.branding-image { align-items: center; background: #fff; border: 1px dashed var(--border-strong); border-radius: var(--radius-control); display: flex; justify-content: center; min-height: 96px; padding: 10px; }
+.branding-image img { max-height: 90px; max-width: 100%; object-fit: contain; }
+.branding-image .field-help { color: #536370; margin: 0; text-align: center; }
+.settings-stack { display: grid; gap: var(--space-4); }
+.document-preview { display: flex; flex-direction: column; gap: var(--space-3); height: 100%; min-height: 70vh; }
+.document-preview iframe { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-control); flex: 1; min-height: 62vh; width: 100%; }
+/* Refonte — onglets de la page Finances */
+.finance-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.finance-tabs__item { background: var(--surface-muted); border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--text-secondary); font-size: 0.85rem; font-weight: 720; padding: 8px 16px; text-decoration: none; }
+.finance-tabs__item--active { background: var(--brand-gold); border-color: var(--brand-gold); color: #17201c; }
+/* Refonte — relevé compact sur la fiche locataire */
+@media (min-width: 761px) {
+  .ledger-table__head--compact, .ledger-table__row--compact { grid-template-columns: 0.7fr 1.6fr repeat(3, 0.9fr); }
+}
+.financial-value--negative { color: var(--financial-negative); }
+.tenant-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+/* Refonte — onglets de fiche */
+.record-tabs-v2 { display: grid; gap: var(--space-4); }
+.record-tabs-v2__bar { border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 2px; overflow-x: auto; }
+.record-tabs-v2__tab { background: none; border: 0; border-bottom: 3px solid transparent; color: var(--text-muted); cursor: pointer; font: inherit; font-size: 0.9rem; font-weight: 720; padding: 10px 14px; white-space: nowrap; }
+.record-tabs-v2__tab--active { border-bottom-color: var(--brand-gold); color: var(--text); }
+.record-tabs-v2__panel { display: grid; gap: var(--space-4); }
+.record-tabs-v2__panel[hidden] { display: none; }
+.next-period { background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent); border-radius: var(--radius-control); display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin: 6px 0 10px; padding: 14px; }
+.next-period small { color: var(--text-muted); display: block; font-size: 0.75rem; font-weight: 700; }
+.next-period strong { font-size: 0.98rem; }
+.record-title { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.record-title .eyebrow { margin: 0; width: 100%; }
+.record-title strong { font-size: 1.15rem; }
+.record-title span { color: var(--text-muted); }
+/* Refonte — rappel en haut du paiement */
+.payment-recap { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.payment-recap span { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-control); padding: 10px 14px; }
+.payment-recap small { color: var(--text-muted); display: block; font-size: 0.75rem; font-weight: 700; }
+.payment-recap strong { font-size: 1rem; }
+.payment-recap__due { background: var(--danger-soft) !important; border-color: color-mix(in srgb, var(--danger) 40%, transparent) !important; }
+.payment-recap__due strong { color: var(--danger); }
+/* Refonte — bouton « + Ajouter » */
+@media (min-width: 980px) { .shell-utility-bar { align-items: center; display: flex !important; gap: 10px; } }
+.quick-add { position: relative; }
+.quick-add__trigger { min-height: 42px; }
+.quick-add__menu { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-control); box-shadow: var(--shadow-menu); display: grid; min-width: 240px; padding: 6px; position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; }
+.quick-add__menu a { align-items: center; border-radius: 10px; color: var(--text); display: flex; font-size: 0.88rem; font-weight: 650; gap: 10px; padding: 10px 12px; text-decoration: none; }
+.quick-add__menu a:hover, .quick-add__menu a:focus-visible { background: var(--surface-muted); }
+@media (min-width: 980px) { .app-shell--internal .shell-content { padding-top: 78px; } }

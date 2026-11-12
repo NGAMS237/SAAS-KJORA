@@ -6,13 +6,14 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Building2, ChevronRight, CircleAlert,
   History, Home, KeyRound, LayoutGrid, List,
-  Mail, Pencil, Phone, Plus, Search, ShieldCheck, StickyNote, UserRound,
+  Mail, MessageCircle, Pencil, Phone, Plus, Search, ShieldCheck, StickyNote, UserRound,
   UserRoundPlus, X,
 } from "lucide-react";
 import { usePreferences } from "@/core/preferences/preferences-provider";
 import { Badge, Card, EmptyState, PageHeader } from "@/core/ui/ui";
 import type { LeaseFinancialDetail, TenantFinancialDetail, TenantFinancialPosition } from "@/modules/finance/model";
-import { LeaseDuesPanel, TenantFinancialSummary } from "@/modules/finance/views";
+import { LeaseDuesPanel, RecentLedgerCard, TenantFinancialSummary } from "@/modules/finance/views";
+import { normalizeTenantPhone } from "@/modules/communications/message-templates";
 import { PaymentHistoryPanel } from "@/modules/payments/views";
 import type { PaymentSummary } from "@/modules/payments/model";
 import type { FinancialDocumentSummary } from "@/modules/documents/model";
@@ -215,6 +216,8 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const current = tenant.leases.find((lease) => lease.status === "active") ?? null;
+  const whatsappPhone = normalizeTenantPhone(tenant.phone ?? null);
+  const whatsappHref = whatsappPhone ? `https://wa.me/${whatsappPhone.replace(/^\+/, "")}` : null;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -242,6 +245,11 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
             {tenant.phone ? <span><Phone size={15} />{tenant.phone}</span> : null}
             {tenant.email ? <span><Mail size={15} />{tenant.email}</span> : null}
           </div>
+          <div className="tenant-quick-actions">
+            {whatsappHref ? <a className="button button--accent" href={whatsappHref} rel="noopener noreferrer" target="_blank"><MessageCircle size={16} />WhatsApp</a> : null}
+            {tenant.phone ? <a className="button button--on-dark" href={`tel:${tenant.phone.replace(/[^\d+]/g, "")}`}><Phone size={16} />{t("Appeler", "Call")}</a> : null}
+            {tenant.email ? <a className="button button--on-dark" href={`mailto:${tenant.email}`}><Mail size={16} />E-mail</a> : null}
+          </div>
         </div>
         <div className="tenant-profile-hero__lease">
           <div>
@@ -263,6 +271,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
 
       <nav className="record-tabs" aria-label={t("Sections du dossier locataire", "Tenant record sections")}>
         <a aria-current="page" href="#profil">{t("Profil", "Profile")}</a>
+        {financial ? <a href="#releve">{t("Relevé", "Statement")}</a> : null}
         <a href="#location-actuelle">{t("Location actuelle", "Current lease")}</a>
         <a href="#historique">{t("Historique", "History")}</a>
         {payments ? <a href="#paiements">{t("Paiements", "Payments")}</a> : null}
@@ -272,6 +281,7 @@ export function TenantDetailView({ tenant, canManage, financial, payments, canRe
       </nav>
 
       {financial ? <TenantFinancialSummary tenantId={tenant.id} financial={financial} /> : null}
+      {financial ? <RecentLedgerCard financial={financial} tenantId={tenant.id} /> : null}
       {financial ? <LeaseDuesPanel financial={financial} tenantScope /> : null}
 
       <div className="tenant-record-grid">

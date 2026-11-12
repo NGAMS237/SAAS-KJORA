@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { parseDocumentId, type FinancialDocumentRecord } from "@/modules/documents/model";
 import { generateFinancialDocumentPdf } from "@/modules/documents/pdf";
+import { loadDocumentRenderContext } from "@/modules/documents/render-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ACTIVE_PORTAL_ACCESS_COOKIE } from "@/tenant-portal/server";
 
@@ -44,7 +45,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
     if (!await recordReceiptView()) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.redirect(signed.data.signedUrl, { headers: { "cache-control": "private, no-store" } });
   }
-  const bytes = await generateFinancialDocumentPdf(document);
+  const bytes = await generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id, accessId));
   if (!await recordReceiptView()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   return new NextResponse(Buffer.from(bytes), { headers: {
     "content-type": "application/pdf", "content-disposition": `inline; filename="${document.reference}.pdf"`,

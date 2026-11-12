@@ -17,6 +17,7 @@ import { BILLING_CYCLE_LABELS, type InvoiceStatus } from "@/core/billing/model";
 import { createResendTransport } from "@/core/email/resend-transport";
 import { PLAN_LABELS, type PlanSlug } from "@/core/entitlements/model";
 import { generateFinancialDocumentPdf } from "@/modules/documents/pdf";
+import { loadDocumentRenderContext } from "@/modules/documents/render-context";
 import type { FinancialDocumentRecord, FinancialDocumentStatus, FinancialDocumentType } from "@/modules/documents/model";
 import {
   COMMUNICATIONS_ENV,
@@ -87,7 +88,7 @@ function rentAdapter(supabase: SupabaseClient): QueueAdapter<ClaimedDelivery> {
       if (!documentResult.data) return { kind: "cancel", reason: "document_unavailable" };
       const document = documentRecord(documentResult.data as DocumentRow);
       if (document.status === "invalidated") return { kind: "cancel", reason: "document_invalidated" };
-      const bytes = await generateFinancialDocumentPdf(document);
+      const bytes = await generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id));
       if (!document.storagePath) {
         // Première matérialisation : copie privée versionnée, jamais publique.
         const storagePath = `${document.organizationId}/${document.id}/v1.pdf`;

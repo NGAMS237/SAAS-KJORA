@@ -58,6 +58,16 @@ export default async function SettingsPage() {
       <Card className="settings-card">
         <NotificationSoundToggle />
       </Card>
+      <Card className="settings-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Documents</p>
+            <h2>Mes informations bailleur</h2>
+            <p>Nom, adresse, téléphone, logo, signature et moyens de paiement imprimés sur vos avis, quittances et reçus.</p>
+          </div>
+          <Link className="button button--secondary" href="/app/parametres/documents">Configurer</Link>
+        </div>
+      </Card>
       {authorization?.role === "organization_owner" ? (
         <Card className="settings-card">
           <div className="section-heading">

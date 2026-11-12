@@ -12,7 +12,7 @@ import {
   isSupportCategory,
   isValidSupportMessage,
 } from "../src/core/support/model.ts";
-import { internalSecondaryNavigation } from "../src/core/navigation/navigation.ts";
+import { internalPrimaryNavigation, internalSecondaryNavigation } from "../src/core/navigation/navigation.ts";
 import { ANALYTICS_EVENTS } from "../src/core/analytics/events.ts";
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
@@ -108,8 +108,8 @@ test("demander de l'aide ne dépend d'aucune capability", () => {
 // Documents — agrégation, jamais un moteur parallèle (D-142)
 // ---------------------------------------------------------------------------
 
-test("Documents est présent dans la navigation secondaire", () => {
-  const docs = internalSecondaryNavigation.find((e) => e.href === "/app/documents");
+test("Documents est présent dans la navigation principale", () => {
+  const docs = internalPrimaryNavigation.find((e) => e.href === "/app/documents");
   assert.ok(docs, "entrée Documents absente");
   assert.equal(docs?.label, "Documents");
 });

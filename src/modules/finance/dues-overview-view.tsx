@@ -121,7 +121,7 @@ export function DuesOverviewView({ rows: baseRows, amountsDue, civilities = {}, 
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Finances" title="Échéances" description="Toutes les échéances en un seul tableau. Le menu ⋯ de chaque ligne donne les actions : paiement, relance, documents." action={canRecord ? <Link className="button button--primary" href="/app/paiements/nouveau" onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return; event.preventDefault(); openDrawer({ type: "page", title: "Enregistrer un paiement", href: "/app/paiements/nouveau" }); }}>Enregistrer un paiement</Link> : undefined} />
+      <PageHeader eyebrow="Finances" title="Finances" description="Ce qui est attendu, encaissé et en retard, au même endroit. Le menu ⋯ de chaque ligne donne les actions : paiement, relance, documents." action={canRecord ? <Link className="button button--primary" href="/app/paiements/nouveau" onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return; event.preventDefault(); openDrawer({ type: "page", title: "Enregistrer un paiement", href: "/app/paiements/nouveau" }); }}>Enregistrer un paiement</Link> : undefined} />
       {scopeLabel ? <Card muted><p>Filtré sur : <strong>{scopeLabel}</strong>. <Link href="/app/echeances">Voir toutes les échéances</Link></p></Card> : null}
       <div className="dues-totals">
         <div><small>Attendu</small><strong>{formatXaf(totals.expectedXaf)}</strong></div>

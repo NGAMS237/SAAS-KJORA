@@ -137,3 +137,26 @@ export function LedgerStatementView({ tenantId, tenantName, financial, statement
     </Card>
   </div>;
 }
+
+// Refonte — relevé de compte visible directement sur la fiche locataire (dernières opérations).
+export function RecentLedgerCard({ tenantId, financial, limit = 8 }: { tenantId: string; financial: TenantFinancialDetail; limit?: number }) {
+  const t = useCopy();
+  const entries = financial.ledger.slice(-limit);
+  const balanceLabel = (value: number) => value > 0 ? t(`Crédit ${money(value)}`, `Credit ${money(value)}`) : value < 0 ? t(`Dû ${money(Math.abs(value))}`, `Due ${money(Math.abs(value))}`) : t("À jour", "Up to date");
+  return <Card id="releve" className="statement-card">
+    <div className="section-heading">
+      <div><p className="eyebrow">{t("Relevé de compte", "Account statement")}</p><h2>{t("Dernières opérations", "Latest operations")}</h2></div>
+      <Link className="button button--secondary" href={`/app/locataires/${tenantId}/etat-de-compte`}><FileText size={16} />{t("Relevé complet et PDF", "Full statement and PDF")}</Link>
+    </div>
+    {entries.length ? <div className="ledger-table" role="table">
+      <div className="ledger-table__head ledger-table__head--compact" role="row"><span>{t("Date", "Date")}</span><span>{t("Opération", "Operation")}</span><span>{t("Débit", "Debit")}</span><span>{t("Crédit", "Credit")}</span><span>{t("Solde", "Balance")}</span></div>
+      {entries.map((entry) => <div className="ledger-table__row ledger-table__row--compact" role="row" key={entry.id}>
+        <span data-label={t("Date", "Date")}>{shortDate(entry.occurredOn)}</span>
+        <span data-label={t("Opération", "Operation")}><strong>{operationLabel(entry, t)}</strong>{entry.periodStart ? <small>{shortDate(entry.periodStart)} → {shortDate(entry.periodEnd)}</small> : null}</span>
+        <span className="financial-value" data-label={t("Débit", "Debit")}>{entry.debitXaf ? money(entry.debitXaf) : "—"}</span>
+        <span className="financial-value" data-label={t("Crédit", "Credit")}>{entry.creditXaf ? money(entry.creditXaf) : "—"}</span>
+        <span className={`financial-value${entry.runningBalanceXaf < 0 ? " financial-value--negative" : ""}`} data-label={t("Solde", "Balance")}>{balanceLabel(entry.runningBalanceXaf)}</span>
+      </div>)}
+    </div> : <EmptyState title={t("Aucune opération", "No operations")} description={t("Les loyers et paiements apparaîtront ici.", "Rents and payments will appear here.")} />}
+  </Card>;
+}

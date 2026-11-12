@@ -15,6 +15,7 @@ import { PreferencesControls } from "@/core/preferences/preferences-controls";
 import { DemoNotice } from "@/core/ui/ui";
 import { PinLockButton, SecureSignOutButton } from "@/core/security/pin-controls";
 import { hasCapability } from "@/core/authorization/capabilities";
+import { QuickAddMenu } from "@/core/shell/quick-add-menu";
 import type { NotificationSummary } from "@/modules/documents/model";
 import { NotificationBell } from "@/modules/documents/views";
 import { NotificationSoundEffect } from "@/core/notifications/notification-sound";
@@ -22,7 +23,9 @@ import { NotificationSoundEffect } from "@/core/notifications/notification-sound
 function isActive(pathname: string, item: NavigationItem) {
   const currentPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   const targetPath = item.href.length > 1 ? item.href.replace(/\/+$/, "") : item.href;
-  return item.exact ? currentPath === targetPath : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+  const matches = (target: string) => currentPath === target || currentPath.startsWith(`${target}/`);
+  if (item.exact) return currentPath === targetPath;
+  return matches(targetPath) || (item.alsoActive ?? []).some(matches);
 }
 
 type NavigationBadge = { count: number; tone: "danger" | "warning" | "info" };
@@ -144,7 +147,7 @@ export function InternalShell({
           ))}
         </nav>
         <div className="desktop-rail__secondary">
-          <p className="nav-caption">Espace secondaire</p>
+          <p className="nav-caption">Plus</p>
           {secondaryNavigation.map((item) => (
             <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} />
           ))}
@@ -167,6 +170,7 @@ export function InternalShell({
         </Link>
         <OrganizationSwitcher organizations={organizations} activeOrganization={activeOrganization} />
         <div className="mobile-header__actions">
+          <QuickAddMenu capabilities={activeOrganization.capabilities} compact />
           <NotificationBell notifications={notifications} placement="mobile" />
           <button
             aria-expanded={menuOpen}
@@ -186,7 +190,7 @@ export function InternalShell({
           <div className="mobile-drawer__panel">
             <div className="mobile-drawer__header">
               <div>
-                <p className="eyebrow">Espace secondaire</p>
+                <p className="eyebrow">Menu</p>
                 <strong>{activeOrganization.name}</strong>
                 <small>{userEmail}</small>
               </div>
@@ -195,7 +199,7 @@ export function InternalShell({
               </button>
             </div>
             <nav>
-              {secondaryNavigation.map((item) => (
+              {[...primaryNavigation.filter((item) => !item.mobile), ...secondaryNavigation].map((item) => (
                 <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} onClick={() => setMenuOpen(false)} />
               ))}
             </nav>
@@ -211,11 +215,11 @@ export function InternalShell({
         </div>
       ) : null}
 
-      <div className="shell-utility-bar"><NotificationBell notifications={notifications} placement="desktop" /></div>
+      <div className="shell-utility-bar"><QuickAddMenu capabilities={activeOrganization.capabilities} /><NotificationBell notifications={notifications} placement="desktop" /></div>
       <main className="shell-content">{children}</main>
 
       <nav className="mobile-bottom-nav" aria-label="Navigation interne principale">
-        {primaryNavigation.map((item) => (
+        {primaryNavigation.filter((item) => item.mobile).map((item) => (
           <NavigationLink item={item} key={item.href} pathname={pathname} badges={navigationBadges} />
         ))}
       </nav>
