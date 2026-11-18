@@ -14,7 +14,7 @@ export type ReminderTarget = {
   dueId?: string;
 };
 
-export type AdjustTarget = { dueId: string; dueDate: string; totalXaf: number; paidXaf: number; remainingXaf: number };
+export type AdjustTarget = { dueId: string; leaseId: string; dueDate: string; totalXaf: number; paidXaf: number; remainingXaf: number };
 
 export type DrawerState =
   | { type: "page"; title: string; subtitle?: string; href: string }
@@ -175,7 +175,7 @@ function AdjustDuePanel({ target, onDone }: { target: AdjustTarget; onDone: () =
   async function call(dryRun: boolean) {
     setBusy(true); setMessage(null);
     try {
-      const response = await fetch("/api/tenancy", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "adjust_due", dueId: target.dueId, newTotalXaf: Number(amount), reason, dryRun }) });
+      const response = await fetch("/api/tenancy", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "adjust_due", leaseId: target.leaseId, dueId: target.dueId, newTotalXaf: Number(amount), reason, dryRun }) });
       const body = (await response.json().catch(() => ({}))) as { error?: string; result?: AdjustPreview };
       if (!response.ok || !body.result) { setMessage(ADJUST_ERRORS[body.error ?? ""] ?? "Le montant n’a pas pu être modifié. Rien n’a été changé."); return null; }
       return body.result;
