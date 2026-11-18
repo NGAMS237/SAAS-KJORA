@@ -62,3 +62,9 @@ test("relance reformulée : mois visé, mention de l'avis joint seulement s'il l
   assert.doesNotMatch(avec, /\[[a-z_]+\]/);
   assert.doesNotMatch(avec, /  /);
 });
+
+test("l'écran d'arrangement envoie le bail : l'API /api/tenancy exige leaseId pour toute action", async () => {
+  const { readFileSync } = await import("node:fs");
+  const drawers = readFileSync(new URL("../src/modules/finance/dues-drawers.tsx", import.meta.url), "utf8");
+  assert.match(drawers, /action: "adjust_due", leaseId: target\.leaseId, dueId: target\.dueId/);
+});
