@@ -63,11 +63,12 @@ function RowMenu({ row, canRecord, canManage, today, open, civility, totalDue }:
       <summary aria-label={`Actions pour ${row.tenantName}`}>⋯</summary>
       <div className="row-menu__panel">
         {canRecord && canPay ? <DrawerLink href={payHref} open={open} state={pageState("Enregistrer un paiement", who, payHref)}>Enregistrer un paiement</DrawerLink> : null}
-        {canPay ? <ReminderButton label={row.status === "overdue" ? "Relancer (WhatsApp, e-mail)" : "Rappeler (WhatsApp, e-mail)"} open={open} state={{ type: "reminder", title: row.status === "overdue" ? "Relancer le locataire" : "Rappeler le locataire", subtitle: who, target: { tenantName: row.tenantName, civility, unitLabel: row.unitLabel, phone: row.phone, email: row.email, status: row.status, dueDate: row.dueDate, totalDueXaf: totalDue, rowRemainingXaf: row.remainingXaf, rowTotalXaf: row.totalXaf } }} /> : null}
+        {canPay ? <ReminderButton label={row.status === "overdue" ? "Relancer (WhatsApp, e-mail)" : "Rappeler (WhatsApp, e-mail)"} open={open} state={{ type: "reminder", title: row.status === "overdue" ? "Relancer le locataire" : "Rappeler le locataire", subtitle: who, target: { tenantName: row.tenantName, civility, unitLabel: row.unitLabel, phone: row.phone, email: row.email, status: row.status, dueDate: row.dueDate, totalDueXaf: totalDue, rowRemainingXaf: row.remainingXaf, rowTotalXaf: row.totalXaf, dueId: row.dueId } }} /> : null}
         <DrawerLink href={`/app/locations/${row.leaseId}#documents`} open={open} state={pageState("Avis, reçus et quittances", who, `/app/locations/${row.leaseId}#documents`)}>Avis, reçus et quittances</DrawerLink>
         <DrawerLink href={`/app/locataires/${row.tenantId}/etat-de-compte`} open={open} state={pageState("État de compte", who, `/app/locataires/${row.tenantId}/etat-de-compte`)}>État de compte</DrawerLink>
         <DrawerLink href={`/app/locataires/${row.tenantId}`} open={open} state={pageState("Fiche du locataire", who, `/app/locataires/${row.tenantId}`)}>Voir le locataire</DrawerLink>
         <DrawerLink href={`/app/locations/${row.leaseId}`} open={open} state={pageState("Bail", who, `/app/locations/${row.leaseId}`)}>Voir le bail</DrawerLink>
+        {canManage && row.status !== "cancelled" && (row.kind === "periodic" || row.kind === "initial_prorata") ? <ReminderButton label="Modifier le montant à payer (arrangement)" open={open} state={{ type: "adjust", title: "Modifier le montant à payer", subtitle: who, target: { dueId: row.dueId, dueDate: row.dueDate, totalXaf: row.totalXaf, paidXaf: row.paidXaf, remainingXaf: row.remainingXaf } }} /> : null}
         {canManage ? <DrawerLink href={`/app/locations/${row.leaseId}/loyer`} open={open} state={pageState("Modifier le loyer", who, `/app/locations/${row.leaseId}/loyer`)}>Modifier le loyer</DrawerLink> : null}
         {canPay && !phone && !row.email ? <small>Ni numéro WhatsApp ni e-mail connus : le message pourra être copié.</small> : null}
       </div>
@@ -95,7 +96,7 @@ function TenantMenu({ item, canRecord, canManage, open, civility }: { item: Tena
   );
 }
 
-const PAGE_SIZES = [30, 50, 100];
+const PAGE_SIZES = [30, 50, 100, 200];
 
 export function DuesOverviewView({ rows: baseRows, amountsDue, civilities = {}, canRecord, canManage, scopeLabel, today }: { rows: DueOverviewRow[]; amountsDue: Record<string, number>; civilities?: Record<string, "M." | "Mme" | null>; canRecord: boolean; canManage: boolean; scopeLabel: string | null; today: string }) {
   const router = useRouter();
@@ -108,7 +109,7 @@ export function DuesOverviewView({ rows: baseRows, amountsDue, civilities = {}, 
   const [month, setMonth] = useState("all");
   const [property, setProperty] = useState("all");
   const [mode, setMode] = useState<"echeances" | "locataires">("echeances");
-  const [limit, setLimit] = useState(30);
+  const [limit, setLimit] = useState(200);
   const rows = useMemo<DueOverviewRowWithBalance[]>(() => attachBalances(baseRows, amountsDue, today), [baseRows, amountsDue, today]);
   const properties = useMemo(() => [...new Set(baseRows.map((row) => row.propertyName))].sort(), [baseRows]);
   const counts = useMemo(() => countByFilter(rows), [rows]);

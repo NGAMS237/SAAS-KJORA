@@ -135,9 +135,35 @@ export async function renderFinancialDocumentPreview(document: FinancialDocument
   return generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id));
 }
 
-export async function createFinancialDocumentSignedUrl(storagePath: string) {
+/** Dernier avis d'échéance non invalidé d'une échéance (null s'il n'existe pas encore). */
+export async function findDueNoticeDocument(organizationId: string, dueId: string) {
   const supabase = await createSupabaseServerClient();
-  const result = await supabase.storage.from("financial-documents").createSignedUrl(storagePath, 120, { download: true });
+  const result = await supabase.from("financial_documents").select(DOCUMENT_COLUMNS)
+    .eq("organization_id", organizationId).eq("due_id", dueId).eq("document_type", "due_notice")
+    .neq("status", "invalidated").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (result.error) throw result.error;
+  return result.data ? documentRecord(result.data as DocumentRow) : null;
+}
+
+/** Octets du PDF approuvé (copie stockée, ou génération à la demande). */
+export async function readFinancialDocumentBytes(document: FinancialDocumentRecord): Promise<Uint8Array> {
+  const artifact = await materializeFinancialDocument(document);
+  if (typeof artifact !== "string") return artifact.bytes;
+  const supabase = await createSupabaseServerClient();
+  const downloaded = await supabase.storage.from("financial-documents").download(artifact);
+  if (downloaded.error || !downloaded.data) throw new Error("document_read_failed");
+  return new Uint8Array(await downloaded.data.arrayBuffer());
+}
+
+export async function getTenantDisplayName(organizationId: string, tenantId: string): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.from("tenants").select("full_name").eq("organization_id", organizationId).eq("id", tenantId).maybeSingle();
+  return result.error ? null : ((result.data as { full_name: string | null } | null)?.full_name ?? null);
+}
+
+export async function createFinancialDocumentSignedUrl(storagePath: string, fileName?: string) {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.storage.from("financial-documents").createSignedUrl(storagePath, 120, { download: fileName ?? true });
   if (result.error) throw result.error;
   return result.data.signedUrl;
 }

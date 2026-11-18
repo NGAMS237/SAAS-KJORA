@@ -10,7 +10,7 @@ const privateResponse = (body: unknown, init?: ResponseInit) => NextResponse.jso
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request, { requireOrigin: true })) return privateResponse({ error: "forbidden" }, { status: 403 });
-  const body = await request.json().catch(() => null) as { documentId?: unknown } | null;
+  const body = await request.json().catch(() => null) as { documentId?: unknown; withPdf?: unknown } | null;
   if (!body || typeof body.documentId !== "string" || !UUID_PATTERN.test(body.documentId)) return privateResponse({ error: "invalid_document" }, { status: 400 });
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("prepare_manual_whatsapp_handoff", { target_document_id: body.documentId });
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
   // Reçus et quittances : page « Mes reçus » du portail ; avis et états de compte : page « Mes loyers ».
   const portalPath = context.documentType === "payment_receipt" || context.documentType === "rent_receipt" ? "/portal/recus/" : "/portal/loyers/";
   const portalUrl = `${getPublicRequestOrigin(request)}${portalPath}`;
-  const url = buildWhatsAppUrl(context.phoneE164, buildManualWhatsAppMessage(context, portalUrl));
+  const message = buildManualWhatsAppMessage(context, portalUrl, { withPdf: body.withPdf === true });
+  const url = buildWhatsAppUrl(context.phoneE164, message);
   if (!url) return privateResponse({ error: "handoff_unavailable" }, { status: 409 });
-  return privateResponse({ url, notice: context.language === "en" ? "WhatsApp was opened. KJORA cannot confirm that the message was sent." : "WhatsApp a été ouvert. KJORA ne peut pas confirmer que le message a été envoyé." });
+  return privateResponse({ url, message, notice: context.language === "en" ? "WhatsApp was opened. KJORA cannot confirm that the message was sent." : "WhatsApp a été ouvert. KJORA ne peut pas confirmer que le message a été envoyé." });
 }

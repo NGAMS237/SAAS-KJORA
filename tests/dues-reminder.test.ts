@@ -52,3 +52,13 @@ test("le mode tiroir repose sur un attribut data-embedded (une classe sur <html>
   assert.match(css, /html\[data-embedded\] \.mobile-bottom-nav/);
   assert.doesNotMatch(css, /html\.is-embedded/);
 });
+
+test("relance reformulée : mois visé, mention de l'avis joint seulement s'il l'est", () => {
+  const sans = buildReminder(base).body;
+  assert.match(sans, /loyer de novembre 2026 pour Chambre 1 E1/);
+  assert.doesNotMatch(sans, /ci-joint/);
+  const avec = buildReminder({ ...base, withNotice: true }).body;
+  assert.match(avec, /Vous trouverez ci-joint l’avis d’échéance correspondant\./);
+  assert.doesNotMatch(avec, /\[[a-z_]+\]/);
+  assert.doesNotMatch(avec, /  /);
+});

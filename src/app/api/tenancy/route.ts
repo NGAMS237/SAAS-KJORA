@@ -15,6 +15,7 @@ type TenancyAction =
   | "end_lease"
   | "schedule_rent_change"
   | "correct_rent"
+  | "adjust_due"
   | "set_contract_dates";
 
 function sameOrigin(request: Request) {
@@ -174,6 +175,23 @@ export async function POST(request: Request) {
       if (error.message?.includes("scheduled_change_exists")) return jsonError("scheduled_change_exists", 409);
       if (error.message?.includes("correction_below_paid")) return jsonError("correction_below_paid", 409);
       if (error.message?.includes("lease_not_active")) return jsonError("lease_not_active", 409);
+      return mutationError(error);
+    }
+    return NextResponse.json({ result: data });
+  }
+  if (action === "adjust_due") {
+    const newTotal = Number(body.newTotalXaf);
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    if (typeof body.dueId !== "string" || !UUID_PATTERN.test(body.dueId)) return jsonError("invalid_payload", 400);
+    if (!Number.isSafeInteger(newTotal) || newTotal <= 0) return jsonError("invalid_amount", 400);
+    if (reason.length < 3 || reason.length > 300) return jsonError("reason_required", 400);
+    const { data, error } = await supabase.rpc("adjust_due_amount", {
+      target_due_id: body.dueId, target_new_total_xaf: newTotal, target_reason: reason, target_dry_run: body.dryRun !== false,
+    });
+    if (error) {
+      for (const code of ["amount_below_paid", "due_not_adjustable", "no_change", "reason_required", "invalid_amount"]) {
+        if (error.message?.includes(code)) return jsonError(code, 409);
+      }
       return mutationError(error);
     }
     return NextResponse.json({ result: data });

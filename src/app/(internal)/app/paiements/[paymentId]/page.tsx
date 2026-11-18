@@ -4,6 +4,7 @@ import { getPaymentDetail } from "@/modules/payments/server";
 import { PaymentDetailView } from "@/modules/payments/views";
 import { MissingTenancyResource } from "@/modules/tenancy/views";
 import { getFinancialDocuments } from "@/modules/documents/server";
+import { listTenantCivilities, listTenants } from "@/modules/tenancy/server";
 
 export default async function PaymentPage({ params, searchParams }: {
   params: Promise<{ paymentId: string }>;
@@ -17,5 +18,10 @@ export default async function PaymentPage({ params, searchParams }: {
       ? getFinancialDocuments(authorization.organizationId, { paymentId }) : Promise.resolve([]),
   ]);
   if (!payment) return <MissingTenancyResource leases />;
-  return <PaymentDetailView payment={payment} canCorrect={authorization.capabilities.includes("payment.correct")} currentUserId={authorization.userId} success={query.success === "1"} documents={documents} canPrepareReceipt={authorization.capabilities.includes("receipt.view")} canShare={authorization.capabilities.includes("receipt.share")} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} />;
+  const canShare = authorization.capabilities.includes("receipt.share");
+  const [tenants, civilities] = canShare
+    ? await Promise.all([listTenants(authorization.organizationId).catch(() => []), listTenantCivilities(authorization.organizationId).catch(() => ({} as Record<string, "M." | "Mme" | null>))])
+    : [[], {} as Record<string, "M." | "Mme" | null>];
+  const tenantPhone = tenants.find((tenant) => tenant.id === payment.tenantId)?.phone ?? null;
+  return <PaymentDetailView payment={payment} canCorrect={authorization.capabilities.includes("payment.correct")} currentUserId={authorization.userId} success={query.success === "1"} documents={documents} canPrepareReceipt={authorization.capabilities.includes("receipt.view")} canShare={canShare} tenantPhone={tenantPhone} tenantCivility={civilities[payment.tenantId] ?? null} emailDeliveryEnabled={process.env.KJORA_FINANCIAL_EMAIL_DELIVERY_ENABLED === "true"} />;
 }

@@ -14,7 +14,20 @@ export type ReminderInput = {
   rowRemainingXaf: number;  // reste de l'échéance cliquée
   rowTotalXaf: number;      // montant de l'échéance cliquée (loyer + charges)
   dueDate: string;          // YYYY-MM-DD
+  withNotice?: boolean;     // true quand l'avis d'échéance PDF est joint au message
 };
+
+// Textes de relance WhatsApp (propres à la relance : les modèles généraux de la bibliothèque ne changent pas).
+const REMINDER_BODIES: Record<ReminderTemplateKey, string> = {
+  retard: "Bonjour {prenom}, j’espère que vous allez bien. Je me permets de vous relancer au sujet du loyer de {mois} pour {logement} : il reste {du} à régler.{avis} Merci de régulariser dès que possible. Si vous rencontrez une difficulté, n’hésitez pas à m’en parler, nous trouverons une solution ensemble. {signature}",
+  rappel_avant: "Bonjour {prenom}, j’espère que vous allez bien. Petit rappel amical : le loyer de {mois} pour {logement}, soit {total}, est à régler le {jour} de ce mois.{avis} Merci d’avance ! {signature}",
+};
+
+const MONTHS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+export function reminderMonthLabel(dueDate: string): string {
+  const month = Number(dueDate.slice(5, 7));
+  return MONTHS_FR[month - 1] ? `${MONTHS_FR[month - 1]} ${dueDate.slice(0, 4)}` : "ce mois";
+}
 
 export function reminderGreetingName(tenantName: string, civility: "M." | "Mme" | null): string {
   return civility ? `${civility} ${tenantName.trim()}`.trim() : firstName(tenantName);
@@ -27,7 +40,9 @@ export function defaultReminderTemplate(status: string): ReminderTemplateKey {
 export function buildReminder(input: ReminderInput): { subject: string; body: string; amountXaf: number } {
   const template = templateByKey(input.templateKey);
   const amountXaf = Math.max(input.totalDueXaf, input.rowRemainingXaf);
-  const body = renderTemplate(template.body, {
+  const avis = input.withNotice ? " Vous trouverez ci-joint l’avis d’échéance correspondant." : "";
+  const body = renderTemplate(REMINDER_BODIES[input.templateKey].replace("{avis}", avis), {
+    mois: reminderMonthLabel(input.dueDate),
     prenom: reminderGreetingName(input.tenantName, input.civility),
     nom: input.tenantName,
     logement: input.unitLabel,
