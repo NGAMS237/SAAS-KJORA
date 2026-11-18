@@ -18,7 +18,7 @@ import { createResendTransport } from "@/core/email/resend-transport";
 import { PLAN_LABELS, type PlanSlug } from "@/core/entitlements/model";
 import { generateFinancialDocumentPdf } from "@/modules/documents/pdf";
 import { loadDocumentRenderContext } from "@/modules/documents/render-context";
-import type { FinancialDocumentRecord, FinancialDocumentStatus, FinancialDocumentType } from "@/modules/documents/model";
+import { financialDocumentFileName, type FinancialDocumentRecord, type FinancialDocumentStatus, type FinancialDocumentType } from "@/modules/documents/model";
 import {
   COMMUNICATIONS_ENV,
   isSaasAutoInvoicingEnabled,
@@ -89,6 +89,8 @@ function rentAdapter(supabase: SupabaseClient): QueueAdapter<ClaimedDelivery> {
       const document = documentRecord(documentResult.data as DocumentRow);
       if (document.status === "invalidated") return { kind: "cancel", reason: "document_invalidated" };
       const bytes = await generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id));
+      const tenantRow = await supabase.from("tenants").select("full_name").eq("organization_id", document.organizationId).eq("id", document.tenantId).maybeSingle();
+      const tenantFullName = (tenantRow.data as { full_name: string | null } | null)?.full_name ?? null;
       if (!document.storagePath) {
         // Première matérialisation : copie privée versionnée, jamais publique.
         const storagePath = `${document.organizationId}/${document.id}/v1.pdf`;
@@ -109,7 +111,7 @@ function rentAdapter(supabase: SupabaseClient): QueueAdapter<ClaimedDelivery> {
         message: {
           to: delivery.row.recipient_email,
           subject: email.subject, html: email.html, text: email.text,
-          attachments: [{ filename: `${document.reference}.pdf`, contentBase64: Buffer.from(bytes).toString("base64") }],
+          attachments: [{ filename: financialDocumentFileName(document, tenantFullName), contentBase64: Buffer.from(bytes).toString("base64") }],
           tags: [{ name: "queue", value: "rent" }, { name: "template", value: delivery.row.template_key.replace(/[^A-Za-z0-9_\-]/g, "_") }],
         },
       };

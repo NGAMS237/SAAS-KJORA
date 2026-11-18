@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { parseDocumentId, type FinancialDocumentRecord } from "@/modules/documents/model";
+import { financialDocumentFileName, parseDocumentId, pdfContentDisposition, type FinancialDocumentRecord } from "@/modules/documents/model";
 import { generateFinancialDocumentPdf } from "@/modules/documents/pdf";
 import { loadDocumentRenderContext } from "@/modules/documents/render-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -40,7 +40,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
     return !viewed.error;
   }
   if (document.storagePath) {
-    const signed = await supabase.storage.from("financial-documents").createSignedUrl(document.storagePath, 120, { download: `${document.reference}.pdf` });
+    const signed = await supabase.storage.from("financial-documents").createSignedUrl(document.storagePath, 120, { download: financialDocumentFileName(document, null) });
     if (signed.error) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (!await recordReceiptView()) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.redirect(signed.data.signedUrl, { headers: { "cache-control": "private, no-store" } });
@@ -48,7 +48,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
   const bytes = await generateFinancialDocumentPdf(document, await loadDocumentRenderContext(supabase, document.id, accessId));
   if (!await recordReceiptView()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   return new NextResponse(Buffer.from(bytes), { headers: {
-    "content-type": "application/pdf", "content-disposition": `inline; filename="${document.reference}.pdf"`,
+    "content-type": "application/pdf", "content-disposition": pdfContentDisposition("inline", financialDocumentFileName(document, null)),
     "cache-control": "private, no-store",
   } });
 }

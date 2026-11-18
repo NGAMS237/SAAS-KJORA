@@ -83,3 +83,36 @@ export function parseStatementRequest(input: Record<string, unknown>) {
 export function parseDocumentId(value: unknown) {
   return typeof value === "string" && UUID_PATTERN.test(value) ? value : null;
 }
+
+
+const FILE_TITLES: Record<FinancialDocumentType, { fr: string; en: string }> = {
+  due_notice: { fr: "Avis d'échéance", en: "Due notice" },
+  payment_receipt: { fr: "Reçu de paiement", en: "Payment receipt" },
+  rent_receipt: { fr: "Quittance de loyer", en: "Rent receipt" },
+  account_statement: { fr: "État de compte", en: "Account statement" },
+};
+
+function cleanFilePart(value: string) {
+  return value.replace(/[\u0000-\u001f\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Nom de fichier lisible pour un PDF financier :
+ * « Quittance de loyer - Prénom Nom - 2026-11 - REFERENCE.pdf ».
+ * La date est le mois visé par le document (période) ; à défaut, la date d'émission.
+ */
+export function financialDocumentFileName(
+  document: { type: FinancialDocumentType; reference: string; issuedOn: string; periodStart: string | null; language?: "fr" | "en" },
+  tenantName: string | null,
+) {
+  const title = FILE_TITLES[document.type]?.[document.language ?? "fr"] ?? document.reference;
+  const date = (document.periodStart ?? document.issuedOn ?? "").slice(0, document.periodStart ? 7 : 10);
+  const parts = [title, tenantName ? cleanFilePart(tenantName) : "", date, cleanFilePart(document.reference)].filter(Boolean);
+  return `${parts.join(" - ")}.pdf`;
+}
+
+/** En-tête Content-Disposition sûr pour les noms accentués (ASCII de repli + filename* UTF-8). */
+export function pdfContentDisposition(kind: "inline" | "attachment", fileName: string) {
+  const ascii = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`;
+}

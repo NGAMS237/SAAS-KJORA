@@ -50,7 +50,7 @@ const frDate = (value: string) => `${value.slice(8, 10)}/${value.slice(5, 7)}/${
  * où le PDF se consulte et se télécharge. Aucun PDF privé n'est joint : wa.me ne sait envoyer que du texte.
  * `portalUrl` est l'adresse publique de la page du portail (https), fournie par le serveur.
  */
-export function buildManualWhatsAppMessage(context: ManualWhatsAppContext, portalUrl?: string | null): string {
+export function buildManualWhatsAppMessage(context: ManualWhatsAppContext, portalUrl?: string | null, options?: { withPdf?: boolean }): string {
   const english = context.language === "en";
   const label = DOCUMENT_LABELS[context.documentType][english ? 1 : 0];
   const period = context.periodStart && context.periodEnd ? ` (${context.periodStart} – ${context.periodEnd})` : "";
@@ -74,9 +74,14 @@ export function buildManualWhatsAppMessage(context: ManualWhatsAppContext, porta
             : `votre ${label}${period} de ${amount} est disponible`;
   }
   const link = portalUrl && /^https?:\/\//.test(portalUrl) ? portalUrl : null;
-  const tail = english
-    ? ` Consult and download the PDF in your secure KJORA tenant portal${link ? `: ${link}` : "."}`
-    : ` Consultez et téléchargez le PDF dans votre portail locataire KJORA sécurisé${link ? ` : ${link}` : "."}`;
+  // PDF joint au message (feuille de partage ou glisser-déposer) : on le dit, le portail n'est qu'un complément.
+  const tail = options?.withPdf
+    ? (english
+      ? ` You will find the PDF attached.${link ? ` You can also view it in your secure KJORA tenant portal: ${link}` : ""} Kind regards.`
+      : ` Vous trouverez le PDF ci-joint.${link ? ` Vous pouvez aussi le consulter dans votre portail locataire KJORA sécurisé : ${link}` : ""} Cordialement.`)
+    : (english
+      ? ` Consult and download the PDF in your secure KJORA tenant portal${link ? `: ${link}` : "."}`
+      : ` Consultez et téléchargez le PDF dans votre portail locataire KJORA sécurisé${link ? ` : ${link}` : "."}`);
   return `${english ? "Hello" : "Bonjour"} ${title}${context.displayName}, ${detail}.${tail}`;
 }
 

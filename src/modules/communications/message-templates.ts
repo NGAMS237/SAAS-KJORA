@@ -19,7 +19,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
   { key: "libre", group: "occasions", label: "Message libre", subject: "", body: "Bonjour {prenom}, {signature}" },
 ];
 
-export type MessageVariables = Partial<Record<"prenom" | "nom" | "logement" | "loyer" | "charges" | "total" | "du" | "jour" | "date" | "nouveau_loyer" | "signature", string>>;
+export type MessageVariables = Partial<Record<"prenom" | "nom" | "mois" | "logement" | "loyer" | "charges" | "total" | "du" | "jour" | "date" | "nouveau_loyer" | "signature", string>>;
 
 export function templateByKey(key: string): MessageTemplate {
   return MESSAGE_TEMPLATES.find((item) => item.key === key) ?? MESSAGE_TEMPLATES[0];

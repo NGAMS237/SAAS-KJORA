@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveAuthorization } from "@/core/authorization/server";
-import { parseDocumentId } from "@/modules/documents/model";
-import { createFinancialDocumentSignedUrl, getFinancialDocument, materializeFinancialDocument, renderFinancialDocumentPreview } from "@/modules/documents/server";
+import { financialDocumentFileName, parseDocumentId, pdfContentDisposition } from "@/modules/documents/model";
+import { createFinancialDocumentSignedUrl, getFinancialDocument, getTenantDisplayName, materializeFinancialDocument, renderFinancialDocumentPreview } from "@/modules/documents/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,11 +13,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ docu
   if (!document) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const required = document.type === "payment_receipt" || document.type === "rent_receipt" ? "receipt.view" : "due.view";
   if (!authorization.capabilities.includes(required)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const fileName = financialDocumentFileName(document, await getTenantDisplayName(authorization.organizationId, document.tenantId));
   if (new URL(request.url).searchParams.get("preview") === "1") {
     const bytes = await renderFinancialDocumentPreview(document);
     return new NextResponse(Buffer.from(bytes), { headers: {
       "content-type": "application/pdf",
-      "content-disposition": `inline; filename="preview-${document.reference}.pdf"`,
+      "content-disposition": pdfContentDisposition("inline", `Aperçu - ${fileName}`),
       "cache-control": "private, no-store",
     } });
   }
@@ -27,9 +28,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ docu
   const artifact = await materializeFinancialDocument(document);
   if (typeof artifact !== "string") {
     return new NextResponse(Buffer.from(artifact.bytes), {
-      headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="${document.reference}.pdf"`, "cache-control": "private, no-store" },
+      headers: { "content-type": "application/pdf", "content-disposition": pdfContentDisposition("inline", fileName), "cache-control": "private, no-store" },
     });
   }
-  const signedUrl = await createFinancialDocumentSignedUrl(artifact);
+  const signedUrl = await createFinancialDocumentSignedUrl(artifact, fileName);
   return NextResponse.redirect(signedUrl, { headers: { "cache-control": "private, no-store" } });
 }
